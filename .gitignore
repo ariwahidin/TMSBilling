@@ -29,3 +29,4 @@ publish/
 # OS generated
 .DS_Store
 Thumbs.db
+appsettings.json
