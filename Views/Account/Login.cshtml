@@ -1,0 +1,138 @@
+﻿@{
+    Layout = "~/Views/Shared/_LoginLayout.cshtml";
+}
+@model LoginViewModel
+
+@* <div class="login-header">
+    <div class="login-icon mb-2">
+        <i class="bi bi-person-circle"></i> <!-- Optional: pakai Bootstrap Icon kalau disertakan -->
+    </div>
+    <h3 class="fw-bold">TMS Billing</h3>
+    <p class="text-muted">Please login to your account</p>
+</div>
+
+<form method="post">
+    <div class="mb-3">
+        <label asp-for="Username" class="form-label">Username</label>
+        <input asp-for="Username" class="form-control" placeholder="Enter your username" />
+        <span asp-validation-for="Username" class="text-danger small"></span>
+    </div>
+    <div class="mb-4">
+        <label asp-for="Password" class="form-label">Password</label>
+        <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+        <span asp-validation-for="Password" class="text-danger small"></span>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Login</button>
+</form> *@
+
+<form id="loginForm">
+    <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <div class="input-group">
+            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required>
+            <i class="bi bi-person input-icon"></i>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-group">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+            <i class="bi bi-lock input-icon"></i>
+            <button type="button" class="password-toggle" onclick="togglePassword()">
+                <i class="bi bi-eye" id="toggleIcon"></i>
+            </button>
+        </div>
+    </div>
+
+        @* <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+            <label class="form-check-label" for="remember">
+                Remember me
+            </label>
+        </div> *@
+
+    <button type="submit" class="btn btn-login">
+        <span class="loading-spinner"></span>
+        <span class="btn-text">Sign In</span>
+    </button>
+
+    @* <div class="forgot-password">
+        <a href="/Account/ForgotPassword">Forgot your password?</a>
+    </div> *@
+</form>
+
+<script>
+    // Password toggle functionality
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.className = 'bi bi-eye-slash';
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.className = 'bi bi-eye';
+        }
+    }
+
+    // Enhanced form submission with loading state
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = this.querySelector('.btn-login');
+        const btnText = submitBtn.querySelector('.btn-text');
+
+        // Show loading state
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+        btnText.textContent = 'Signing In...';
+
+        const formData = new FormData(this);
+
+        try {
+            const response = await fetch('/Account/Login', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                window.location.href = result.redirectUrl;
+            } else {
+                alert(result.message || 'Login failed');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Something went wrong. Please try again.');
+        } finally {
+            // Reset loading state
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+            btnText.textContent = 'Sign In';
+        }
+    });
+
+
+    // Enhanced input focus effects
+    document.querySelectorAll('.form-control').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('focused');
+        });
+    });
+
+    // Auto-hide alerts after 5 seconds
+    document.querySelectorAll('.alert').forEach(alert => {
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-10px)';
+            setTimeout(() => alert.remove(), 300);
+        }, 5000);
+    });
+</script>

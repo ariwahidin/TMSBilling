@@ -1,0 +1,32 @@
+﻿@model TMSBilling.Models.CustomerMain
+
+<form id="customerForm">
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Customer Main ID</label>
+        <div class="col-sm-8">
+            <input asp-for="MAIN_CUST" class="form-control" readonly="@(Model.MAIN_CUST != "" ? "readonly" : null)" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Customer Main Name</label>
+        <div class="col-sm-8">
+            <input asp-for="CUST_NAME" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Status</label>
+        <div class="col-sm-8">
+            <select asp-for="STATUS_FLAG" class="form-select">
+                <option value="1">Active</option>
+                <option value="0">Not Active</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+    </div>
+</form>
+

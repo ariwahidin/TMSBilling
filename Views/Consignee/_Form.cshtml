@@ -1,0 +1,73 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model TMSBilling.Models.Consignee
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    var subCodeList = ViewBag.SubCodeList as List<SelectListItem>;
+}
+
+<form id="formConsignee">
+    <input type="hidden" asp-for="ID" />
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Consignee ID</label>
+        <div class="col-sm-8">
+            <input asp-for="CNEE_CODE" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Consignee Name</label>
+        <div class="col-sm-8">
+            <input asp-for="CNEE_NAME" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Address</label>
+        <div class="col-sm-8">
+            <input asp-for="CNEE_ADDR1" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">City</label>
+        <div class="col-sm-8">
+            <input asp-for="CNEE_ADDR2" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Pic Name</label>
+        <div class="col-sm-8">
+            <input asp-for="CNEE_PIC" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Customer Code</label>
+        <div class="col-sm-8">
+            <select asp-for="SUB_CODE" asp-items="subCodeList" class="form-select select2">
+                <option value="">-- Pilih --</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Consignee Status</label>
+        <div class="col-sm-8">
+            <select asp-for="ACTIVE_FLAG" class="form-select">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-success">Save</button>
+    </div>
+</form>

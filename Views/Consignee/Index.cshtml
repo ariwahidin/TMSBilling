@@ -1,0 +1,108 @@
+﻿
+@model IEnumerable<TMSBilling.Models.Consignee>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Consignee";
+}
+
+<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Data</button>
+
+<table class="table table-bordered table-striped" id="dataTable">
+    <thead>
+        <tr>
+            <th>Customer ID</th>
+            <th>Consignee ID</th>
+            <th>Consignee Name</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.SUB_CODE</td>
+                <td>@item.CNEE_CODE</td>
+                <td>@item.CNEE_NAME</td>
+                <td>@(item.ACTIVE_FLAG == 1 ? "Active" : "Inactive")</td>
+                <td>
+                    <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Hapus">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="modal fade" id="modalForm" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Form Consignee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalContent"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const modal = new bootstrap.Modal(document.getElementById("modalForm"));
+
+        $(document).ready(function () {
+            $('#dataTable').DataTable();
+
+            $('#btnAdd').click(function () {
+                $.get('/Consignee/Form', function (html) {
+                    $('#modalContent').html(html);
+                    modal.show();
+                    $('.select2').select2({ 
+                        dropdownParent: $('#modalForm'),
+                        placeholder: "Select an Option",
+                        allowClear: true,
+                        width: '100%' 
+                    });
+                });
+            });
+
+            $('.btnEdit').click(function () {
+                const id = $(this).data('id');
+                $.get('/Consignee/Form?id=' + id, function (html) {
+                    $('#modalContent').html(html);
+                    modal.show();
+                    $('.select2').select2({
+                        dropdownParent: $('#modalForm'),
+                        placeholder: "Select an Option",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                });
+            });
+
+            $('.btnDelete').click(function () {
+                if (!confirm("Yakin hapus data?")) return;
+                const id = $(this).data('id');
+                $.post('/Consignee/Delete', { id }, function () {
+                    location.reload();
+                });
+            });
+
+            $(document).on("submit", "#formConsignee", function (e) {
+                e.preventDefault();
+                $.post('/Consignee/Form', $(this).serialize())
+                    .done(function () {
+                        modal.hide();
+                        location.reload();
+                    })
+                    .fail(function () {
+                        alert("Gagal menyimpan data.");
+                    });
+            });
+        });
+    </script>
+}

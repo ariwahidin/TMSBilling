@@ -1,0 +1,62 @@
+﻿@model IEnumerable<TMSBilling.Models.VendorTruck>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Vendor Vehicle";
+}
+
+<div class="mb-3">
+    @* <h4>Truck List</h4> *@
+    <a class="btn btn-sm btn-primary" asp-action="Create">Add Truck</a>
+    <a class="btn btn-sm btn-primary" href="/Vendor/Index">Back</a>
+</div>
+
+<table class="table table-striped" id="truckTable">
+    <thead>
+        <tr>
+            <th>Vehicle No</th>
+            <th>Driver</th>
+            <th>Size</th>
+            <th>Vendor</th>
+            <th>Status</th>
+            <th style="width:100px;">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.vehicle_no</td>
+                <td>@item.vehicle_driver</td>
+                <td>@item.vehicle_size</td>
+                <td>@item.sup_code</td>
+                <td>@(item.vehicle_active == 1 ? "Aktif" : "Tidak Aktif")</td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@item.ID" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#truckTable').DataTable();
+
+            $(".btnDelete").click(function () {
+                if (!confirm("Yakin hapus data ini?")) return;
+
+                $.post("/VendorTruck/Delete", { id: $(this).data("id") }, function () {
+                    location.reload();
+                }).fail(function () {
+                    alert("Gagal menghapus data.");
+                });
+            });
+        });
+    </script>
+}

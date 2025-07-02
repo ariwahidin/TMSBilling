@@ -1,0 +1,69 @@
+﻿@model IEnumerable<TMSBilling.Models.Vendor>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Vendor Truck";
+}
+
+<div class="align-items-center mb-3">
+    @* <h4>Vendor List</h4> *@
+    <a class="btn btn-primary btn-sm" href="/Vendor/Create">
+        Add Vendor
+    </a>
+    <a class="btn btn-primary btn-sm" href="/VendorTruck/Index">
+        Vehicle
+    </a>
+</div>
+
+<table class="table table-bordered table-striped" id="vendorTable">
+    <thead>
+        <tr>
+            <th>Vendor ID</th>
+            <th>Vendor Name</th>
+            <th>City</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th style="width: 100px;">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var v in Model)
+        {
+            <tr>
+                <td>@v.SUP_CODE</td>
+                <td>@v.SUP_NAME</td>
+                <td>@v.SUP_CITY</td>
+                <td>@v.SUP_TEL</td>
+                <td>
+                    @(v.ACTIVE_FLAG == 1 ? "Aktif" : "Tidak Aktif")
+                </td>
+                <td>
+                    <a href="/Vendor/Edit/@v.ID" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@v.ID">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#vendorTable').DataTable();
+
+            $(".btnDelete").click(function () {
+                if (!confirm("Yakin hapus data ini?")) return;
+                const id = $(this).data("id");
+
+                $.post("/Vendor/Delete", { id }, function () {
+                    location.reload();
+                }).fail(function () {
+                    alert("Gagal menghapus data.");
+                });
+            });
+        });
+    </script>
+}

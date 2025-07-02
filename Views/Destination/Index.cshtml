@@ -1,0 +1,98 @@
+﻿@model IEnumerable<TMSBilling.Models.Destination>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Destination Area";
+}
+
+<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Destination</button>
+
+<table class="table table-bordered table-striped" id="destinationTable">
+    <thead>
+        <tr>
+            <th>Destination Name</th>
+            <th>Location Code</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.destination_code</td>
+                <td>@item.dest_loccode</td>
+                <td>
+                    <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal -->
+<div class="modal fade" id="destinationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Form Destination</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalContent"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#destinationTable').DataTable();
+            let modal = new bootstrap.Modal(document.getElementById("destinationModal"));
+
+            $("#btnAdd").click(function () {
+                $.get("/Destination/Form", function (html) {
+                    $("#modalContent").html(html);
+                    modal.show();
+                });
+            });
+
+            $(".btnEdit").click(function () {
+                const id = $(this).data("id");
+                $.get("/Destination/Form?id=" + id, function (html) {
+                    $("#modalContent").html(html);
+                    modal.show();
+                });
+            });
+
+            $(".btnDelete").click(function () {
+                if (!confirm("Yakin hapus data ini?")) return;
+                const id = $(this).data("id");
+
+                $.post("/Destination/Delete", { id }, function () {
+                    location.reload();
+                }).fail(function () {
+                    alert("Gagal menghapus data.");
+                });
+            });
+
+            $(document).on("submit", "#destinationForm", function (e) {
+                e.preventDefault();
+                $.ajax({
+                    type: "POST",
+                    url: "/Destination/Form",
+                    data: $(this).serialize(),
+                    success: function () {
+                        modal.hide();
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Gagal menyimpan data.");
+                    }
+                });
+            });
+        });
+    </script>
+}

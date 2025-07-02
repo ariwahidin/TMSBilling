@@ -1,0 +1,76 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using TMSBilling.Data;
+using TMSBilling.Models;
+
+public class CustomerGroupController : Controller
+{
+    private readonly AppDbContext _context;
+
+    public CustomerGroupController(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public IActionResult Index()
+    {
+        var list = _context.CustomerGroups.ToList();
+        return View(list);
+    }
+
+    public IActionResult Form(int? id)
+    {
+        var customerList = _context.Customers
+            .Select(c => new SelectListItem
+            {
+                Value = c.CUST_CODE,
+                Text = $"{c.CUST_CODE} - {c.CUST_NAME}"
+            }).ToList();
+
+        ViewBag.CustomerList = customerList;
+
+        if (id == null)
+            return PartialView("_Form", new CustomerGroup());
+
+        var data = _context.CustomerGroups.Find(id);
+        return PartialView("_Form", data);
+    }
+
+    [HttpPost]
+    public IActionResult Form(CustomerGroup model)
+    {
+        if (!ModelState.IsValid) return BadRequest();
+
+        if (model.ID == 0)
+        {
+            model.ENTRY_DATE = DateTime.Now;
+            _context.CustomerGroups.Add(model);
+        }
+        else
+        {
+            var data = _context.CustomerGroups.Find(model.ID);
+            if (data == null) return NotFound();
+
+            data.SUB_CODE = model.SUB_CODE;
+            data.CUST_CODE = model.CUST_CODE;
+            data.UPDATE_USER = model.UPDATE_USER;
+            data.UPDATE_DATE = DateTime.Now;
+        }
+
+        _context.SaveChanges();
+        return Ok();
+    }
+
+    [HttpPost]
+    public IActionResult Delete(int id)
+    {
+        var data = _context.CustomerGroups.Find(id);
+        if (data == null) return NotFound();
+
+        _context.CustomerGroups.Remove(data);
+        _context.SaveChanges();
+
+        return Ok();
+    }
+}
