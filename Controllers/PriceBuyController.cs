@@ -39,7 +39,7 @@ namespace TMSBilling.Controllers
             if (model.id_seq == 0)
             {
                 model.entry_date = DateTime.Now;
-                model.entry_user = User.Identity?.Name ?? "system";
+                model.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 _context.PriceBuys.Add(model);
             }
             else
@@ -75,7 +75,7 @@ namespace TMSBilling.Controllers
                 existing.rate_value = model.rate_value;
                 existing.active_flag = model.active_flag;
                 existing.update_date = DateTime.Now;
-                existing.update_user = User.Identity?.Name ?? "system";
+                existing.update_user = HttpContext.Session.GetString("username") ?? "System";
             }
 
             _context.SaveChanges();

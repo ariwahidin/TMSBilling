@@ -58,6 +58,7 @@ public class ConsigneeController : Controller
         if (existing == null)
         {
             model.ENTRY_DATE = DateTime.Now;
+            model.ENTRY_USER = HttpContext.Session.GetString("username");
             _context.Consignees.Add(model);
         }
         else
@@ -75,7 +76,7 @@ public class ConsigneeController : Controller
             existing.TAX_REG_NO = model.TAX_REG_NO;
             existing.ACTIVE_FLAG = model.ACTIVE_FLAG;
             existing.SUB_CODE = model.SUB_CODE;
-            existing.UPDATE_USER = model.UPDATE_USER;
+            existing.UPDATE_USER = HttpContext.Session.GetString("username");
             existing.UPDATE_DATE = DateTime.Now;
 
             // Tidak menyentuh existing.ID (identity)

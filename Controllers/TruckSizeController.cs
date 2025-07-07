@@ -44,13 +44,14 @@ public class TruckSizeController : Controller
 
         if (existing == null)
         {
+            model.entryuser= HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.TruckSizes.Add(model);
         }
         else
         {
             existing.trucksize_code = model.trucksize_code;
-            existing.updateuser = model.updateuser;
+            existing.updateuser = HttpContext.Session.GetString("username") ?? "System";
             existing.updatedate = DateTime.Now;
         }
 

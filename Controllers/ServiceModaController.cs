@@ -53,7 +53,7 @@ namespace TMSBilling.Controllers
 
                 existing.moda_name = model.moda_name;
                 existing.entry_date = DateTime.Now;
-                existing.entry_user = User.Identity?.Name ?? "system";
+                existing.entry_user = HttpContext.Session.GetString("username") ?? "System";
             }
 
             _context.SaveChanges();

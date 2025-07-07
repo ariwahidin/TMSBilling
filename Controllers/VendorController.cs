@@ -26,7 +26,6 @@ public class VendorController : Controller
 
     public IActionResult Create()
     {
-        //return View("Form", new Vendor());
         return View("Form", new Vendor
         {
             SUP_CODE = string.Empty // atau nilai default sesuai kebutuhan
@@ -38,6 +37,7 @@ public class VendorController : Controller
     {
         if (!ModelState.IsValid) return View("Form", model);
 
+        model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
         model.ENTRY_DATE = DateTime.Now;
         _context.Vendors.Add(model);
         _context.SaveChanges();
@@ -71,6 +71,7 @@ public class VendorController : Controller
         existing.SUP_PIC = model.SUP_PIC;
         existing.TAX_REG_NO = model.TAX_REG_NO;
         existing.ACTIVE_FLAG = model.ACTIVE_FLAG;
+        existing.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";
         existing.UPDATE_DATE = DateTime.Now;
 
         _context.SaveChanges();

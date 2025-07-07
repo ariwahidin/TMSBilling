@@ -43,6 +43,7 @@ public class OriginController : Controller
 
         if (existing == null)
         {
+            model.entryuser = HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.Origins.Add(model);
         }
@@ -50,7 +51,7 @@ public class OriginController : Controller
         {
             existing.origin_code = model.origin_code;
             existing.origin_loccode = model.origin_loccode;
-            existing.updateuser = model.updateuser;
+            existing.updateuser = HttpContext.Session.GetString("username") ?? "System";
             existing.updatedate = DateTime.Now;
         }
 

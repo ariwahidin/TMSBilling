@@ -34,7 +34,7 @@ public class PriceSellController : Controller
         if (model.id_seq == 0)
         {
             model.entry_date = DateTime.Now;
-            model.entry_user = "system";
+            model.entry_user = HttpContext.Session.GetString("username") ?? "System";
             _context.PriceSells.Add(model);
         }
         else
@@ -55,7 +55,7 @@ public class PriceSellController : Controller
             db.curr = model.curr;
             db.rate_value = model.rate_value;
             db.update_date = DateTime.Now;
-            db.update_user = "system";
+            db.update_user = HttpContext.Session.GetString("username") ?? "System";
         }
 
         _context.SaveChanges();

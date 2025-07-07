@@ -44,6 +44,7 @@ public class DestinationController : Controller
 
         if (existing == null)
         {
+            model.entryuser = HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.Destinations.Add(model);
         }
@@ -51,7 +52,7 @@ public class DestinationController : Controller
         {
             existing.destination_code = model.destination_code;
             existing.dest_loccode = model.dest_loccode;
-            existing.updateuser = model.updateuser;
+            existing.updateuser = HttpContext.Session.GetString("username") ?? "System"; ;
             existing.updatedate = DateTime.Now;
         }
 

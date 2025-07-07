@@ -46,7 +46,7 @@ namespace TMSBilling.Controllers
             if (existing == null)
             {
                 model.ENTRY_DATE = DateTime.Now;
-                model.ENTRY_USER = "admin";
+                model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
                 _context.CustomerMains.Add(model);
             }
             else
@@ -56,7 +56,7 @@ namespace TMSBilling.Controllers
                 existing.CUST_TEL = model.CUST_TEL;
                 existing.STATUS_FLAG = model.STATUS_FLAG;
                 existing.UPDATE_DATE = DateTime.Now;
-                existing.UPDATE_USER = "admin";
+                existing.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";
             }
 
             _context.SaveChanges();

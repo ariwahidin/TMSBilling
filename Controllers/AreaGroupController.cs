@@ -39,7 +39,7 @@ namespace TMSBilling.Controllers
             if (model.id_seq == 0)
             {
                 model.entry_date = DateTime.Now;
-                model.entry_user = User.Identity?.Name ?? "system";
+                model.entry_user = HttpContext.Session.GetString("username") ?? "system";
                 _context.AreaGroups.Add(model);
             }
             else
@@ -49,7 +49,7 @@ namespace TMSBilling.Controllers
 
                 existing.area_name = model.area_name;
                 existing.entry_date = DateTime.Now;
-                existing.entry_user = User.Identity?.Name ?? "system";
+                existing.entry_user = HttpContext.Session.GetString("username") ?? "system";
             }
 
             _context.SaveChanges();

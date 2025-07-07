@@ -46,6 +46,7 @@ public class CustomerGroupController : Controller
 
         if (model.ID == 0)
         {
+            model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
             model.ENTRY_DATE = DateTime.Now;
             _context.CustomerGroups.Add(model);
         }
@@ -56,7 +57,7 @@ public class CustomerGroupController : Controller
 
             data.SUB_CODE = model.SUB_CODE;
             data.CUST_CODE = model.CUST_CODE;
-            data.UPDATE_USER = model.UPDATE_USER;
+            data.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";
             data.UPDATE_DATE = DateTime.Now;
         }
 

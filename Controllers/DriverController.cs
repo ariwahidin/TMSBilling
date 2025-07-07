@@ -93,7 +93,7 @@ public class DriverController : Controller
         }
 
         model.date_entry = DateTime.Now;
-        model.user_entry = User.Identity?.Name ?? "system";
+        model.user_entry = HttpContext.Session.GetString("username") ?? "System";
 
         _context.Drivers.Add(model);
         _context.SaveChanges();
@@ -145,7 +145,7 @@ public class DriverController : Controller
         existing.terminate_reason = model.terminate_reason;
         existing.vehicle_type = model.vehicle_type;
 
-        existing.user_update = User.Identity?.Name ?? "system";
+        existing.user_update = HttpContext.Session.GetString("username") ?? "System";
         existing.date_update = DateTime.Now;
 
         _context.SaveChanges();

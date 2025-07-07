@@ -59,7 +59,7 @@ namespace TMSBilling.Controllers
                 {
                     // INSERT (create)
                     header.entry_date = DateTime.Now;
-                    header.entry_user = User.Identity?.Name ?? "system";
+                    header.entry_user = HttpContext.Session.GetString("username") ?? "System";
                     _context.Orders.Add(header);
                     _context.SaveChanges();
                 }
@@ -81,7 +81,7 @@ namespace TMSBilling.Controllers
                     existingHeader.serv_req = header.serv_req;
                     existingHeader.order_status = header.order_status;
                     existingHeader.update_date = DateTime.Now;
-                    existingHeader.update_user = User.Identity?.Name ?? "system";
+                    existingHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
 
                     _context.Orders.Update(existingHeader);
 
@@ -97,7 +97,9 @@ namespace TMSBilling.Controllers
                     detail.id_seq = 0; // pastikan tidak isi id_seq
                     detail.id_seq_order = header.id_seq;
                     detail.entry_date = DateTime.Now;
-                    detail.entry_user = User.Identity?.Name ?? "system";
+                    detail.entry_user = HttpContext.Session.GetString("username") ?? "System";
+                    detail.update_date= DateTime.Now;
+                    detail.update_user = HttpContext.Session.GetString("username") ?? "System";
                     _context.OrderDetails.Add(detail);
                 }
 
@@ -113,54 +115,5 @@ namespace TMSBilling.Controllers
                 return StatusCode(500, new { success = false, message = "Terjadi kesalahan: " + message });
             }
         }
-
-
-        //[HttpPost]
-        //public IActionResult Save([FromBody] OrderViewModel model)
-        //{
-        //    if (model == null || model.Header == null || model.Details == null)
-        //        return BadRequest(new { success = false, message = "Invalid data" });
-
-        //    using var trx = _context.Database.BeginTransaction();
-
-        //    try
-        //    {
-        //        var header = model.Header;
-
-        //        if (header.id_seq == 0)
-        //        {
-        //            header.entry_date = DateTime.Now;
-        //            header.entry_user = User.Identity?.Name ?? "system";
-        //            _context.Orders.Add(header);
-        //            _context.SaveChanges();
-        //        }
-        //        else
-        //        {
-        //            header.update_date = DateTime.Now;
-        //            header.update_user = User.Identity?.Name ?? "system";
-        //            _context.Orders.Update(header);
-        //            _context.OrderDetails.RemoveRange(_context.OrderDetails.Where(d => d.id_seq_order == header.id_seq));
-        //            _context.SaveChanges();
-        //        }
-
-        //        foreach (var d in model.Details)
-        //        {
-        //            d.id_seq_order = header.id_seq;
-        //            d.entry_date = DateTime.Now;
-        //            d.entry_user = User.Identity?.Name ?? "system";
-        //            _context.OrderDetails.Add(d);
-        //        }
-
-        //        _context.SaveChanges();
-        //        trx.Commit();
-
-        //        return Json(new { success = true, message = "Order berhasil disimpan." });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        trx.Rollback();
-        //        return StatusCode(500, new { success = false, message = "Error: " + ex.Message });
-        //    }
-        //}
     }
 }

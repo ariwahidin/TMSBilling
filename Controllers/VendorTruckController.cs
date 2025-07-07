@@ -95,7 +95,7 @@ public class VendorTruckController : Controller
         if (!ModelState.IsValid) return View("Form", model);
 
         model.entry_date = DateTime.Now;
-        model.entry_user = User.Identity?.Name ?? "system";
+        model.entry_user = HttpContext.Session.GetString("username") ?? "System";
 
         _context.VendorTrucks.Add(model);
         _context.SaveChanges();
@@ -138,7 +138,7 @@ public class VendorTruckController : Controller
         existing.vehicle_active = model.vehicle_active;
 
         existing.update_date = DateTime.Now;
-        existing.update_user = User.Identity?.Name ?? "system";
+        existing.update_user = HttpContext.Session.GetString("username") ?? "System";
 
         _context.SaveChanges();
         return RedirectToAction("Index");

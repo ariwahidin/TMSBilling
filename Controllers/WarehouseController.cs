@@ -44,6 +44,7 @@ public class WarehouseController : Controller
 
         if (existing == null)
         {
+            model.entryuser = HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.Warehouses.Add(model);
         }
@@ -51,7 +52,7 @@ public class WarehouseController : Controller
         {
             existing.wh_code = model.wh_code;
             existing.wh_name = model.wh_name;
-            existing.updateuser = model.updateuser;
+            existing.updateuser = HttpContext.Session.GetString("username") ?? "System";
             existing.updatedate = DateTime.Now;
         }
 
