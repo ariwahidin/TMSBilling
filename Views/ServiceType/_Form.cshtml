@@ -1,0 +1,16 @@
+﻿@model TMSBilling.Models.ServiceType
+
+<form asp-action="Save" method="post">
+    <input type="hidden" asp-for="id_seq" />
+
+    <div class="mb-3">
+        <label asp-for="serv_name" class="form-label">Service Name</label>
+        <input asp-for="serv_name" class="form-control" />
+        <span asp-validation-for="serv_name" class="text-danger"></span>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    </div>
+</form>

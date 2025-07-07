@@ -10,44 +10,54 @@
     <div class="row">
         <div class="col-md-5">
             <div class="mb-3 row">
-                <label class="col-sm-4 col-form-label text-end">Vendor Code</label>
+                <label class="col-sm-4 col-form-label text-end">Vendor ID</label>
                 <div class="col-sm-8">
-                    <input asp-for="sup_code" class="form-control" />
+                    <select asp-for="sup_code" asp-items="ViewBag.ListVendor" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
 
             <div class="mb-3 row">
-                <label class="col-sm-4 col-form-label text-end">Vehicle No</label>
+                <label class="col-sm-4 col-form-label text-end">Truck ID</label>
                 <div class="col-sm-8">
                     <input asp-for="vehicle_no" class="form-control" />
                 </div>
             </div>
 
             <div class="mb-3 row">
-                <label class="col-sm-4 col-form-label text-end">Merk</label>
+                <label class="col-sm-4 col-form-label text-end">Vehicle Merk</label>
                 <div class="col-sm-8">
-                    <input asp-for="vehicle_merk" class="form-control" />
+                    <select asp-for="vehicle_merk" asp-items="ViewBag.ListMerk" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
 
             <div class="mb-3 row">
-                <label class="col-sm-4 col-form-label text-end">Type</label>
+                <label class="col-sm-4 col-form-label text-end">Vehicle Type</label>
                 <div class="col-sm-8">
-                    <input asp-for="vehicle_type" class="form-control" />
+                    <select asp-for="vehicle_type" asp-items="ViewBag.ListType" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
 
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Door Type</label>
                 <div class="col-sm-8">
-                    <input asp-for="vehicle_doortype" class="form-control" />
+                    <select asp-for="vehicle_doortype" asp-items="ViewBag.ListDoorType" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
 
             <div class="mb-3 row">
-                <label class="col-sm-4 col-form-label text-end">Size</label>
+                <label class="col-sm-4 col-form-label text-end">Capacity</label>
                 <div class="col-sm-8">
-                    <input asp-for="vehicle_size" class="form-control" />
+                    <select asp-for="vehicle_size" asp-items="ViewBag.ListCapacity" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -121,9 +131,9 @@
             </div>
 
             <div class="mb-3 row">
-                <label class="col-sm-2 col-form-label text-end">Active</label>
+                <label class="col-sm-2 col-form-label text-end">Vehicle Status</label>
                 <div class="col-sm-10 d-flex align-items-center">
-                    <input type="hidden" name="vehicle_active" value="0" />
+                    @* <input type="hidden" name="vehicle_active" value="0" /> *@
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="activeSwitch"
                                name="vehicle_active" value="1"
@@ -144,3 +154,16 @@
         </div>
     </div>
 </form>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.select2').select2({
+                // dropdownParent: $('#modalForm'),
+                placeholder: "Select an Option",
+                allowClear: true,
+                width: '100%' // ini penting biar full lebar
+            });
+        })
+    </script>
+}

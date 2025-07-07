@@ -1,0 +1,77 @@
+﻿@model IEnumerable<TMSBilling.Models.PriceBuy>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Price Buy";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    @* <h4>Price Buy</h4> *@
+    <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Buy</button>
+</div>
+
+<table class="table table-bordered table-sm table-striped" id="priceBuyTable">
+    <thead>
+        <tr>
+            <th>Supplier</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Type</th>
+            <th>Moda</th>
+            <th>Buy 1</th>
+            <th>Active</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.sup_code</td>
+                <td>@item.origin</td>
+                <td>@item.dest</td>
+                <td>@item.serv_type</td>
+                <td>@item.serv_moda</td>
+                <td>@item.buy1?.ToString("N0")</td>
+                <td>@(item.active_flag == 1 ? "Yes" : "No")</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">Edit</button>
+                    <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?')">
+                        <input type="hidden" name="id" value="@item.id_seq" />
+                        <button type="submit" class="btn btn-danger btn-sm">Del</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Form Price Buy</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="formBody">
+                <!-- form will load here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function loadForm(id) {
+            $.get('/PriceBuy/Form', { id }, function (html) {
+                $('#formBody').html(html);
+                const modal = new bootstrap.Modal(document.getElementById('formModal'));
+                modal.show();
+            });
+        }
+
+        $(document).ready(() => {
+            $('#priceBuyTable').DataTable();
+        });
+    </script>
+}

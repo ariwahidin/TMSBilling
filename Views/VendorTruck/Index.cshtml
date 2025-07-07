@@ -6,7 +6,7 @@
 
 <div class="mb-3">
     @* <h4>Truck List</h4> *@
-    <a class="btn btn-sm btn-primary" asp-action="Create">Add Truck</a>
+    <a class="btn btn-sm btn-primary" asp-action="Form">Add Truck</a>
     <a class="btn btn-sm btn-primary" href="/Vendor/Index">Back</a>
 </div>
 
@@ -31,7 +31,7 @@
                 <td>@item.sup_code</td>
                 <td>@(item.vehicle_active == 1 ? "Aktif" : "Tidak Aktif")</td>
                 <td>
-                    <a asp-action="Edit" asp-route-id="@item.ID" class="btn btn-sm btn-warning">
+                    <a asp-action="Form" asp-route-id="@item.ID" class="btn btn-sm btn-warning">
                         <i class="bi bi-pencil-square"></i>
                     </a>
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID">

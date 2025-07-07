@@ -1,0 +1,75 @@
+﻿@model IEnumerable<TMSBilling.Models.PriceSell>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Price Sell";
+}
+<div class="d-flex justify-content-between mb-3">
+    <div>
+        <button class="btn btn-primary btn-sm" onclick="addNew()">Add Price Sell</button>
+        @* <a asp-action="ExportExcel" class="btn btn-success btn-sm">Export Data</a> *@
+    </div>
+</div>
+
+<div id="formContainer"></div>
+
+<table class="table table-bordered table-sm" id="priceSellTable">
+    <thead>
+        <tr>
+            <th>Customer</th>
+            <th>Origin</th>
+            <th>Dest</th>
+            <th>Service Type</th>
+            <th>Sell1</th>
+            <th>Valid</th>
+            <th>Status</th>
+            <th style="width:80px">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.cust_code</td>
+                <td>@item.origin</td>
+                <td>@item.dest</td>
+                <td>@item.serv_type</td>
+                <td>@item.sell1?.ToString("N2")</td>
+                <td>@item.valid_date?.ToString("yyyy-MM-dd")</td>
+                <td>@(item.active_flag == 1 ? "Aktif" : "Nonaktif")</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" onclick="edit(@item.id_seq)">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="remove(@item.id_seq)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        function addNew() {
+            $.get("/PriceSell/Form", function (res) {
+                $("#formContainer").html(res);
+                $("#priceSellModal").modal("show");
+            });
+        }
+
+        function edit(id) {
+            $.get("/PriceSell/Form", { id }, function (res) {
+                $("#formContainer").html(res);
+                $("#priceSellModal").modal("show");
+            });
+        }
+
+        function remove(id) {
+            if (!confirm("Yakin ingin menghapus data ini?")) return;
+            $.post("/PriceSell/Delete", { id }, function () {
+                location.reload();
+            });
+        }
+
+        $(document).ready(function () {
+            $('#priceSellTable').DataTable();
+        });
+    </script>
+}

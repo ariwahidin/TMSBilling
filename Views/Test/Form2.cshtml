@@ -1,0 +1,852 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Form Tabulator";
+}
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel-Style Form with Tabulator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tabulator/6.3.0/css/tabulator.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        } */
+
+        .form-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        .form-header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-title {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .header-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header-title {
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+            .header-title i {
+                margin-right: 8px;
+                color: #6c757d;
+            }
+
+        .select2-container--default .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                line-height: 36px;
+                padding-left: 12px;
+            }
+
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 36px;
+            }
+
+        .detail-section {
+            margin-top: 30px;
+        }
+
+        .detail-title {
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+            .detail-title i {
+                margin-right: 8px;
+                color: #6c757d;
+            }
+
+        .tabulator-container {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .tabulator .tabulator-header {
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+            .tabulator .tabulator-header .tabulator-col {
+                background: #f8f9fa;
+                border-right: 1px solid #dee2e6;
+            }
+
+                .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+                    padding: 8px 6px;
+                }
+
+                .tabulator .tabulator-header .tabulator-col .tabulator-col-title {
+                    font-weight: 600;
+                    color: #495057;
+                    font-size: 12px;
+                }
+
+        .tabulator .tabulator-row {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+            .tabulator .tabulator-row:nth-child(even) {
+                background: #f8f9fa;
+            }
+
+            .tabulator .tabulator-row:hover {
+                background: #e3f2fd !important;
+            }
+
+        .tabulator .tabulator-cell {
+            border-right: 1px solid #dee2e6;
+            padding: 2px 4px;
+        }
+
+            .tabulator .tabulator-cell input,
+            .tabulator .tabulator-cell select {
+                width: 100%;
+                border: none;
+                background: transparent;
+                padding: 6px 8px;
+                font-size: 12px;
+                outline: none;
+                min-height: 28px;
+            }
+
+                .tabulator .tabulator-cell input:focus,
+                .tabulator .tabulator-cell select:focus {
+                    background: #fff;
+                    border: 1px solid #007bff;
+                    border-radius: 2px;
+                }
+
+        .number-input {
+            text-align: right;
+        }
+
+        .action-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.3s;
+        }
+
+            .action-btn:hover {
+                background: #c82333;
+            }
+
+        .table-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-start;
+        }
+
+        .btn-add-row {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+            .btn-add-row:hover {
+                background: #218838;
+            }
+
+        .btn-export {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+            .btn-export:hover {
+                background: #138496;
+            }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            justify-content: flex-end;
+        }
+
+        .btn-save {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+            .btn-save:hover {
+                background: #0056b3;
+            }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+            .btn-cancel:hover {
+                background: #545b62;
+            }
+
+        .row-number {
+            background: #f8f9fa;
+            text-align: center;
+            font-weight: 600;
+            color: #6c757d;
+            width: 50px;
+        }
+
+        .tabulator-editing {
+            background: #fff3cd !important;
+        }
+
+        .tabulator .tabulator-footer {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="form-header">
+            <h1 class="form-title">
+                <i class="fas fa-file-invoice"></i>
+                Form Input Data dengan Tabulator
+            </h1>
+        </div>
+
+        <form id="mainForm">
+            <!-- Header Section -->
+            <div class="header-section">
+                <div class="header-title">
+                    <i class="fas fa-info-circle"></i>
+                    Header Information
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="vendorId" class="form-label">Vendor ID</label>
+                        <select id="vendorId" name="vendorId" class="form-select select2">
+                            <option value="">Select Vendor</option>
+                            <option value="VND001">VND001 - PT. Vendor A</option>
+                            <option value="VND002">VND002 - PT. Vendor B</option>
+                            <option value="VND003">VND003 - PT. Vendor C</option>
+                            <option value="VND004">VND004 - PT. Vendor D</option>
+                            <option value="VND005">VND005 - PT. Vendor E</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label for="currency" class="form-label">Currency</label>
+                        <select id="currency" name="currency" class="form-select select2">
+                            <option value="">Select Currency</option>
+                            <option value="IDR">IDR - Indonesian Rupiah</option>
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="SGD">SGD - Singapore Dollar</option>
+                            <option value="JPY">JPY - Japanese Yen</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label for="origin" class="form-label">Origin</label>
+                        <select id="origin" name="origin" class="form-select select2">
+                            <option value="">Select Origin</option>
+                            <option value="JKT">JKT - Jakarta</option>
+                            <option value="SBY">SBY - Surabaya</option>
+                            <option value="BDG">BDG - Bandung</option>
+                            <option value="MDN">MDN - Medan</option>
+                            <option value="DPS">DPS - Denpasar</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label for="destination" class="form-label">Destination</label>
+                        <select id="destination" name="destination" class="form-select select2">
+                            <option value="">Select Destination</option>
+                            <option value="JKT">JKT - Jakarta</option>
+                            <option value="SBY">SBY - Surabaya</option>
+                            <option value="BDG">BDG - Bandung</option>
+                            <option value="MDN">MDN - Medan</option>
+                            <option value="DPS">DPS - Denpasar</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Section -->
+            <div class="detail-section">
+                <div class="detail-title">
+                    <i class="fas fa-table"></i>
+                    Detail Information
+                </div>
+
+                <div class="tabulator-container">
+                    <div id="data-table"></div>
+                </div>
+
+                <div class="table-actions">
+                    <button type="button" class="btn-add-row" onclick="addRow()">
+                        <i class="fas fa-plus"></i> Add Row
+                    </button>
+                    <button type="button" class="btn-export" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="resetForm()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tabulator/6.3.0/js/tabulator.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        let table;
+
+        $(document).ready(function() {
+            // Initialize Select2
+            $('.select2').select2({
+                width: '100%',
+                placeholder: function() {
+                    return $(this).data('placeholder') || 'Select an option';
+                }
+            });
+
+            // Initialize Tabulator
+            table = new Tabulator("#data-table", {
+                height: 400,
+                layout: "fitData",
+                resizableColumns: true,
+                movableColumns: true,
+                persistence: true,
+                addRowPos: "bottom",
+                history: true,
+                pagination: false,
+                clipboard: true,
+                clipboardCopyConfig: {
+                    columnHeaders: true,
+                    columnGroups: false,
+                    rowGroups: false,
+                },
+                clipboardPasteConfig: {
+                    paste: "replace",
+                    allowCells: true,
+                    allowColumns: true,
+                    allowRows: true,
+                },
+                keybindings: {
+                    "deleteRow": "del",
+                    "copyToClipboard": "ctrl+67",
+                    "pasteFromClipboard": "ctrl+86",
+                    "undo": "ctrl+90",
+                    "redo": "ctrl+89",
+                },
+                columns: [
+                    {
+                        title: "#",
+                        field: "id",
+                        width: 50,
+                        hozAlign: "center",
+                        headerSort: false,
+                        frozen: true,
+                        cssClass: "row-number",
+                        formatter: function(cell, formatterParams, onRendered) {
+                            return cell.getRow().getPosition(true);
+                        }
+                    },
+                    {
+                        title: "Category",
+                        field: "category",
+                        width: 120,
+                        editor: "select",
+                        editorParams: {
+                            values: {
+                                "": "Select",
+                                "CAT1": "Category 1",
+                                "CAT2": "Category 2",
+                                "CAT3": "Category 3",
+                                "CAT4": "Category 4",
+                                "CAT5": "Category 5"
+                            }
+                        },
+                        validator: "required"
+                    },
+                    {
+                        title: "Amount 1",
+                        field: "amount1",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 2",
+                        field: "amount2",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 3",
+                        field: "amount3",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 4",
+                        field: "amount4",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 5",
+                        field: "amount5",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 6",
+                        field: "amount6",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 7",
+                        field: "amount7",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 8",
+                        field: "amount8",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 9",
+                        field: "amount9",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Amount 10",
+                        field: "amount10",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Status",
+                        field: "status",
+                        width: 100,
+                        editor: "select",
+                        editorParams: {
+                            values: {
+                                "": "Select",
+                                "ACTIVE": "Active",
+                                "INACTIVE": "Inactive",
+                                "PENDING": "Pending"
+                            }
+                        },
+                        validator: "required"
+                    },
+                    {
+                        title: "Amount 11",
+                        field: "amount11",
+                        width: 100,
+                        editor: "number",
+                        editorParams: {
+                            min: 0,
+                            step: 0.01,
+                            verticalNavigation: "editor"
+                        },
+                        hozAlign: "right",
+                        formatter: "money",
+                        formatterParams: {
+                            decimal: ".",
+                            thousand: ",",
+                            precision: 2
+                        }
+                    },
+                    {
+                        title: "Action",
+                        field: "actions",
+                        width: 80,
+                        hozAlign: "center",
+                        headerSort: false,
+                        cellClick: function(e, cell) {
+                            if (table.getDataCount() > 1) {
+                                cell.getRow().delete();
+                            } else {
+                                alert('Minimal harus ada 1 baris data.');
+                            }
+                        },
+                        formatter: function(cell, formatterParams, onRendered) {
+                            return "<button class='action-btn' title='Delete Row'><i class='fas fa-trash'></i></button>";
+                        }
+                    }
+                ],
+                data: [
+                    {
+                        category: "",
+                        amount1: 0,
+                        amount2: 0,
+                        amount3: 0,
+                        amount4: 0,
+                        amount5: 0,
+                        amount6: 0,
+                        amount7: 0,
+                        amount8: 0,
+                        amount9: 0,
+                        amount10: 0,
+                        status: "",
+                        amount11: 0
+                    }
+                ]
+            });
+
+            // Form submit handler
+            $('#mainForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const formData = {
+                    header: {
+                        vendorId: $('#vendorId').val(),
+                        currency: $('#currency').val(),
+                        origin: $('#origin').val(),
+                        destination: $('#destination').val()
+                    },
+                    details: table.getData()
+                };
+
+                // Validate data
+                if (!formData.header.vendorId || !formData.header.currency || !formData.header.origin || !formData.header.destination) {
+                    alert('Please fill all header fields!');
+                    return;
+                }
+
+                // Log payload to console
+                console.log('Form Payload:', JSON.stringify(formData, null, 2));
+
+                // Show success message
+                alert('Data saved successfully! Check console for payload.');
+            });
+
+            // Table events
+            table.on("cellEdited", function(cell) {
+                console.log("Cell edited:", cell.getField(), cell.getValue());
+            });
+
+            table.on("rowDeleted", function(row) {
+                console.log("Row deleted:", row.getData());
+            });
+
+            table.on("rowAdded", function(row) {
+                console.log("Row added:", row.getData());
+            });
+        });
+
+        function addRow() {
+            table.addRow({
+                category: "",
+                amount1: 0,
+                amount2: 0,
+                amount3: 0,
+                amount4: 0,
+                amount5: 0,
+                amount6: 0,
+                amount7: 0,
+                amount8: 0,
+                amount9: 0,
+                amount10: 0,
+                status: "",
+                amount11: 0
+            });
+        }
+
+        function exportToExcel() {
+            table.download("xlsx", "data.xlsx", {
+                sheetName: "Detail Data"
+            });
+        }
+
+        function resetForm() {
+            $('#mainForm')[0].reset();
+            $('.select2').val(null).trigger('change');
+
+            // Reset table
+            table.clearData();
+            table.addRow({
+                category: "",
+                amount1: 0,
+                amount2: 0,
+                amount3: 0,
+                amount4: 0,
+                amount5: 0,
+                amount6: 0,
+                amount7: 0,
+                amount8: 0,
+                amount9: 0,
+                amount10: 0,
+                status: "",
+                amount11: 0
+            });
+        }
+
+        // Load data for edit mode
+        function loadData(data) {
+            // Load header data
+            $('#vendorId').val(data.header.vendorId).trigger('change');
+            $('#currency').val(data.header.currency).trigger('change');
+            $('#origin').val(data.header.origin).trigger('change');
+            $('#destination').val(data.header.destination).trigger('change');
+
+            // Load detail data
+            table.setData(data.details);
+        }
+
+        // Example usage for edit mode
+        // loadData({
+        //     header: {
+        //         vendorId: "VND001",
+        //         currency: "IDR",
+        //         origin: "JKT",
+        //         destination: "SBY"
+        //     },
+        //     details: [
+        //         {
+        //             category: "CAT1",
+        //             amount1: 1000000,
+        //             amount2: 2000000,
+        //             amount3: 3000000,
+        //             amount4: 4000000,
+        //             amount5: 5000000,
+        //             amount6: 6000000,
+        //             amount7: 7000000,
+        //             amount8: 8000000,
+        //             amount9: 9000000,
+        //             amount10: 10000000,
+        //             status: "ACTIVE",
+        //             amount11: 11000000
+        //         },
+        //         {
+        //             category: "CAT2",
+        //             amount1: 500000,
+        //             amount2: 1500000,
+        //             amount3: 2500000,
+        //             amount4: 3500000,
+        //             amount5: 4500000,
+        //             amount6: 5500000,
+        //             amount7: 6500000,
+        //             amount8: 7500000,
+        //             amount9: 8500000,
+        //             amount10: 9500000,
+        //             status: "PENDING",
+        //             amount11: 10500000
+        //         }
+        //     ]
+        // });
+    </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+﻿@model IEnumerable<TMSBilling.Models.Driver>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Driver Profile";
+}
+
+<div class="mb-3">
+    <a class="btn btn-primary btn-sm" href="/Driver/Create">
+        Add Driver
+    </a>
+    <a class="btn btn-success btn-sm" href="/Driver/ExportExcel">
+            Export Data
+    </a>
+</div>
+
+<table class="table table-bordered table-striped" id="driverTable">
+    <thead>
+        <tr>
+            <th>Driver ID</th>
+            <th>Name</th>
+            <th>Vendor</th>
+            <th>SIM</th>
+            <th>Status</th>
+            <th>Photo</th>
+            <th style="width: 100px;">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <tr>
+                <td>@d.driver_id</td>
+                <td>@d.driver_name</td>
+                <td>@d.vendor_id</td>
+                <td>@d.driver_sim</td>
+                <td>
+                    @(d.driver_status == 1 ? "Aktif" : "Tidak Aktif")
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(d.driver_photo))
+                    {
+                        <img src="@d.driver_photo" width="60" height="60" class="rounded border" />
+                    }
+                </td>
+                <td>
+                    <a href="/Driver/Edit/@d.ID" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@d.ID">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#driverTable').DataTable();
+
+            $(".btnDelete").click(function () {
+                if (!confirm("Yakin hapus driver ini?")) return;
+                const id = $(this).data("id");
+
+                $.post("/Driver/Delete", { id }, function () {
+                    location.reload();
+                }).fail(function () {
+                    alert("Gagal menghapus driver.");
+                });
+            });
+        });
+    </script>
+}

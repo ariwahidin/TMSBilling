@@ -1,0 +1,16 @@
+﻿@model TMSBilling.Models.ServiceModa
+
+<form asp-action="Save" method="post">
+    <input type="hidden" asp-for="id_seq" />
+
+    <div class="mb-3">
+        <label asp-for="moda_name" class="form-label">Moda Name</label>
+        <input asp-for="moda_name" class="form-control" />
+        <span asp-validation-for="moda_name" class="text-danger"></span>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    </div>
+</form>

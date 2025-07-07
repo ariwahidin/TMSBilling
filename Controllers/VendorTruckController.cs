@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using TMSBilling.Data;
 using TMSBilling.Models;
 
@@ -17,12 +18,72 @@ public class VendorTruckController : Controller
         return View(list);
     }
 
-    public IActionResult Create()
+    public IActionResult Form(int? id)
     {
-        return View("Form", new VendorTruck { 
-            sup_code = string.Empty,
-            vehicle_no  = string.Empty,
-        });
+        var listVendor = _context.Vendors
+            .Select(v => new SelectListItem {
+                Value = v.SUP_CODE,
+                Text = $"{v.SUP_CODE} - {v.SUP_NAME}"
+            }).ToList();
+
+        var listCapacity = _context.TruckSizes
+            .Select(x => new SelectListItem {
+                Value = x.trucksize_code,
+                Text = x.trucksize_code
+            }).ToList();
+
+        var listMerk = new List<SelectListItem> { 
+            new SelectListItem {Value = "DAIHATSU", Text = "DAIHATSU"},
+            new SelectListItem {Value = "GRANDMAX", Text = "GRANDMAX"},
+            new SelectListItem {Value = "HINO", Text = "HINO"},
+            new SelectListItem {Value = "ISUZU", Text = "ISUZU"},
+            new SelectListItem {Value = "MITSUBISHI", Text = "MITSUBISHI"},
+            new SelectListItem {Value = "NISSAN", Text = "NISSAN"},
+            new SelectListItem {Value = "SUZUKI", Text = "SUZUKI"},
+            new SelectListItem {Value = "TOYOTA", Text = "TOYOTA"},
+            new SelectListItem {Value = "UD QUESTER", Text = "UD QUESTER"},
+        };
+
+        var listType = new List<SelectListItem>
+        {
+            new SelectListItem {Value = "BLIND VAN", Text = "BLIND VAN"},
+            new SelectListItem {Value = "BUILT UP", Text = "BUILT UP"},
+            new SelectListItem {Value = "CARRY", Text = "CARRY"},
+            new SelectListItem {Value = "CDD", Text = "CDD"},
+            new SelectListItem {Value = "CDD LONG", Text = "CDD LONG"},
+            new SelectListItem {Value = "CDE", Text = "CDE"},
+            new SelectListItem {Value = "FUSO", Text = "FUSO"},
+            new SelectListItem {Value = "HINO", Text = "HINO"},
+            new SelectListItem {Value = "L300", Text = "L300"},
+            new SelectListItem {Value = "TRONTON", Text = "TRONTON"},
+            new SelectListItem {Value = "WINGBOX", Text = "WINGBOX"},
+        };
+
+        var listDoorType = new List<SelectListItem> {
+            new SelectListItem {Value = "PINTU BELAKANG", Text =  "PINTU BELAKANG"},
+            new SelectListItem {Value = "PINTU DEPAN", Text = "PINTU DEPAN" },
+            new SelectListItem {Value = "WING BOX", Text = "WING BOX"},
+        };
+
+        ViewBag.ListVendor = listVendor;
+        ViewBag.ListMerk = listMerk;
+        ViewBag.ListType = listType;
+        ViewBag.ListDoorType = listDoorType;
+        ViewBag.ListCapacity = listCapacity;
+
+        if(id == null)
+            return View("Form", new VendorTruck
+            {
+                sup_code = string.Empty,
+                vehicle_no = string.Empty,
+            });
+
+        var data = _context.VendorTrucks.Find(id);
+            
+        if (data == null) 
+            return NotFound();
+
+        return View("Form", data);
     }
 
     [HttpPost]

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250705215139_CreateTableJob")]
+    partial class CreateTableJob
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -653,92 +656,6 @@ namespace TMSBilling.Migrations
                     b.HasKey("id_seq");
 
                     b.ToTable("TRC_JOB");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.JobPOD", b =>
-                {
-                    b.Property<int>("id_seq")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id_seq"));
-
-                    b.Property<DateTime?>("arriv_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("arriv_pic")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("arriv_time")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<DateTime?>("entry_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("entry_user")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("inv_no")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("jobid")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("outorigin_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("outorigin_time")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("pod_remark")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("pod_ret_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("pod_ret_pic")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("pod_ret_time")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<DateTime?>("pod_send_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("pod_send_pic")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("pod_send_time")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<byte?>("pod_status")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("spd_no")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<DateTime?>("update_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("update_user")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("id_seq");
-
-                    b.ToTable("TRC_JOB_POD");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.Order", b =>

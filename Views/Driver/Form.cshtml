@@ -1,0 +1,106 @@
+﻿@model TMSBilling.Models.Driver
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = Model.ID == 0 ? "Add Driver" : "Edit Driver";
+}
+
+<form asp-action="@(Model.ID == 0 ? "Create" : "Edit")" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="ID" />
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="mb-3 row d-none">
+                <label class="col-sm-4 col-form-label text-end">Driver ID</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_id" class="form-control" readonly />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Driver Name</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_name" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Vendor ID</label>
+                <div class="col-sm-8">
+                    <input asp-for="vendor_id" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Birthday</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_birth" type="date" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Driver Address</label>
+                <div class="col-sm-8">
+                    <textarea asp-for="driver_address" class="form-control"></textarea>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">SIM No.</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_sim" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">SIM Expired</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_sim_exp" type="date" class="form-control" />
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">NIK E-KTP</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_nik" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Vehicle Type</label>
+                <div class="col-sm-8">
+                    <input asp-for="vehicle_type" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Driver Remark</label>
+                <div class="col-sm-8">
+                    <input asp-for="driver_remark" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Driver Photo</label>
+                <div class="col-sm-8">
+                    <input type="file" name="photoFile" class="form-control" />
+                    @if (!string.IsNullOrEmpty(Model.driver_photo))
+                    {
+                        <img src="@Model.driver_photo" alt="Photo" width="120" class="mt-2 border rounded" />
+                    }
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Driver Status</label>
+                <div class="col-sm-8 d-flex align-items-center">
+                    @* <input type="hidden" name="driver_status" value="0" /> *@
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="driver_status" value="1"
+                               @(Model.driver_status == 1 ? "checked" : "") />
+                        <label class="form-check-label ms-2">Active</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-10 text-end">
+            <a asp-action="Index" class="btn btn-secondary">Back</a>
+            <a asp-action="Create" class="btn btn-info">Reset</a>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </div>
+</form>

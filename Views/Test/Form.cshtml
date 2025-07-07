@@ -1,0 +1,593 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Form Bootstrap";
+}
+
+<style>
+    .form-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+
+    .form-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .form-title {
+        color: #2c3e50;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .header-section {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .header-title {
+        color: #495057;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+        .header-title i {
+            margin-right: 8px;
+            color: #6c757d;
+        }
+
+    .select2-container--default .select2-selection--single {
+        height: 25px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 25px;
+            padding-left: 12px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 25px;
+        }
+
+    .detail-section {
+        margin-top: 30px;
+    }
+
+    .detail-title {
+        color: #495057;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+        .detail-title i {
+            margin-right: 8px;
+            color: #6c757d;
+        }
+
+    .excel-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+        .excel-table th {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 8px 6px;
+            text-align: center;
+            font-weight: 600;
+            color: #495057;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .excel-table td {
+            border: 1px solid #dee2e6;
+            padding: 2px;
+            vertical-align: middle;
+        }
+
+        .excel-table input,
+        .excel-table select {
+            width: 100%;
+            border: none;
+            padding: 6px 8px;
+            font-size: 12px;
+            background: transparent;
+            outline: none;
+            min-height: 30px;
+        }
+
+            .excel-table input:focus,
+            .excel-table select:focus {
+                background: #e3f2fd;
+            }
+
+        .excel-table .number-input {
+            text-align: right;
+        }
+
+    .action-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.3s;
+    }
+
+        .action-btn:hover {
+            background: #c82333;
+        }
+
+    .btn-add-row {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+        transition: background 0.3s;
+    }
+
+        .btn-add-row:hover {
+            background: #218838;
+        }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e9ecef;
+        justify-content: flex-end;
+    }
+
+    .btn-save {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+
+        .btn-save:hover {
+            background: #0056b3;
+        }
+
+    .btn-cancel {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+
+        .btn-cancel:hover {
+            background: #545b62;
+        }
+
+    .col-narrow {
+        width: 80px;
+    }
+
+    .col-action {
+        width: 60px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+    }
+
+    .row-number {
+        background: #f8f9fa;
+        text-align: center;
+        font-weight: 600;
+        color: #6c757d;
+        width: 40px;
+    }
+</style>
+<div class="form-container">
+    @* <div class="form-header">
+        <h1 class="form-title">
+            <i class="fas fa-file-invoice"></i>
+            Form Input Data
+        </h1>
+    </div> *@
+
+    <form id="mainForm">
+        <!-- Header Section -->
+        <div class="header-section">
+            @* <div class="header-title">
+                <i class="fas fa-info-circle"></i>
+                Header Information
+            </div> *@
+
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="vendorId" class="form-label">Vendor ID</label>
+                    <select id="vendorId" name="vendorId" class="form-select select2">
+                        <option value="">Select Vendor</option>
+                        <option value="VND001">VND001 - PT. Vendor A</option>
+                        <option value="VND002">VND002 - PT. Vendor B</option>
+                        <option value="VND003">VND003 - PT. Vendor C</option>
+                        <option value="VND004">VND004 - PT. Vendor D</option>
+                        <option value="VND005">VND005 - PT. Vendor E</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="currency" class="form-label">Currency</label>
+                    <select id="currency" name="currency" class="form-select select2">
+                        <option value="">Select Currency</option>
+                        <option value="IDR">IDR - Indonesian Rupiah</option>
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="SGD">SGD - Singapore Dollar</option>
+                        <option value="JPY">JPY - Japanese Yen</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="origin" class="form-label">Origin</label>
+                    <select id="origin" name="origin" class="form-select select2">
+                        <option value="">Select Origin</option>
+                        <option value="JKT">JKT - Jakarta</option>
+                        <option value="SBY">SBY - Surabaya</option>
+                        <option value="BDG">BDG - Bandung</option>
+                        <option value="MDN">MDN - Medan</option>
+                        <option value="DPS">DPS - Denpasar</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="destination" class="form-label">Destination</label>
+                    <select id="destination" name="destination" class="form-select select2">
+                        <option value="">Select Destination</option>
+                        <option value="JKT">JKT - Jakarta</option>
+                        <option value="SBY">SBY - Surabaya</option>
+                        <option value="BDG">BDG - Bandung</option>
+                        <option value="MDN">MDN - Medan</option>
+                        <option value="DPS">DPS - Denpasar</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Section -->
+        <div class="detail-section">
+            @* <div class="detail-title">
+                <i class="fas fa-table"></i>
+                Detail Information
+            </div> *@
+
+            <div class="table-container">
+                <table class="excel-table">
+                    <thead>
+                        <tr>
+                            <th class="row-number">#</th>
+                            <th class="col-narrow">Category</th>
+                            <th class="col-narrow">Amount 1</th>
+                            <th class="col-narrow">Amount 2</th>
+                            <th class="col-narrow">Amount 3</th>
+                            <th class="col-narrow">Amount 4</th>
+                            <th class="col-narrow">Amount 5</th>
+                            <th class="col-narrow">Amount 6</th>
+                            <th class="col-narrow">Amount 7</th>
+                            <th class="col-narrow">Amount 8</th>
+                            <th class="col-narrow">Amount 9</th>
+                            <th class="col-narrow">Amount 10</th>
+                            <th class="col-narrow">Status</th>
+                            <th class="col-narrow">Amount 11</th>
+                            <th class="col-action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailTableBody">
+                        <tr>
+                            <td class="row-number">1</td>
+                            <td>
+                                <select name="details[0].category" class="form-control">
+                                    <option value="">Select</option>
+                                    <option value="CAT1">Category 1</option>
+                                    <option value="CAT2">Category 2</option>
+                                    <option value="CAT3">Category 3</option>
+                                </select>
+                            </td>
+                            <td><input type="number" name="details[0].amount1" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount2" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount3" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount4" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount5" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount6" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount7" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount8" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount9" class="form-control number-input" step="0.01"></td>
+                            <td><input type="number" name="details[0].amount10" class="form-control number-input" step="0.01"></td>
+                            <td>
+                                <select name="details[0].status" class="form-control">
+                                    <option value="">Select</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="INACTIVE">Inactive</option>
+                                    <option value="PENDING">Pending</option>
+                                </select>
+                            </td>
+                            <td><input type="number" name="details[0].amount11" class="form-control number-input" step="0.01"></td>
+                            <td><button type="button" class="action-btn" onclick="deleteRow(this)"><i class="fas fa-trash"></i></button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button" class="btn-add-row" onclick="addRow()">
+                <i class="fas fa-plus"></i> Add Row
+            </button>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="button" class="btn-cancel btn-sm" onclick="resetForm()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="submit" class="btn-save btn-sm">
+                <i class="fas fa-save"></i> Save
+            </button>
+        </div>
+    </form>
+</div>
+@section Scripts {
+
+<script>
+    let rowIndex = 1;
+
+    $(document).ready(function() {
+        // Initialize Select2
+        $('.select2').select2({
+            width: '100%',
+            placeholder: function() {
+                return $(this).data('placeholder') || 'Select an option';
+            }
+        });
+
+        // Form submit handler
+        $('#mainForm').on('submit', function(e) {
+            e.preventDefault();
+
+            const formData = {
+                header: {
+                    vendorId: $('#vendorId').val(),
+                    currency: $('#currency').val(),
+                    origin: $('#origin').val(),
+                    destination: $('#destination').val()
+                },
+                details: []
+            };
+
+            // Collect detail data
+            $('#detailTableBody tr').each(function() {
+                const row = $(this);
+                const detail = {
+                    category: row.find('select[name$=".category"]').val(),
+                    amount1: parseFloat(row.find('input[name$=".amount1"]').val()) || 0,
+                    amount2: parseFloat(row.find('input[name$=".amount2"]').val()) || 0,
+                    amount3: parseFloat(row.find('input[name$=".amount3"]').val()) || 0,
+                    amount4: parseFloat(row.find('input[name$=".amount4"]').val()) || 0,
+                    amount5: parseFloat(row.find('input[name$=".amount5"]').val()) || 0,
+                    amount6: parseFloat(row.find('input[name$=".amount6"]').val()) || 0,
+                    amount7: parseFloat(row.find('input[name$=".amount7"]').val()) || 0,
+                    amount8: parseFloat(row.find('input[name$=".amount8"]').val()) || 0,
+                    amount9: parseFloat(row.find('input[name$=".amount9"]').val()) || 0,
+                    amount10: parseFloat(row.find('input[name$=".amount10"]').val()) || 0,
+                    status: row.find('select[name$=".status"]').val(),
+                    amount11: parseFloat(row.find('input[name$=".amount11"]').val()) || 0
+                };
+
+                formData.details.push(detail);
+            });
+
+            // Log payload to console
+            console.log('Form Payload:', JSON.stringify(formData, null, 2));
+
+            // Show success message
+            alert('Data saved successfully! Check console for payload.');
+        });
+    });
+
+    function addRow() {
+        const newRow = `
+            <tr>
+                <td class="row-number">${rowIndex + 1}</td>
+                <td>
+                    <select name="details[${rowIndex}].category" class="form-control">
+                        <option value="">Select</option>
+                        <option value="CAT1">Category 1</option>
+                        <option value="CAT2">Category 2</option>
+                        <option value="CAT3">Category 3</option>
+                    </select>
+                </td>
+                <td><input type="number" name="details[${rowIndex}].amount1" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount2" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount3" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount4" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount5" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount6" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount7" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount8" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount9" class="form-control number-input" step="0.01"></td>
+                <td><input type="number" name="details[${rowIndex}].amount10" class="form-control number-input" step="0.01"></td>
+                <td>
+                    <select name="details[${rowIndex}].status" class="form-control">
+                        <option value="">Select</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="INACTIVE">Pending</option>
+                    </select>
+                </td>
+                <td><input type="number" name="details[${rowIndex}].amount11" class="form-control number-input" step="0.01"></td>
+                <td><button type="button" class="action-btn" onclick="deleteRow(this)"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `;
+
+        $('#detailTableBody').append(newRow);
+        rowIndex++;
+        updateRowNumbers();
+    }
+
+    function deleteRow(button) {
+        if ($('#detailTableBody tr').length > 1) {
+            $(button).closest('tr').remove();
+            updateRowNumbers();
+        } else {
+            alert('Minimal harus ada 1 baris data.');
+        }
+    }
+
+    function updateRowNumbers() {
+        $('#detailTableBody tr').each(function(index) {
+            $(this).find('.row-number').text(index + 1);
+        });
+    }
+
+    function resetForm() {
+        $('#mainForm')[0].reset();
+        $('.select2').val(null).trigger('change');
+
+        // Reset detail table to 1 row
+        $('#detailTableBody').empty();
+        rowIndex = 1;
+        addRow();
+    }
+
+    // Load data for edit mode (example function)
+    function loadData(data) {
+        // Load header data
+        $('#vendorId').val(data.header.vendorId).trigger('change');
+        $('#currency').val(data.header.currency).trigger('change');
+        $('#origin').val(data.header.origin).trigger('change');
+        $('#destination').val(data.header.destination).trigger('change');
+
+        // Clear existing rows
+        $('#detailTableBody').empty();
+
+        // Load detail data
+        data.details.forEach(function(detail, index) {
+            if (index === 0) {
+                rowIndex = 0;
+            }
+            addRow();
+
+            const row = $('#detailTableBody tr').last();
+            row.find('select[name$=".category"]').val(detail.category);
+            row.find('input[name$=".amount1"]').val(detail.amount1);
+            row.find('input[name$=".amount2"]').val(detail.amount2);
+            row.find('input[name$=".amount3"]').val(detail.amount3);
+            row.find('input[name$=".amount4"]').val(detail.amount4);
+            row.find('input[name$=".amount5"]').val(detail.amount5);
+            row.find('input[name$=".amount6"]').val(detail.amount6);
+            row.find('input[name$=".amount7"]').val(detail.amount7);
+            row.find('input[name$=".amount8"]').val(detail.amount8);
+            row.find('input[name$=".amount9"]').val(detail.amount9);
+            row.find('input[name$=".amount10"]').val(detail.amount10);
+            row.find('select[name$=".status"]').val(detail.status);
+            row.find('input[name$=".amount11"]').val(detail.amount11);
+        });
+    }
+
+    // Example usage for edit mode
+    // loadData({
+    //     header: {
+    //         vendorId: "VND001",
+    //         currency: "IDR",
+    //         origin: "JKT",
+    //         destination: "SBY"
+    //     },
+    //     details: [
+    //         {
+    //             category: "CAT1",
+    //             amount1: 1000,
+    //             amount2: 2000,
+    //             amount3: 3000,
+    //             amount4: 4000,
+    //             amount5: 5000,
+    //             amount6: 6000,
+    //             amount7: 7000,
+    //             amount8: 8000,
+    //             amount9: 9000,
+    //             amount10: 10000,
+    //             status: "ACTIVE",
+    //             amount11: 11000
+    //         }
+    //     ]
+    // });
+
+
+            // Arrow Key Navigation for Excel-style inputs
+    $(document).on('keydown', '.excel-table input, .excel-table select', function (e) {
+        const key = e.which;
+        const $current = $(this);
+        const $allInputs = $('#detailTableBody').find('input, select').filter(':visible');
+        const index = $allInputs.index(this);
+        const total = $allInputs.length;
+
+        let rowIndex = $current.closest('tr').index();
+        let colIndex = $current.closest('td').index();
+        let $next;
+
+        switch (key) {
+            case 37: // left
+                $next = $current.closest('td').prev().find('input, select');
+                break;
+            case 39: // right
+                $next = $current.closest('td').next().find('input, select');
+                break;
+            case 38: // up
+                $next = $('#detailTableBody tr').eq(rowIndex - 1).find('td').eq(colIndex).find('input, select');
+                break;
+            case 40: // down
+                $next = $('#detailTableBody tr').eq(rowIndex + 1).find('td').eq(colIndex).find('input, select');
+                break;
+        }
+
+        if ($next && $next.length) {
+            e.preventDefault(); // prevent scrolling
+            $next.focus();
+        }
+    });
+
+</script>
+
+}
