@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
+[SessionAuthorize]
 public class DriverController : Controller
 {
     private readonly AppDbContext _context;

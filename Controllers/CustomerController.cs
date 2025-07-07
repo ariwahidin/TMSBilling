@@ -1,19 +1,17 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using TMSBilling.Data;
-using TMSBilling.Models;
 using Microsoft.EntityFrameworkCore;
+using TMSBilling.Data;
+using TMSBilling.Filters;
+using TMSBilling.Models;
 
 
 namespace TMSBilling.Controllers
 {
+
+    [SessionAuthorize]
     public class CustomerController : Controller
     {
-        //public IActionResult Index()
-        //{
-        //    return View();
-        //}
-
 
         private readonly AppDbContext _context;
 

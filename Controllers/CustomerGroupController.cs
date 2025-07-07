@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
+[SessionAuthorize]
 public class CustomerGroupController : Controller
 {
     private readonly AppDbContext _context;

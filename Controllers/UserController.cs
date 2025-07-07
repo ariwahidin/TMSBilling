@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
 namespace TMSBilling.Controllers
 {
+    [SessionAuthorize]
     public class UserController : Controller
     {
         private readonly AppDbContext _context;
@@ -20,15 +22,11 @@ namespace TMSBilling.Controllers
 
         public IActionResult Index()
         {
-            if (!HttpContext.Session.Keys.Contains("username"))
-                return RedirectToAction("Login", "Account");
             return View();
         }
 
         public IActionResult Create()
         {
-            if (!HttpContext.Session.Keys.Contains("username"))
-                return RedirectToAction("Login", "Account");
             return View("Form", new User()); // kosong
         }
 

@@ -1,9 +1,12 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
 namespace TMSBilling.Controllers
 {
+
+    [SessionAuthorize]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;

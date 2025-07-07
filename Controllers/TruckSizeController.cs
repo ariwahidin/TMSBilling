@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
+
+[SessionAuthorize]
 public class TruckSizeController : Controller
 {
     private readonly AppDbContext _context;

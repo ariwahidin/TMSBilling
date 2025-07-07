@@ -5,8 +5,10 @@ using OfficeOpenXml.Style;
 using System.IO;
 using System.Text;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
+[SessionAuthorize]
 public class VendorController : Controller
 {
     private readonly AppDbContext _context;

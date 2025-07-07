@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
 
 namespace TMSBilling.Controllers
 {
+
+    [SessionAuthorize]
     public class OrderController : Controller
     {
         private readonly AppDbContext _context;

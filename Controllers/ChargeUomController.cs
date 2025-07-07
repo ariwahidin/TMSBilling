@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
 namespace TMSBilling.Controllers
 {
+    [SessionAuthorize]
     public class ChargeUomController : Controller
     {
         private readonly AppDbContext _context;

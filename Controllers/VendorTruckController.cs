@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
+
+[SessionAuthorize]
 public class VendorTruckController : Controller
 {
     private readonly AppDbContext _context;
