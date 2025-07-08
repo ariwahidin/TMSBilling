@@ -12,7 +12,7 @@
 <table class="table table-bordered table-sm table-striped" id="priceBuyTable">
     <thead>
         <tr>
-            <th>Supplier</th>
+            <th>Vendor ID</th>
             <th>Origin</th>
             <th>Destination</th>
             <th>Type</th>
@@ -67,11 +67,20 @@
                 $('#formBody').html(html);
                 const modal = new bootstrap.Modal(document.getElementById('formModal'));
                 modal.show();
+                 $('.select2').select2({
+                    dropdownParent: $('#formModal'),
+                    placeholder: "Select an Option",
+                    allowClear: true,
+                    width: '100%' // ini penting biar full lebar
+                });
             });
         }
 
         $(document).ready(() => {
             $('#priceBuyTable').DataTable();
         });
+
+
+
     </script>
 }

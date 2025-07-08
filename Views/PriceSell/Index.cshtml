@@ -12,10 +12,10 @@
 
 <div id="formContainer"></div>
 
-<table class="table table-bordered table-sm" id="priceSellTable">
+<table class="table table-bordered table-sm table-striped nowrap" id="priceSellTable">
     <thead>
         <tr>
-            <th>Customer</th>
+            <th>Customer ID</th>
             <th>Origin</th>
             <th>Dest</th>
             <th>Service Type</th>
@@ -37,8 +37,12 @@
                 <td>@item.valid_date?.ToString("yyyy-MM-dd")</td>
                 <td>@(item.active_flag == 1 ? "Aktif" : "Nonaktif")</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="edit(@item.id_seq)">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="remove(@item.id_seq)">Delete</button>
+                    <button class="btn btn-sm btn-warning" onclick="edit(@item.id_seq)">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="remove(@item.id_seq)">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </td>
             </tr>
         }
@@ -51,6 +55,12 @@
             $.get("/PriceSell/Form", function (res) {
                 $("#formContainer").html(res);
                 $("#priceSellModal").modal("show");
+                $('.select2').select2({
+                    dropdownParent: $('#priceSellModal'),
+                    placeholder: "Select an Option",
+                    allowClear: true,
+                    width: '100%' // ini penting biar full lebar
+                });
             });
         }
 
@@ -58,6 +68,12 @@
             $.get("/PriceSell/Form", { id }, function (res) {
                 $("#formContainer").html(res);
                 $("#priceSellModal").modal("show");
+                $('.select2').select2({
+                    dropdownParent: $('#priceSellModal'),
+                    placeholder: "Select an Option",
+                    allowClear: true,
+                    width: '100%' // ini penting biar full lebar
+                });
             });
         }
 

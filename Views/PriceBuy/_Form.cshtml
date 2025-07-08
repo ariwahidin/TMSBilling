@@ -6,39 +6,51 @@
     <div class="row">
         <div class="col-md-5">
             <div class="mb-3 row">
-                <label class="col-sm-4 col-form-label text-end">Supplier</label>
+                <label class="col-sm-4 col-form-label text-end">Vendor ID</label>
                 <div class="col-sm-8">
-                    <input asp-for="sup_code" class="form-control" />
+                    <select asp-for="sup_code" asp-items="ViewBag.ListVendor" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Origin</label>
                 <div class="col-sm-8">
-                    <input asp-for="origin" class="form-control" />
+                    <select asp-for="origin" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Destination</label>
                 <div class="col-sm-8">
-                    <input asp-for="dest" class="form-control" />
+                    <select asp-for="dest" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Service Type</label>
                 <div class="col-sm-8">
-                    <input asp-for="serv_type" class="form-control" />
+                    <select asp-for="serv_type" asp-items="ViewBag.ListServiceType" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Service Moda</label>
                 <div class="col-sm-8">
-                    <input asp-for="serv_moda" class="form-control" />
+                    <select asp-for="serv_moda" asp-items="ViewBag.ListServiceModa" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Truck Size</label>
                 <div class="col-sm-8">
-                    <input asp-for="truck_size" class="form-control" />
+                    <select asp-for="truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -47,7 +59,9 @@
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Charge UOM</label>
                 <div class="col-sm-8">
-                    <input asp-for="charge_uom" class="form-control" />
+                    <select asp-for="charge_uom" asp-items="ViewBag.ListChargeUom" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">
@@ -59,7 +73,9 @@
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Currency</label>
                 <div class="col-sm-8">
-                    <input asp-for="curr" class="form-control" />
+                    <select asp-for="curr" asp-items="ViewBag.ListCurrency" class="form-select select2" required>
+                        <option value="">Select an Option</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3 row">

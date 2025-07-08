@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
@@ -9,10 +10,12 @@ namespace TMSBilling.Controllers
     public class PriceBuyController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly SelectListService _selectList;
 
-        public PriceBuyController(AppDbContext context)
+        public PriceBuyController(AppDbContext context, SelectListService selectList)
         {
             _context = context;
+            _selectList = selectList;
         }
 
         public IActionResult Index()
@@ -23,6 +26,16 @@ namespace TMSBilling.Controllers
 
         public IActionResult Form(int? id)
         {
+
+            ViewBag.ListVendor = _selectList.GetVendors();
+            ViewBag.ListCurrency = _selectList.GetCurrency();
+            ViewBag.ListOrigin = _selectList.GetOrigins();
+            ViewBag.ListDestination = _selectList.GetDestinations();
+            ViewBag.ListServiceType = _selectList.GetServiceTypes();
+            ViewBag.ListServiceModa = _selectList.GetServiceModas();
+            ViewBag.ListTruckSize = _selectList.GetTruckSizes();
+            ViewBag.ListChargeUom = _selectList.GetChargeUoms();
+
             var model = id == null || id == 0
                 ? new PriceBuy()
                 : _context.PriceBuys.FirstOrDefault(x => x.id_seq == id) ?? new PriceBuy();

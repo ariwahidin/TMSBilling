@@ -8,10 +8,12 @@ using TMSBilling.Models;
 public class PriceSellController : Controller
 {
     private readonly AppDbContext _context;
+    private readonly SelectListService _selectList;
 
-    public PriceSellController(AppDbContext context)
+    public PriceSellController(AppDbContext context, SelectListService selectList)
     {
         _context = context;
+        _selectList = selectList;
     }
 
     public IActionResult Index()
@@ -21,6 +23,13 @@ public class PriceSellController : Controller
 
     public IActionResult Form(int? id)
     {
+        ViewBag.ListCustomer = _selectList.getCustomers();
+        ViewBag.ListOrigin = _selectList.GetOrigins();
+        ViewBag.ListDestination = _selectList.GetDestinations();
+        ViewBag.ListServiceType = _selectList.GetServiceTypes();
+        ViewBag.ListServiceModa = _selectList.GetServiceModas();
+        ViewBag.ListTruckSize = _selectList.GetTruckSizes();
+        ViewBag.ListChargeUom = _selectList.GetChargeUoms();
         var model = id == null ? new PriceSell() : _context.PriceSells.Find(id);
         return PartialView("_Form", model);
     }

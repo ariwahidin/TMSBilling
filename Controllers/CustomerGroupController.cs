@@ -27,7 +27,7 @@ public class CustomerGroupController : Controller
             .Select(c => new SelectListItem
             {
                 Value = c.CUST_CODE,
-                Text = $"{c.CUST_CODE} - {c.CUST_NAME}"
+                Text = c.CUST_CODE,
             }).ToList();
 
         ViewBag.CustomerList = customerList;

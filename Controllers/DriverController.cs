@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.IO;
 using TMSBilling.Data;
 using TMSBilling.Filters;
@@ -44,14 +45,32 @@ public class DriverController : Controller
     }
 
 
-    public IActionResult Create()
+    public IActionResult Form(int? id)
     {
-        return View("Form", new Driver
+
+        var listVendor = _context.Vendors
+            .Select(v => new SelectListItem
+            {
+                Value = v.SUP_CODE,
+                Text = $"{v.SUP_CODE} - {v.SUP_NAME}"
+            }).ToList();
+
+        ViewBag.ListVendor = listVendor;
+
+        if (id == null)
         {
-            driver_id = string.Empty,
-            driver_name = string.Empty,
-            vendor_id = string.Empty,
-        });     
+            return View("Form", new Driver
+            {
+                driver_id = string.Empty,
+                driver_name = string.Empty,
+                vendor_id = string.Empty,
+            });
+        }
+
+        var driver = _context.Drivers.FirstOrDefault(x => x.ID == id.Value);
+        if (driver == null) return NotFound();
+
+        return View("Form", driver);
     }
 
     [HttpPost]
@@ -100,13 +119,7 @@ public class DriverController : Controller
         return RedirectToAction("Index");
     }
 
-    public IActionResult Edit(int id)
-    {
-        var driver = _context.Drivers.FirstOrDefault(x => x.ID == id);
-        if (driver == null) return NotFound();
-
-        return View("Form", driver);
-    }
+   
 
     [HttpPost]
     public IActionResult Edit(Driver model, IFormFile? photoFile)

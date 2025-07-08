@@ -14,30 +14,42 @@
                         <div class="col-md-6">
                             <div class="mb-2">
                                 <label>Customer</label>
-                                <input asp-for="cust_code" class="form-control" />
+                                <select asp-for="cust_code" asp-items="ViewBag.ListCustomer" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
                             </div>
                             <div class="mb-2">
                                 <label>Origin</label>
-                                <input asp-for="origin" class="form-control" />
+                                <select asp-for="origin" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
                             </div>
                             <div class="mb-2">
-                                <label>Dest</label>
-                                <input asp-for="dest" class="form-control" />
+                                <label>Destination</label>
+                                <select asp-for="dest" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
                             </div>
                             <div class="mb-2">
                                 <label>Service Type</label>
-                                <input asp-for="serv_type" class="form-control" />
+                                <select asp-for="serv_type" asp-items="ViewBag.ListServiceType" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
                             </div>
                             <div class="mb-2">
                                 <label>Charge UOM</label>
-                                <input asp-for="charge_uom" class="form-control" />
+                                <select asp-for="charge_uom" asp-items="ViewBag.ListChargeUom" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="mb-2">
                                 <label>Truck Size</label>
-                                <input asp-for="truck_size" class="form-control" />
+                                <select asp-for="truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
                             </div>
                             <div class="mb-2">
                                 <label>Sell 1</label>

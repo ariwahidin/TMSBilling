@@ -11,7 +11,6 @@
 <table class="table table-bordered table-striped" id="areaGroupTable">
     <thead>
         <tr>
-            <th>ID</th>
             <th>Area Name</th>
             <th>User</th>
             <th>Date</th>
@@ -22,15 +21,18 @@
         @foreach (var item in Model)
         {
             <tr>
-                <td>@item.id_seq</td>
                 <td>@item.area_name</td>
                 <td>@item.entry_user</td>
                 <td>@item.entry_date?.ToString("yyyy-MM-dd HH:mm")</td>
                 <td>
-                    <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">Edit</button>
+                    <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
                     <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?')">
                         <input type="hidden" name="id" value="@item.id_seq" />
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </form>
                 </td>
             </tr>

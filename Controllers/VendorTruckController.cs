@@ -65,7 +65,7 @@ public class VendorTruckController : Controller
         var listDoorType = new List<SelectListItem> {
             new SelectListItem {Value = "PINTU BELAKANG", Text =  "PINTU BELAKANG"},
             new SelectListItem {Value = "PINTU DEPAN", Text = "PINTU DEPAN" },
-            new SelectListItem {Value = "WING BOX", Text = "WING BOX"},
+            new SelectListItem {Value = "WINGBOX", Text = "WINGBOX"},
         };
 
         ViewBag.ListVendor = listVendor;
