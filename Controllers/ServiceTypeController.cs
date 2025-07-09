@@ -24,8 +24,8 @@ namespace TMSBilling.Controllers
         public IActionResult Form(int? id)
         {
             ServiceType model = id == null || id == 0
-                ? new ServiceType()
-                : _context.ServiceTypes.FirstOrDefault(x => x.id_seq == id) ?? new ServiceType();
+                ? new ServiceType { serv_name  = string.Empty}
+                : _context.ServiceTypes.FirstOrDefault(x => x.id_seq == id) ?? new ServiceType { serv_name = string.Empty };
 
             return PartialView("_Form", model);
         }

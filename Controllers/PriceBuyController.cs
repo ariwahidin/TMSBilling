@@ -114,15 +114,16 @@ namespace TMSBilling.Controllers
             return View();
         }
 
+
         [HttpGet]
         public IActionResult DownloadTemplate()
         {
             using var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("Template");
 
-            // Header kolom
+            // 1. Sheet Template
+            var worksheet = workbook.Worksheets.Add("Template");
             var headers = new[]
-                    {
+            {
                 "sup_code", "origin", "dest", "serv_type", "serv_moda",
                 "truck_size", "charge_uom", "flag_min", "charge_min",
                 "flag_range", "min_range", "max_range",
@@ -138,8 +139,7 @@ namespace TMSBilling.Controllers
                 worksheet.Column(i + 1).AdjustToContents();
             }
 
-            // (Optional) Contoh baris data
-            worksheet.Cell(2, 1).Value = "SUP001"; // sup_code
+            worksheet.Cell(2, 1).Value = "SUP001"; // sample data...
             worksheet.Cell(2, 2).Value = "JAKARTA";
             worksheet.Cell(2, 3).Value = "BANDUNG";
             worksheet.Cell(2, 4).Value = "REG";
@@ -166,7 +166,30 @@ namespace TMSBilling.Controllers
             worksheet.Cell(2, 25).Value = "IDR";
             worksheet.Cell(2, 26).Value = 1;
 
-            //using var stream = new MemoryStream();
+            // 2. Sheet Master - 1 sheet 1 field
+            CreateMasterSheet(workbook, "SupCode",
+                _context.Vendors.Select(v => v.SUP_CODE).Distinct().ToArray());
+
+            CreateMasterSheet(workbook, "Origin",
+                _context.Origins.Select(l => l.origin_code).Distinct().ToArray());
+
+            CreateMasterSheet(workbook, "Dest",
+                _context.Destinations.Select(l => l.destination_code).Distinct().ToArray());
+
+            CreateMasterSheet(workbook, "ServType",
+                _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
+
+            CreateMasterSheet(workbook, "ServModa",
+                _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
+
+            CreateMasterSheet(workbook, "TruckSize",
+                _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
+
+            CreateMasterSheet(workbook, "ChargeUom",
+                _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
+
+
+            // 3. Output file
             var stream = new MemoryStream();
             workbook.SaveAs(stream);
             stream.Position = 0;
@@ -175,6 +198,22 @@ namespace TMSBilling.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "Template_Upload_PriceBuy.xlsx");
         }
+
+        // Fungsi bantu untuk bikin sheet master
+        private void CreateMasterSheet(XLWorkbook workbook, string sheetName, string[] values)
+        {
+            var sheet = workbook.Worksheets.Add(sheetName);
+            sheet.Cell(1, 1).Value = sheetName;
+            sheet.Cell(1, 1).Style.Font.Bold = true;
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                sheet.Cell(i + 2, 1).Value = values[i];
+            }
+
+            sheet.Columns().AdjustToContents();
+        }
+
 
 
 

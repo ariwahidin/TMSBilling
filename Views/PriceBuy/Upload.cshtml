@@ -5,14 +5,16 @@
 
 @* <h2>Upload Harga Beli</h2> *@
 
-<a href="/PriceBuy/DownloadTemplate" class="btn btn-secondary mb-3">Download Template Excel</a>
 
-<form id="uploadForm" enctype="multipart/form-data">
-    <div class="mb-3">
-        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" />
-    </div>
-    <button type="button" class="btn btn-primary" onclick="previewExcel()">Preview</button>
-</form>
+<div class="d-flex align-items-center">
+    <form id="uploadForm" enctype="multipart/form-data">
+        <a href="/PriceBuy/DownloadTemplate" class="btn btn-secondary mb-3">Download Template Excel</a>
+        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control mb-3" />
+        <button type="button" class="btn btn-primary" onclick="previewExcel()">Preview</button>
+    </form>
+</div>
+
+
 
 <hr />
 
@@ -22,12 +24,14 @@
     <thead></thead>
     <tbody></tbody>
 </table>
-
-<select id="operationType" class="form-select mb-3" style="width: 200px;">
-    <option value="add">Add</option>
-    <option value="edit">Edit</option>
-</select>
-<button class="btn btn-success" onclick="submitData()">Submit</button>
+<p>Total rows : <span id="spanRows"></span></p>
+<div class="d-flex align-items-center">
+    <select id="operationType" class="form-select me-3" style="width: 200px;">
+        <option value="add">Add</option>
+        <option value="edit">Edit</option>
+    </select>
+    <button class="btn btn-success" onclick="submitData()">Submit</button>
+</div>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -108,6 +112,9 @@
                 const row = `<tr>${headers.map(h => `<td style="min-width:120px;">${item[h]}</td>`).join('')}</tr>`;
                 tbody.innerHTML += row;
             });
+
+            const spanRows = document.getElementById("spanRows");
+            spanRows.innerHTML = data.length;
         }
 
         function submitData() {
@@ -129,6 +136,11 @@
                  return
                 }
                 showToast(result.message, 'success')
+
+                 setTimeout(() => {
+                    window.location.href = '/PriceBuy/Index';
+                }, 1000);
+
                 // console.log(result)
             })
             .catch(err => {
