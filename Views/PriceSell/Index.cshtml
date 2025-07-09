@@ -3,10 +3,10 @@
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Price Sell";
 }
-<div class="d-flex justify-content-between mb-3">
+<div class="mb-3">
     <div>
-        <button class="btn btn-primary btn-sm" onclick="addNew()">Add Price Sell</button>
-        @* <a asp-action="ExportExcel" class="btn btn-success btn-sm">Export Data</a> *@
+        <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Sell</button>
+        <a href="/PriceSell/Upload" class="btn btn-success btn-sm">Import</a>
     </div>
 </div>
 
@@ -19,8 +19,9 @@
             <th>Origin</th>
             <th>Destination</th>
             <th>Service Type</th>
-            <th>Sell 1</th>
-            <th>Valid</th>
+            <th>Moda</th>
+            <th>Truk Size</th>
+            <th>Charge UoM</th>
             <th>Status</th>
             <th style="width:80px">Action</th>
         </tr>
@@ -33,11 +34,12 @@
                 <td>@item.origin</td>
                 <td>@item.dest</td>
                 <td>@item.serv_type</td>
-                <td>@item.sell1?.ToString("N2")</td>
-                <td>@item.valid_date?.ToString("yyyy-MM-dd")</td>
+                <td>@item.serv_moda</td>
+                <td>@item.truck_size</td>
+                <td>@item.charge_uom</td>
                 <td>@(item.active_flag == 1 ? "Aktif" : "Nonaktif")</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="edit(@item.id_seq)">
+                    <button class="btn btn-sm btn-warning" onclick="loadForm(@item.id_seq)">
                         <i class="bi bi-pencil-square"></i>
                     </button>
                     <button class="btn btn-sm btn-danger" onclick="remove(@item.id_seq)">
@@ -49,27 +51,56 @@
     </tbody>
 </table>
 
+<!-- Modal -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Form Price Sell</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="formBody">
+                <!-- form will load here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        function addNew() {
-            $.get("/PriceSell/Form", function (res) {
-                $("#formContainer").html(res);
-                $("#priceSellModal").modal("show");
-                $('.select2').select2({
-                    dropdownParent: $('#priceSellModal'),
-                    placeholder: "Select an Option",
-                    allowClear: true,
-                    width: '100%' // ini penting biar full lebar
-                });
-            });
-        }
+        // function addNew() {
+        //     $.get("/PriceSell/Form", function (res) {
+        //         $("#formContainer").html(res);
+        //         $("#priceSellModal").modal("show");
+        //         $('.select2').select2({
+        //             dropdownParent: $('#priceSellModal'),
+        //             placeholder: "Select an Option",
+        //             allowClear: true,
+        //             width: '100%' ini penting biar full lebar
+        //         });
+        //     });
+        // }
 
-        function edit(id) {
-            $.get("/PriceSell/Form", { id }, function (res) {
-                $("#formContainer").html(res);
-                $("#priceSellModal").modal("show");
+        // function edit(id) {
+        //     $.get("/PriceSell/Form", { id }, function (res) {
+        //         $("#formContainer").html(res);
+        //         $("#priceSellModal").modal("show");
+        //         $('.select2').select2({
+        //             dropdownParent: $('#priceSellModal'),
+        //             placeholder: "Select an Option",
+        //             allowClear: true,
+        //             width: '100%' ini penting biar full lebar
+        //         });
+        //     });
+        // }
+
+         function loadForm(id) {
+            $.get('/PriceSell/Form', { id }, function (html) {
+                $('#formBody').html(html);
+                const modal = new bootstrap.Modal(document.getElementById('formModal'));
+                modal.show();
                 $('.select2').select2({
-                    dropdownParent: $('#priceSellModal'),
+                    dropdownParent: $('#formModal'),
                     placeholder: "Select an Option",
                     allowClear: true,
                     width: '100%' // ini penting biar full lebar
