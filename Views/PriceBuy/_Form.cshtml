@@ -53,9 +53,6 @@
                     </select>
                 </div>
             </div>
-        </div>
-
-        <div class="col-md-5">
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Charge UOM</label>
                 <div class="col-sm-8">
@@ -68,6 +65,18 @@
                 <label class="col-sm-4 col-form-label text-end">Buy 1</label>
                 <div class="col-sm-8">
                     <input asp-for="buy1" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy 2</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy2" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy 3</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy3" class="form-control" />
                 </div>
             </div>
             <div class="mb-3 row">
@@ -90,6 +99,9 @@
                     <input asp-for="valid_date" type="date" class="form-control" />
                 </div>
             </div>
+        </div>
+
+        <div class="col-md-5">
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Status</label>
                 <div class="col-sm-8 d-flex align-items-center">
@@ -98,6 +110,86 @@
                                @(Model.active_flag == 1 ? "checked" : "") />
                         <label class="form-check-label ms-2">Active</label>
                     </div>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Flag Min</label>
+                <div class="col-sm-8 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="flag_min" value="1"
+                               @(Model.flag_min == 1 ? "checked" : "") />
+                        <label class="form-check-label ms-2">Active</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Charge Min</label>
+                <div class="col-sm-8">
+                    <input asp-for="charge_min" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Flag Range</label>
+                <div class="col-sm-8 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="flag_range" value="1"
+                               @(Model.flag_range == 1 ? "checked" : "") />
+                        <label class="form-check-label ms-2">Active</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Min Range</label>
+                <div class="col-sm-8">
+                    <input asp-for="min_range" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Max Range</label>
+                <div class="col-sm-8">
+                    <input asp-for="max_range" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Rate Empty</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy_ret_empt" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Rate Cargo</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy_ret_cargo" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Rate Over Night</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy_ovnight" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Cancel</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy_cancel" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Trip 2</label>
+                <div class="col-sm-8">
+                    <input asp-for="buytrip2" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Trip 3</label>
+                <div class="col-sm-8">
+                    <input asp-for="buytrip3" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="col-sm-4 col-form-label text-end">Buy Diff Area</label>
+                <div class="col-sm-8">
+                    <input asp-for="buy_diff_area" class="form-control" />
                 </div>
             </div>
         </div>

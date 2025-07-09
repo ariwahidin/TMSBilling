@@ -1,0 +1,140 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Import Data Price Buy";
+}
+
+@* <h2>Upload Harga Beli</h2> *@
+
+<a href="/PriceBuy/DownloadTemplate" class="btn btn-secondary mb-3">Download Template Excel</a>
+
+<form id="uploadForm" enctype="multipart/form-data">
+    <div class="mb-3">
+        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" />
+    </div>
+    <button type="button" class="btn btn-primary" onclick="previewExcel()">Preview</button>
+</form>
+
+<hr />
+
+<h4>Preview Data</h4>
+
+<table class="table table-bordered nowrap" id="previewTable">
+    <thead></thead>
+    <tbody></tbody>
+</table>
+
+<select id="operationType" class="form-select mb-3" style="width: 200px;">
+    <option value="add">Add</option>
+    <option value="edit">Edit</option>
+</select>
+<button class="btn btn-success" onclick="submitData()">Submit</button>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        let parsedData = [];
+
+        function fixExcelDate(value) {
+            if (typeof value === "number") {
+                const excelEpoch = new Date(1899, 11, 30);
+                const dateObj = new Date(excelEpoch.getTime() + value * 86400000);
+                return dateObj.toISOString().split("T")[0];
+            } else if (typeof value === "string") {
+                const parsed = new Date(value);
+                return isNaN(parsed) ? "" : parsed.toISOString().split("T")[0];
+            }
+            return "";
+        }
+
+
+        function previewExcel() {
+            const fileInput = document.getElementById('excelFile');
+            const file = fileInput.files[0];
+
+            if (!file) return alert("Pilih file Excel terlebih dahulu!");
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+                parsedData = json.map(row => {
+                    const {
+                        sup_code, origin, dest, serv_type, serv_moda,
+                        truck_size, charge_uom, flag_min, charge_min,
+                        flag_range, min_range, max_range,
+                        buy1, buy2, buy3,
+                        buy_ret_empt, buy_ret_cargo, buy_ovnight, buy_cancel,
+                        buytrip2, buytrip3, buy_diff_area,
+                        valid_date, active_flag, curr, rate_value
+                    } = row;
+
+                    return {
+                        sup_code, origin, dest, serv_type, serv_moda,
+                        truck_size, charge_uom, flag_min, charge_min,
+                        flag_range, min_range, max_range,
+                        buy1, buy2, buy3,
+                        buy_ret_empt, buy_ret_cargo, buy_ovnight, buy_cancel,
+                        buytrip2, buytrip3, buy_diff_area,
+                        valid_date :  fixExcelDate(valid_date), active_flag, curr, rate_value
+                    };
+                });
+
+                renderTable(parsedData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderTable(data) {
+            const table = document.getElementById('previewTable');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+
+            thead.innerHTML = "";
+            tbody.innerHTML = "";
+
+            if (data.length === 0) return;
+
+            // Header
+            const headers = Object.keys(data[0]);
+            const headerRow = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            thead.innerHTML = headerRow;
+
+            // Rows
+            data.forEach(item => {
+                const row = `<tr>${headers.map(h => `<td style="min-width:120px;">${item[h]}</td>`).join('')}</tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function submitData() {
+            if (parsedData.length === 0) return alert("Belum ada data untuk dikirim.");
+
+            const op = document.getElementById('operationType').value;
+
+            fetch('/PriceBuy/UploadExcel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ mode: op, data: parsedData })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if(result.errors){
+                 showToast(result.errors, 'error')
+                 return
+                }
+                showToast(result.message, 'success')
+                // console.log(result)
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Gagal upload data.");
+            });
+        }
+    </script>
+}

@@ -27,9 +27,13 @@ namespace TMSBilling.Controllers
             ServiceModa model;
 
             if (id == null || id == 0)
-                model = new ServiceModa();
+                model = new ServiceModa {
+                    moda_name = string.Empty,
+                };
             else
-                model = _context.ServiceModas.FirstOrDefault(m => m.id_seq == id) ?? new ServiceModa();
+                model = _context.ServiceModas.FirstOrDefault(m => m.id_seq == id) ?? new ServiceModa { 
+                    moda_name = string.Empty,
+                };
 
             return PartialView("_Form", model);
         }

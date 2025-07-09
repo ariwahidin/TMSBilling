@@ -11,10 +11,11 @@ namespace TMSBilling.Controllers
     public class OrderController : Controller
     {
         private readonly AppDbContext _context;
-
-        public OrderController(AppDbContext context)
+        private readonly SelectListService _selectList;
+        public OrderController(AppDbContext context, SelectListService selectList)
         {
             _context = context;
+            _selectList = selectList;
         }
 
         public IActionResult Index()
@@ -30,6 +31,9 @@ namespace TMSBilling.Controllers
         public IActionResult Form(int? id)
         {
             var vm = new OrderViewModel();
+            ViewBag.ListCustomer = _selectList.getCustomers();
+            ViewBag.ListWarehouse = _selectList.GetWarehouse();
+            ViewBag.ListConsignee = _selectList.GetConsignee();
 
             if (id.HasValue)
             {

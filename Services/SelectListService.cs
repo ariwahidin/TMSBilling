@@ -83,4 +83,16 @@ public class SelectListService
             .Select(x => new SelectListItem { Value = x.charge_name, Text = x.charge_name })
             .ToList();
     }
+
+    public List<SelectListItem> GetWarehouse() {
+        return _context.Warehouses
+            .Select(w => new SelectListItem { Value = w.wh_code, Text = w.wh_code })
+            .ToList();
+    }
+
+    public List<SelectListItem> GetConsignee() { 
+        return _context.Consignees
+            .Select(c => new SelectListItem { Value = c.CNEE_CODE, Text = c.CNEE_CODE  })
+            .ToList();
+    }
 }

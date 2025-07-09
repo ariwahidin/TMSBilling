@@ -4,9 +4,10 @@
     ViewData["Title"] = "Price Buy";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="align-items-center mb-3">
     @* <h4>Price Buy</h4> *@
     <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Buy</button>
+    <a href="/PriceBuy/Upload" class="btn btn-success btn-sm" >Import</a>
 </div>
 
 <table class="table table-bordered table-sm table-striped" id="priceBuyTable">
@@ -15,7 +16,7 @@
             <th>Vendor ID</th>
             <th>Origin</th>
             <th>Destination</th>
-            <th>Type</th>
+            <th>Service Type</th>
             <th>Moda</th>
             <th>Buy 1</th>
             <th>Active</th>
@@ -34,10 +35,14 @@
                 <td>@item.buy1?.ToString("N0")</td>
                 <td>@(item.active_flag == 1 ? "Yes" : "No")</td>
                 <td>
-                    <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">Edit</button>
+                    <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
                     <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?')">
                         <input type="hidden" name="id" value="@item.id_seq" />
-                        <button type="submit" class="btn btn-danger btn-sm">Del</button>
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </form>
                 </td>
             </tr>
@@ -67,7 +72,7 @@
                 $('#formBody').html(html);
                 const modal = new bootstrap.Modal(document.getElementById('formModal'));
                 modal.show();
-                 $('.select2').select2({
+                $('.select2').select2({
                     dropdownParent: $('#formModal'),
                     placeholder: "Select an Option",
                     allowClear: true,
