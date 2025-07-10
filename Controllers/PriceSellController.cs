@@ -25,13 +25,14 @@ public class PriceSellController : Controller
 
     public IActionResult Form(int? id)
     {
-        ViewBag.ListCustomer = _selectList.getCustomers();
+        ViewBag.ListCustomer = _selectList.getCustomerMains();
         ViewBag.ListOrigin = _selectList.GetOrigins();
         ViewBag.ListDestination = _selectList.GetDestinations();
         ViewBag.ListServiceType = _selectList.GetServiceTypes();
         ViewBag.ListServiceModa = _selectList.GetServiceModas();
         ViewBag.ListTruckSize = _selectList.GetTruckSizes();
         ViewBag.ListChargeUom = _selectList.GetChargeUoms();
+        ViewBag.ListCurrency = _selectList.GetCurrency();
 
         var model = id == null || id == 0
                 ? new PriceSell()
@@ -161,26 +162,26 @@ public class PriceSellController : Controller
         worksheet.Cell(2, 26).Value = 1;
 
         // 2. Sheet Master
-        CreateMasterSheet(workbook, "CustCode",
-            _context.Customers.Select(c => c.CUST_CODE).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "CustCode",
+        //    _context.Customers.Select(c => c.CUST_CODE).Distinct().ToArray());
 
-        CreateMasterSheet(workbook, "Origin",
-            _context.Origins.Select(o => o.origin_code).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "Origin",
+        //    _context.Origins.Select(o => o.origin_code).Distinct().ToArray());
 
-        CreateMasterSheet(workbook, "Dest",
-            _context.Destinations.Select(d => d.destination_code).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "Dest",
+        //    _context.Destinations.Select(d => d.destination_code).Distinct().ToArray());
 
-        CreateMasterSheet(workbook, "ServType",
-            _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "ServType",
+        //    _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
 
-        CreateMasterSheet(workbook, "ServModa",
-            _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "ServModa",
+        //    _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
 
-        CreateMasterSheet(workbook, "TruckSize",
-            _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "TruckSize",
+        //    _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
 
-        CreateMasterSheet(workbook, "ChargeUom",
-            _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
+        //CreateMasterSheet(workbook, "ChargeUom",
+        //    _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
 
         // 3. Output
         var stream = new MemoryStream();
@@ -211,8 +212,8 @@ public class PriceSellController : Controller
 
     private async Task<(bool isValid, string? errorMessage)> ValidatePriceSellItemAsync(PriceSellDto item)
     {
-        if (!await _context.Customers.AnyAsync(c => c.CUST_CODE == item.cust_code))
-            return (false, $"Kode customer tidak valid: {item.cust_code}");
+        if (!await _context.CustomerMains.AnyAsync(c => c.MAIN_CUST == item.cust_code))
+            return (false, $"Kode customer main tidak valid: {item.cust_code}");
 
         if (!await _context.Origins.AnyAsync(l => l.origin_code == item.origin))
             return (false, $"Kode origin tidak valid: {item.origin}");
@@ -267,7 +268,7 @@ public class PriceSellController : Controller
         var modeErrors = new List<string>();
 
         foreach (var item in request.data)
-        {
+        { 
             var query = _context.PriceSells.Where(x =>
                 x.cust_code == item.cust_code &&
                 x.origin == item.origin &&

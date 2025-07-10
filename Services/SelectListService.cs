@@ -14,6 +14,16 @@ public class SelectListService
         _context = context;
     }
 
+    public List<SelectListItem> getCustomerMains()
+    {
+        return _context.CustomerMains
+            .Select(c => new SelectListItem
+            {
+                Value = c.MAIN_CUST,
+                Text = c.MAIN_CUST,
+            }).ToList();
+    }
+
     public List<SelectListItem> getCustomers() { 
         return _context.Customers
             .Select(c => new SelectListItem

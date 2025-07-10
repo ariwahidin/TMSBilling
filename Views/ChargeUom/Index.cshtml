@@ -13,8 +13,6 @@
     <thead>
         <tr>
             <th>Charge Name</th>
-            <th>User</th>
-            <th>Date</th>
             <th>Action</th>
         </tr>
     </thead>
@@ -23,8 +21,6 @@
         {
             <tr>
                 <td>@item.charge_name</td>
-                <td>@item.entry_user</td>
-                <td>@item.entry_date?.ToString("yyyy-MM-dd HH:mm")</td>
                 <td>
                     <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">
                         <i class="bi bi-pencil-square"></i>

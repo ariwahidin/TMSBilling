@@ -167,26 +167,26 @@ namespace TMSBilling.Controllers
             worksheet.Cell(2, 26).Value = 1;
 
             // 2. Sheet Master - 1 sheet 1 field
-            CreateMasterSheet(workbook, "SupCode",
-                _context.Vendors.Select(v => v.SUP_CODE).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "SupCode",
+            //    _context.Vendors.Select(v => v.SUP_CODE).Distinct().ToArray());
 
-            CreateMasterSheet(workbook, "Origin",
-                _context.Origins.Select(l => l.origin_code).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "Origin",
+            //    _context.Origins.Select(l => l.origin_code).Distinct().ToArray());
 
-            CreateMasterSheet(workbook, "Dest",
-                _context.Destinations.Select(l => l.destination_code).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "Dest",
+            //    _context.Destinations.Select(l => l.destination_code).Distinct().ToArray());
 
-            CreateMasterSheet(workbook, "ServType",
-                _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "ServType",
+            //    _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
 
-            CreateMasterSheet(workbook, "ServModa",
-                _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "ServModa",
+            //    _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
 
-            CreateMasterSheet(workbook, "TruckSize",
-                _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "TruckSize",
+            //    _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
 
-            CreateMasterSheet(workbook, "ChargeUom",
-                _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
+            //CreateMasterSheet(workbook, "ChargeUom",
+            //    _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
 
 
             // 3. Output file

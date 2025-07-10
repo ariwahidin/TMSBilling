@@ -37,7 +37,7 @@ namespace TMSBilling.Controllers
                 }
             }
 
-            return Json(new { success = false, message = "Login gagal. Username atau password salah." });
+            return Json(new { success = false, message = "Username or password invalid!" });
         }
 
         public IActionResult Logout()
