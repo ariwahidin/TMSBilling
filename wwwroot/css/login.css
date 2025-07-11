@@ -218,7 +218,8 @@ body {
 
 .btn-login {
     width: 100%;
-    background: var(--primary-gradient);
+    /*    background: var(--primary-gradient);*/
+    background: #252d70;
     border: none;
     border-radius: 12px;
     padding: 0.875rem 1rem;
@@ -249,6 +250,7 @@ body {
     .btn-login:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-medium);
+        color : aliceblue;
     }
 
     .btn-login:active {
