@@ -223,31 +223,154 @@
         color: #6c757d;
         width: 40px;
     }
-</style>
 
+    .header-section * {
+        font-size: 12px;
+    }
+</style>
+<a href="/Order/Index" class="btn btn-sm btn-primary mb-2"> <i class="bi bi-arrow-left"></i> Back</a>
+<a href="/Order/Form" class="btn btn-sm btn-warning mb-2"> <i class="bi bi-arrow-clockwise"></i> Reset</a>
 <div class="form-container">
+    
     <form id="orderForm">
 
         <div class="header-section">
+
+
             <div class="row">
-                <div class="col-md-3 mb-3">
-                    <label for="wh_code" class="form-label">Warehouse</label>
-                    <input type="hidden" id="id_seq" name="id_seq" value="@Model.Header.id_seq" />
-                    <input type="text" id="wh_code" name="wh_code" class="form-control" value="@Model.Header.wh_code" />
+                @* <div class="col-md-1"></div> *@
+
+
+                <div class="col-md-5">
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Delivery Date : </label>
+                        <div class="col-sm-8">
+                            <input type="date" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">WHS Code : </label>
+                        <div class="col-sm-8">
+                            <input type="hidden" id="id_seq" name="id_seq" value="@Model.Header.id_seq" />
+                            <input type="text" id="wh_code" name="wh_code" class="form-control" value="@Model.Header.wh_code" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Sub Customer : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="sub_custid" name="sub_custid" class="form-control" value="@Model.Header.sub_custid" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Consignee : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="cnee_code" name="cnee_code" class="form-control" value="@Model.Header.cnee_code" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Invoice No : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="inv_no" name="inv_no" class="form-control" value="@Model.Header.inv_no" />
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Origin : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="origin_id" name="origin_id" class="form-control" value="@Model.Header.origin_id" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Dest Area : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="dest_area" name="dest_area" class="form-control" value="@Model.Header.dest_area" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Tot Pkgs : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="tot_pkgs" name="tot_pkgs" class="form-control" value="@Model.Header.tot_pkgs" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">UoM : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="uom" name="uom" class="form-control" value="@Model.Header.uom" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Pallet Consume : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="pallet_consume" name="pallet_consume" class="form-control" value="@Model.Header.pallet_consume" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Pallet Delivery : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="pallet_delivery" name="pallet_delivery" class="form-control" value="@Model.Header.pallet_delivery" />
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label for="sub_custid" class="form-label">Sub Customer</label>
-                    <input type="text" id="sub_custid" name="sub_custid" class="form-control" value="@Model.Header.sub_custid" />
+
+
+                <div class="col-md-5">
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">SI No : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="si_no" name="si_no" class="form-control" value="@Model.Header.si_no" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">DO Rcv Date : </label>
+                        <div class="col-sm-8">
+                            <input type="date" id="do_rcv_date" name="do_rcv_date" class="form-control" value="@(Model.Header.do_rcv_date?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">DO Rcv Time : </label>
+                        <div class="col-sm-8">
+                            <input type="time" id="do_rcv_time" name="do_rcv_time" class="form-control" value="@Model.Header.do_rcv_time" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Moda Req : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="moda_req" name="moda_req" class="form-control" value="@Model.Header.moda_req" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Serv Req : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="serv_req" name="serv_req" class="form-control" value="@Model.Header.serv_req" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="truck_size" name="truck_size" class="form-control" value="@Model.Header.truck_size" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Remarks : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="remark" name="remark" class="form-control" value="@Model.Header.remark" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Status : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="order_status" name="order_status" class="form-control" value="@Model.Header.order_status" />
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label for="cnee_code" class="form-label">Consignee</label>
-                    <input type="text" id="cnee_code" name="cnee_code" class="form-control" value="@Model.Header.cnee_code" />
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="delivery_date" class="form-label">Delivery Date</label>
-                    <input type="date" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-dd"))" />
-                </div>
+
+
             </div>
+
+
+
+            
         </div>
 
         <div class="detail-section">
@@ -310,7 +433,21 @@
                         wh_code: $('#wh_code').val(),
                         sub_custid: $('#sub_custid').val(),
                         cnee_code: $('#cnee_code').val(),
-                        delivery_date: $('#delivery_date').val()
+                        inv_no : $('#inv_no').val(),
+                        delivery_date: $('#delivery_date').val(),
+                        origin_id : $('#origin_id').val(),
+                        dest_area : $('#dest_area').val(),
+                        tot_pkgs : parseInt($('#tot_pkgs').val()) || 0,
+                        serv_req : $('#serv_req').val(),
+                        uom : $('#uom').val(),
+                        pallet_consume : $('#pallet_consume').val(),
+                        pallet_delivery : $('#pallet_delivery').val(),
+                        si_no : $('#si_no').val(),
+                        do_rcv_date : $('#do_rcv_date').val(),
+                        do_rcv_time : $('#do_rcv_time').val(),
+                        moda_req : $('#moda_req').val(),
+                        truck_size : $('#truck_size').val(),
+                        remark : $('#remark').val()
                     },
                     details: []
                 };
@@ -331,14 +468,6 @@
                     });
                 });
 
-                // $.ajax({
-                //     url: '/Order/Save',
-                //     type: 'POST',
-                //     contentType: 'application/json',
-                //     data: JSON.stringify(formData),
-                //     success: () => alert('Data saved!'),
-                //     error: () => alert('Save failed!')
-                // });
 
                 $.ajax({
                     url: '/Order/Save',
@@ -347,14 +476,20 @@
                     data: JSON.stringify(formData),
                     success: (res) => {
                         if (res.success) {
-                            alert(res.message || 'Data saved!');
-                            window.location.href = '/Order/Index'; // Redirect ke Index
+                            Swal.fire({
+                              position: "top-end",
+                              icon: "success",
+                              title: "Your work has been saved",
+                              showConfirmButton: false,
+                              timer: 1500
+                            }).then(function(){
+                                window.location.href = '/Order/Index'
+                            })
                         } else {
-                            alert(res.message || 'Gagal menyimpan data.');
+                            Swal.fire("Failed", "Failed saving data!", "error")
                         }
                     },
                     error: (xhr) => {
-                        alert('Save failed!');
                         console.error(xhr.responseText);
                     }
                 });

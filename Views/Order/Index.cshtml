@@ -6,12 +6,15 @@
 
 @* <h2>Order List</h2> *@
 <div class="mb-3">
-    <a href="/Order/Form" class="btn btn-primary">
+    <a href="/Order/Form" class="btn btn-primary btn-sm">
         <i class="bi bi-plus"></i> Create New Order
+    </a>
+    <a href="/Order/Import" class="btn btn-success btn-sm">
+        <i class="bi bi-upload me-2"></i> Import New Order
     </a>
 </div>
 
-<table class="table table-bordered table-hover">
+<table class="table table-bordered table-hover table-striped" id="tableOrder">
     <thead class="table-light">
         <tr>
             <th>#</th>
@@ -26,8 +29,7 @@
         </tr>
     </thead>
     <tbody>
-        @if (Model != null && Model.Any())
-        {
+        @{
             var i = 1;
             foreach (var item in Model)
             {
@@ -52,12 +54,6 @@
                 i++;
             }
         }
-        else
-        {
-            <tr>
-                <td colspan="9" class="text-center">No data available.</td>
-            </tr>
-        }
     </tbody>
 </table>
 
@@ -78,5 +74,13 @@
                 });
             }
         }
+
+        $(document).ready(() => {
+            $('#tableOrder').DataTable({
+                language: {
+                    emptyTable: "No orders available"
+                }
+            });
+        });
     </script>
 }

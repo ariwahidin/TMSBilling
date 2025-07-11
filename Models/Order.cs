@@ -25,6 +25,10 @@ namespace TMSBilling.Models
 
         public DateTime? delivery_date { get; set; }
 
+
+        [StringLength(50)]
+        public string? origin_id { get; set; }
+
         [StringLength(50)]
         public string? dest_area { get; set; }
 
