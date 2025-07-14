@@ -153,14 +153,18 @@
                            data-bs-toggle="collapse"
                            role="button"
                            aria-expanded="true">
-                            <i class="bi bi-gear nav-icon"></i>
+                            <i class="bi bi-journals"></i>
                             <span class="nav-text">Transaction</span>
                         </a>
 
-                        <div class="collapse submenu @(IsControllerActive("Order", "OrderDetail") ? "show" : "")" id="transactionMenu">
+                        <div class="collapse submenu @(IsControllerActive("Order", "OrderDetail", "Job") ? "show" : "")" id="transactionMenu">
                             <a href="/Order/Index" class="nav-link @(IsControllerActive("Order") ? "active" : "")">
-                                <i class="bi bi-database nav-icon"></i>
+                                <i class="bi bi-card-checklist"></i>
                                 <span class="nav-text">Order</span>
+                            </a>
+                            <a href="/Job/Index" class="nav-link @(IsControllerActive("Job") ? "active" : "")">
+                                <i class="bi bi-card-checklist"></i>
+                                <span class="nav-text">Job</span>
                             </a>
                         </div>
                     </div>

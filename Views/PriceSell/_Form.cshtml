@@ -1,9 +1,18 @@
 ﻿@model TMSBilling.Models.PriceSell
 
+
+<style>
+
+    .form-price-sell * {
+        font-size: 12px;
+    }
+
+</style>
+
 <form method="post" asp-action="Save">
     <input type="hidden" asp-for="id_seq" />
 
-    <div class="row">
+    <div class="row form-price-sell">
         <!-- LEFT COLUMN -->
         <div class="col-md-6">
             <div class="mb-3 row">

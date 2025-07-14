@@ -1,9 +1,18 @@
 ﻿@model TMSBilling.Models.PriceBuy
 
+
+<style>
+
+    .form-price-buy * {
+        font-size : 12px;
+    }
+
+</style>
+
 <form asp-action="Save" method="post">
     <input type="hidden" asp-for="id_seq" />
 
-    <div class="row">
+    <div class="row form-price-buy">
         <div class="col-md-6">
             <div class="mb-3 row">
                 <label class="col-sm-4 col-form-label text-end">Vendor ID</label>

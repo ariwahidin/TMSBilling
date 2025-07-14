@@ -1,7 +1,7 @@
-﻿@model TMSBilling.Models.ViewModels.OrderViewModel
+﻿@model TMSBilling.Models.ViewModels.JobViewModel
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
-    ViewData["Title"] = "Order Form";
+    ViewData["Title"] = "Job Form";
 }
 
 
@@ -228,111 +228,59 @@
         font-size: 12px;
     }
 </style>
-<a href="/Order/Index" class="btn btn-sm btn-primary mb-2"> <i class="bi bi-arrow-left"></i> Back</a>
-<a href="/Order/Form" class="btn btn-sm btn-warning mb-2"> <i class="bi bi-arrow-clockwise"></i> Reset</a>
+<a href="/Job/Index" class="btn btn-sm btn-primary mb-2"> <i class="bi bi-arrow-left"></i> Back</a>
+<a href="/Job/Form" class="btn btn-sm btn-warning mb-2"> <i class="bi bi-arrow-clockwise"></i> Reset</a>
 <div class="form-container">
-    
+
     <form id="orderForm">
 
         <div class="header-section">
 
 
             <div class="row">
-                @* <div class="col-md-1"></div> *@
-
-
-                <div class="col-md-5">
+                <div class="col-md-4">
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Job ID : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="jobid" name="jobid" class="form-control" readonly value="@Model.Header.jobid" />
+                        </div>
+                    </div>
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Delivery Date : </label>
                         <div class="col-sm-8">
-                            <input type="date" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-dd"))" />
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">WHS Code : </label>
-                        <div class="col-sm-8">
-                            <input type="hidden" id="id_seq" name="id_seq" value="@Model.Header.id_seq" />
-                            @* <input type="text" id="wh_code" name="wh_code" class="form-control" value="@Model.Header.wh_code" /> *@
-                            <select id="wh_code" asp-for="Header.wh_code" asp-items="ViewBag.ListWarehouse" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Sub Customer : </label>
-                        <div class="col-sm-8">
-                            @* <input type="text" id="sub_custid" name="sub_custid" class="form-control" value="@Model.Header.sub_custid" /> *@
-                            <select id="sub_custid" asp-for="Header.sub_custid" asp-items="ViewBag.ListCustomer" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Consignee : </label>
-                        <div class="col-sm-8">
-                            @* <input type="text" id="cnee_code" name="cnee_code" class="form-control" value="@Model.Header.cnee_code" /> *@
-                            <select id="cnee_code" asp-for="Header.cnee_code" asp-items="ViewBag.ListConsignee" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
+                            <input type="date" id="dv_date" name="dv_date" class="form-control" value="@(Model.Header.dvdate?.ToString("yyyy-MM-dd"))" />
                         </div>
                     </div>
 
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Invoice No : </label>
-                        <div class="col-sm-8">
-                            <input type="text" id="inv_no" name="inv_no" class="form-control" value="@Model.Header.inv_no" />
-                        </div>
-                    </div>
-                    
-                    <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Origin : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="origin_id" name="origin_id" class="form-control" value="@Model.Header.origin_id" /> *@
                             <select id="origin_id" asp-for="Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
                         </div>
                     </div>
+    
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Dest Area : </label>
+                        <label class="col-sm-4 col-form-label text-end">Destination : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="dest_area" name="dest_area" class="form-control" value="@Model.Header.dest_area" /> *@
-                            <select id="dest_area" asp-for="Header.dest_area" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                            <select id="dest_id" asp-for="Header.dest_id" asp-items="ViewBag.ListDestination" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Tot Pkgs : </label>
+                        <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
                         <div class="col-sm-8">
-                            <input type="text" id="tot_pkgs" name="tot_pkgs" class="form-control" value="@Model.Header.tot_pkgs" />
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">UoM : </label>
-                        <div class="col-sm-8">
-                            @* <input type="text" id="uom" name="uom" class="form-control" value="@Model.Header.uom" /> *@
-                            <select id="uom" asp-for="Header.uom" asp-items="ViewBag.ListUoM" class="form-select select2" required>
+                            <select id="truckid" asp-for="Header.truckid" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Pallet Consume : </label>
-                        <div class="col-sm-8">
-                            <input type="text" id="pallet_consume" name="pallet_consume" class="form-control" value="@Model.Header.pallet_consume" />
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Pallet Delivery : </label>
-                        <div class="col-sm-8">
-                            <input type="text" id="pallet_delivery" name="pallet_delivery" class="form-control" value="@Model.Header.pallet_delivery" />
                         </div>
                     </div>
                 </div>
 
 
-                <div class="col-md-5">
+                @* <div class="col-md-5">
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">SI No : </label>
                         <div class="col-sm-8">
@@ -354,7 +302,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Moda Req : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="moda_req" name="moda_req" class="form-control" value="@Model.Header.moda_req" /> *@
                             <select id="moda_req" asp-for="Header.moda_req" asp-items="ViewBag.ListModa" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -363,7 +310,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Serv Req : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="serv_req" name="serv_req" class="form-control" value="@Model.Header.serv_req" /> *@
                             <select id="serv_req" asp-for="Header.serv_req" asp-items="ViewBag.ListServiceType" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -372,7 +318,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="truck_size" name="truck_size" class="form-control" value="@Model.Header.truck_size" /> *@
                             <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -390,14 +335,14 @@
                             <input type="text" id="order_status" name="order_status" class="form-control" value="@Model.Header.order_status" />
                         </div>
                     </div>
-                </div>
+                </div> *@
 
 
             </div>
 
 
 
-            
+
         </div>
 
         <div class="detail-section">
@@ -444,7 +389,7 @@
     </form>
 </div>
 
-@section Scripts {
+@* @section Scripts {
     <script>
         let rowIndex = 0;
         const header = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Header))
@@ -546,13 +491,6 @@
                                 }else{
                                      $('#inv_no').val('');
                                      $('#si_no').val('');
-                                     // $('#inv_no').focus();
-
-                                     // console.log("Before focus");
-                                     // $('#inv_no').focus();
-                                     // console.log("After focus");
-
-
                                     setTimeout(() => {
                                       console.log("Focusing now...");
                                       $('#inv_no').focus();
@@ -636,4 +574,4 @@
             }
         });
     </script>
-}
+} *@

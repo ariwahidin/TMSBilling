@@ -40,6 +40,12 @@ namespace TMSBilling.Controllers
             ViewBag.ListCustomer = _selectList.getCustomers();
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
+            ViewBag.ListOrigin = _selectList.GetOrigins();
+            ViewBag.ListDestination = _selectList.GetDestinations();
+            ViewBag.ListUoM = _selectList.GetChargeUoms();
+            ViewBag.ListModa = _selectList.GetServiceModas();
+            ViewBag.ListServiceType = _selectList.GetServiceTypes();
+            ViewBag.ListTruckSize = _selectList.GetTruckSizes();
 
             if (id.HasValue)
             {
@@ -77,6 +83,11 @@ namespace TMSBilling.Controllers
 
             if (!_context.Origins.Any(l => l.origin_code == header.origin_id))
                 errors.Add($"Origin '{header.origin_id}' tidak ditemukan");
+
+
+            if (header.id_seq == 0)
+                if (_context.Orders.Any(o => o.inv_no == header.inv_no))
+                errors.Add($"Inv No '{header.inv_no}' already exists!");
 
             //foreach (var detail in details)
             //{
