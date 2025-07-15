@@ -105,4 +105,13 @@ public class SelectListService
             .Select(c => new SelectListItem { Value = c.CNEE_CODE, Text = c.CNEE_CODE  })
             .ToList();
     }
+
+    public List<SelectListItem> GetYesNo()
+    {
+        return new List<SelectListItem>
+        {
+            new SelectListItem { Value = "0", Text = "No" },
+            new SelectListItem { Value = "1", Text = "Yes" }
+        };
+    }
 }

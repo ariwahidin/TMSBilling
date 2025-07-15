@@ -52,6 +52,8 @@ namespace TMSBilling.Data
 
         public DbSet<OrderDetail> OrderDetails { get; set; }
 
+        public DbSet<JobHeader> JobHeaders { get; set; }
+
         public DbSet<Job> Jobs { get; set; }
 
         public DbSet<JobPOD> JobPODs { get; set; }

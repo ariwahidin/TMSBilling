@@ -10,5 +10,16 @@
             Header = new Job();
             //Details = new List<OrderDetail>();
         }
+
+        public class JobListViewModel
+        {
+            public string? JobId { get; set; }
+            public string? Origin { get; set; }
+            public string? Destination { get; set; }
+            public DateTime? DeliveryDate { get; set; }
+            public string? Vendor { get; set; }
+
+            public string? TruckID { get; set; }
+        }
     }
 }

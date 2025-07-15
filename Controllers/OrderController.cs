@@ -177,9 +177,6 @@ namespace TMSBilling.Controllers
             }
         }
 
-
-
-
         [HttpGet]
         public IActionResult DownloadSample()
         {

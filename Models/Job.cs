@@ -160,4 +160,15 @@ namespace TMSBilling.Models
 
         public DateTime? update_date { get; set; }
     }
+
+    [Table("TRC_JOB_H")]
+    public class JobHeader
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int id_seq { get; set; }
+
+        [StringLength(30)]
+        public string? jobid { get; set; }
+    }
 }

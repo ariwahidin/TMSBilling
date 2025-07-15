@@ -1,4 +1,6 @@
-﻿@model IEnumerable<TMSBilling.Models.Job>
+﻿@* @model IEnumerable<TMSBilling.Models.Job> *@
+@model IEnumerable<TMSBilling.Models.ViewModels.JobViewModel.JobListViewModel>
+
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Job List";
@@ -18,34 +20,32 @@
         <tr>
             <th>#</th>
             <th>Job ID</th>
-            <th>Customer ID</th>
-            <th>Consignee ID</th>
+            <th>Truck ID</th>
+            <th>Delivery Date</th>
+            <th>Origin</th>
             <th>Destination</th>
             <th>Vendor ID</th>
-            <th>Truck ID</th>
-            <th>Status</th>
             <th class="text-center">Action</th>
         </tr>
     </thead>
-    @* <tbody>
+    <tbody>
         @{
             var i = 1;
             foreach (var item in Model)
             {
                 <tr>
                     <td>@i</td>
-                    <td>@item.wh_code</td>
-                    <td>@item.sub_custid</td>
-                    <td>@item.cnee_code</td>
-                    <td>@item.inv_no</td>
-                    <td>@item.delivery_date?.ToString("yyyy-MM-dd")</td>
-                    <td>@item.origin_id</td>
-                    <td>@item.dest_area</td>
+                    <td>@item.JobId</td>
+                    <td>@item.TruckID</td>
+                    <td>@item.DeliveryDate?.ToString("yyyy-MM-dd")</td>
+                    <td>@item.Origin</td>
+                    <td>@item.Destination</td>
+                    <td>@item.Vendor</td>
                     <td class="text-center">
-                        <a href="/Order/Form/@item.id_seq" class="text-primary me-2">
+                        <a href="/Job/Form/@item.JobId" class="text-primary me-2">
                             <i class="bi bi-pencil-square"></i>
                         </a>
-                        <a href="#" class="text-danger" onclick="confirmDelete(@item.id_seq)">
+                        <a href="#" class="text-danger" onclick="confirmDelete('@item.JobId')">
                             <i class="bi bi-trash"></i>
                         </a>
                     </td>
@@ -53,7 +53,7 @@
                 i++;
             }
         }
-    </tbody> *@
+    </tbody>
 </table>
 
 @section Scripts {
