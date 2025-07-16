@@ -73,6 +73,9 @@ namespace TMSBilling.Models
         public string? update_user { get; set; }
 
         public DateTime? update_date { get; set; }
+
+        [StringLength(50)]
+        public string? jobid { get; set; }
     }
 
     [Table("TRC_ORDER_DTL")]

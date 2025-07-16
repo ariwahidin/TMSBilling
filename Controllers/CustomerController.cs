@@ -44,7 +44,6 @@ namespace TMSBilling.Controllers
         {
             Console.WriteLine("Form Customer");
 
-            //if (!ModelState.IsValid) return BadRequest();
 
             if (!ModelState.IsValid)
             {

@@ -232,8 +232,8 @@
 <div class="form-container">
 
     @* Debug sementara *@
-    <p>Origin ID: @Model.Header.origin_id</p>
-    <p>Truck Size: @Model.Header.truck_size</p>
+    @* <p>Origin ID: @Model.Header.origin_id</p>
+    <p>Truck Size: @Model.Header.truck_size</p> *@
 
     <form id="orderForm">
         <div class="header-section">
@@ -367,24 +367,28 @@
                             <th class="col-narrow">Cust Code</th>
                             <th class="col-narrow">Cnee Code</th>
                             <th class="col-narrow">Destination</th>
-                            <th class="col-narrow">Total PKGS</th>
-                            <th class="col-narrow">Total Pallet</th>
-                            <th class="col-narrow">Truck Size</th>
+                            <th class="col-action">Total <br> PKGS</th>
+                            <th class="col-action">Total <br> Pallet</th>
+                            <th class="col-action">Truck <br> Size</th>
                             <th class="col-action">Remark</th>
-                            <th class="col-action">Empty Pallet</th>
-                            <th class="col-action">Return Cargo</th>
-                            <th class="col-action">Over Night</th>
-                            <th class="col-action">Cancel Cargo</th>
-                            <th class="col-action">Deff Area</th>
+                            <th class="col-action">Empty <br> Pallet</th>
+                            <th class="col-action">Return <br> Cargo</th>
+                            <th class="col-action">Over <br> Night</th>
+                            <th class="col-action">Cancel <br> Cargo</th>
+                            <th class="col-action text-center">Deff <br> Area</th>
                         </tr>
                     </thead>
                     <tbody id="detailTableBody">
                     </tbody>
                 </table>
             </div>
-            @* <button type="button" class="btn-add-row" onclick="addRow()">
-                <i class="fas fa-plus"></i> Add Row
-            </button> *@
+
+            @if (Model.Header.jobid != null)
+            {
+                <button type="button" class="btn btn-sm btn-success mt-2" id="show_order">
+                    <i class="fas fa-plus"></i> Show all order
+                </button>
+            }
         </div>
         <div class="form-actions">
             <button type="button" class="btn-cancel btn-sm" onclick="resetForm()">
@@ -462,11 +466,36 @@
             $('#vendorid').on('change', function(){
                 console.log('sssss')
             })
+
+            $('#show_order').on('click', showOrder)
         });
 
         const jobid = $('#jobid').val();
         if (jobid) {
             fetchDetail(jobid);
+        }
+
+        function showOrder(){
+            const deliv_date = $('#dv_date').val();
+            const job_id = $('#jobid').val();
+
+            if(job_id != ''){
+                $.ajax({
+                    url: '/Job/GetOrdersByDate',
+                    type: 'GET',
+                    data: { date: deliv_date, jobid : job_id },
+                    success: function(response) {
+                            if (response.success) {
+                                renderTable(response.data);
+                            } else {
+                                alert(response.message);
+                            }
+                    },
+                    error: function() {
+                        alert("Terjadi kesalahan saat mengambil data.");
+                    }
+                });
+            }
         }
 
         function fetchVendorsEdit(originId, destId, truckSize) {
@@ -528,11 +557,11 @@
 
                         } else {
                             $('#vendorid').val('');
-                            alert(data.message || 'Vendor not found');
+                            // alert(data.message || 'Vendor not found');
                         }
                     },
                     error: function () {
-                        alert('Failed to fetch vendor');
+                        // alert('Failed to fetch vendor');
                         $('#vendorid').val('');
                     }
                 });
@@ -572,20 +601,24 @@
 
         function handleSave() {
             const rows = $('#detailTableBody tr');
-            const dataToSave = [];
+
+            const header = {
+                            job_id : $('#jobid').val(),
+                            origin_id : $('#origin_id').val(),
+                            dest_area : $('#dest_id').val(),
+                            vendor_id : $('#vendorid').val(),
+                            truck_id : $('#truckid').val(),
+                            driver_name : $('#drivername').val(),
+                            delivery_date : $('#dv_date').val(),
+                            truck_size : $('#truck_size').val(),
+                        };
+            const details = [];
+            
 
             rows.each(function (i, row) {
                 const isChecked = $(row).find('input[type="checkbox"][name^="Details["]').is(':checked');
                 if (isChecked) {
-
                     const detail = {
-                        origin_id : $('#origin_id').val(),
-                        dest_id : $('#dest_id').val(),
-                        vendorid : $('#vendorid').val(),
-                        truckid : $('#truckid').val(),
-                        drivername : $('#drivername').val(),
-                        dvdate : $('#dv_date').val(),
-                        trucksize_h : $('#truck_size').val(),
                         is_selected: $(row).find('[name*=".IsSelected"]').is(':checked'),
                         drop_seq: $(row).find('[name*=".drop_seq"]').val(),
                         wh_code: $(row).find('[name*=".wh_code"]').val(),
@@ -603,21 +636,31 @@
                         cancel_cargo: $(row).find('[name*=".cancel_cargo"]').val(),
                         deff_area: $(row).find('[name*=".deff_area"]').val(),
                     };
-                    dataToSave.push(detail);
+                    details.push(detail);
                 }
             });
 
+            const dataToSave = {FormJobHeader : header, FormJobDetails :details}
+
             // Kirim lewat AJAX
+
+            let url = '/Job/Save';
+            const jobid = $('#jobid').val();
+
+            if(jobid != ""){
+                url = '/Job/Save/'+jobid
+            }
             $.ajax({
-                url: '/Job/Save',
+                url: url,
                 type: 'POST',
                 data: JSON.stringify(dataToSave),
                 contentType: 'application/json',
                 success: function (res) {
                     Swal.fire('Success', res.message, 'success');
                 },
-                error: function () {
-                    Swal.fire('Oops!', 'Terjadi kesalahan saat menyimpan data.', 'error');
+                error: function (e) {
+                    console.log(e)
+                    // Swal.fire('Oops!', 'Terjadi kesalahan saat menyimpan data.', 'error');
                 }
             });
         }

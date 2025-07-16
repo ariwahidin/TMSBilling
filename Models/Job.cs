@@ -170,5 +170,15 @@ namespace TMSBilling.Models
 
         [StringLength(30)]
         public string? jobid { get; set; }
+
+        [StringLength(50)]
+        public string? entry_user { get; set; }
+
+        public DateTime? entry_date { get; set; }
+
+        [StringLength(50)]
+        public string? update_user { get; set; }
+
+        public DateTime? update_date { get; set; }
     }
 }

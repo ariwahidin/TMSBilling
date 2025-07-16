@@ -409,6 +409,7 @@ namespace TMSBilling.Controllers
                     continue;
 
                 // Simpan Header
+                header.order_status = 0;
                 header.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 header.entry_date = DateTime.Now;
                 _context.Orders.Add(header);
