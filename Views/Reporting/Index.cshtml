@@ -1,0 +1,33 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Reporting";
+
+    string iframeSrc = "";
+    if (ViewBag.Config != null)
+    {
+        string hostname = ViewBag.Config.hostname;
+        int port = ViewBag.Config.port;
+        iframeSrc = $"{hostname}:{port}/Reporting/JobReport";
+    }
+}
+
+<style>
+    .content{
+        padding : 0;
+    }
+
+    #reportFrame{
+        width : 100%;
+        min-height: 90vh;
+        /* height: 500px; */
+        /* max-height: 1000px; */
+        border: none;
+    }
+</style>
+
+<iframe id="reportFrame" src="@iframeSrc"></iframe>
+
+@section Scripts {
+
+
+}

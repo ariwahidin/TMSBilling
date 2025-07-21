@@ -171,17 +171,27 @@
 
 
 
-                    <div class="nav-item">
-                        <a href="/Reports" class="nav-link">
+                    @* <div class="nav-item">
+                        <a class="nav-link"
+                           href="#ReportMenu"
+                           data-bs-toggle="collapse"
+                           role="button"
+                           aria-expanded="true">
                             <i class="bi bi-bar-chart nav-icon"></i>
                             <span class="nav-text">Reports</span>
                         </a>
-                    </div>
+                        <div class="collapse submenu @(IsControllerActive("Reporting") ? "show" : "")" id="ReportMenu">
+                            <a href="/Reporting/Index" class="nav-link @(IsControllerActive("Reporting") ? "active" : "")">
+                                <i class="bi bi-card-checklist"></i>
+                                <span class="nav-text">Index</span>
+                            </a>
+                        </div>
+                    </div> *@
 
                     <div class="nav-item">
-                        <a href="/Analytics" class="nav-link">
-                            <i class="bi bi-graph-up nav-icon"></i>
-                            <span class="nav-text">Analytics</span>
+                        <a href="/Reporting/Index" class="nav-link">
+                            <i class="bi bi-bar-chart nav-icon"></i>
+                            <span class="nav-text">Reporting</span>
                         </a>
                     </div>
                 </nav>

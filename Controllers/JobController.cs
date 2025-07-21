@@ -209,7 +209,7 @@ namespace TMSBilling.Controllers
                                     && sr.serv_moda == orderExisting.moda_req
                                     && sr.charge_uom == orderExisting.uom
                                     );
-                if (SellRateCheck != null) {
+                if (SellRateCheck == null) {
                     return BadRequest(new { success = false, message = "Sell rate not found for INV "+ orderExisting.inv_no });
                 }
             }
@@ -297,7 +297,7 @@ namespace TMSBilling.Controllers
                                     && sr.serv_moda == order.moda_req
                                     && sr.charge_uom == order.uom
                                     );
-                if (SellRate != null)
+                if (SellRate == null)
                 {
                     return BadRequest(new { success = false, message = "Sell rate not found for INV " + order.inv_no });
                 }
@@ -341,6 +341,11 @@ namespace TMSBilling.Controllers
                 newJob.sell_rc = SellRate?.sell_ret_cargo;
                 newJob.sell_ov = SellRate?.sell_ovnight;
                 newJob.sell_cc = SellRate?.sell_cancel;
+
+                newJob.entry_user = HttpContext.Session.GetString("username") ?? "System";
+                newJob.entry_date = DateTime.Now;
+                newJob.update_user = HttpContext.Session.GetString("username") ?? "System";
+                newJob.update_date = DateTime.Now;
 
                 _context.Jobs.Add(newJob);
             }

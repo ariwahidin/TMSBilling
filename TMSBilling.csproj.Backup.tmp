@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AspNetCore.Reporting" Version="2.1.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="EPPlus" Version="8.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
@@ -17,6 +16,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Reports\" />
   </ItemGroup>
 
 </Project>

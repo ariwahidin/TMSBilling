@@ -58,5 +58,7 @@ namespace TMSBilling.Data
 
         public DbSet<JobPOD> JobPODs { get; set; }
 
+        public DbSet<Config> Configs { get; set; }
+
     }
 }
