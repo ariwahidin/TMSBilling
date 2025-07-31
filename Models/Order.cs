@@ -76,6 +76,8 @@ namespace TMSBilling.Models
 
         [StringLength(50)]
         public string? jobid { get; set; }
+
+        public int? total_pkgs { get; set; }
     }
 
     [Table("TRC_ORDER_DTL")]

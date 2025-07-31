@@ -20,11 +20,12 @@
             <th>#</th>
             <th>WH Code</th>
             <th>Customer</th>
-            <th>Consignee</th>
+            <th>Cnee</th>
             <th>Invoice No</th>
             <th>Delivery Date</th>
             <th>Origin</th>
             <th>Destination Area</th>
+            <th>Sts</th>
             <th class="text-center">Action</th>
         </tr>
     </thead>
@@ -42,6 +43,7 @@
                     <td>@item.delivery_date?.ToString("yyyy-MM-dd")</td>
                     <td>@item.origin_id</td>
                     <td>@item.dest_area</td>
+                    <td>@item.order_status</td>
                     <td class="text-center">
                         <a href="/Order/Form/@item.id_seq" class="text-primary me-2">
                             <i class="bi bi-pencil-square"></i>

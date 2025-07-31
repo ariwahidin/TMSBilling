@@ -23,6 +23,9 @@ namespace TMSBilling.Models
         [StringLength(30)]
         public string? drivername { get; set; }
 
+        [StringLength(30)]
+        public string? driverhp { get; set; }
+
         [StringLength(10)]
         public string? moda_req { get; set; }
 
@@ -32,11 +35,19 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? truck_size { get; set; }
 
+        [StringLength(50)]
+        public string? serv_moda { get; set; }
+
+        [StringLength(50)]
+        public string? charge_uom { get; set; }
+
         public byte? multidrop { get; set; }
 
         public byte? multitrip { get; set; }
 
         public int? drop_seq { get; set; }
+
+        //public int? total_pkgs { get; set; }
 
         public int? ritase_seq { get; set; }
 

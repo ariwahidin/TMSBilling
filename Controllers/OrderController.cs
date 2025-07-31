@@ -140,7 +140,8 @@ namespace TMSBilling.Controllers
                     existingHeader.tot_pkgs = header.tot_pkgs;
                     existingHeader.do_rcv_time = header.do_rcv_time;
                     existingHeader.remark = header.remark;
-                    existingHeader.order_status = header.order_status;
+                    existingHeader.order_status = header.order_status ?? 0;
+                    existingHeader.uom = header.uom;
                     existingHeader.update_date = DateTime.Now;
                     existingHeader.update_user = username;
 

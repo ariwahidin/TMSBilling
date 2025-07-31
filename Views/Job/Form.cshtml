@@ -275,6 +275,23 @@
                             </select>
                         </div>
                     </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Serv Moda : </label>
+                        <div class="col-sm-8">
+                            <select id="serv_moda" asp-for="Header.serv_moda" asp-items="ViewBag.ListModa" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Chgr UoM : </label>
+                        <div class="col-sm-8">
+                            <select id="charge_uom" asp-for="Header.charge_uom" asp-items="ViewBag.ListUoM" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="col-md-4">
                     <div class="mb-2 row">
@@ -420,15 +437,18 @@
                     const dest = "@Model.Header.dest_id";
                     const truckSize = "@Model.Header.truck_size";
                     const selectedVendor = "@Model.Header.vendorid";
+                    const servModa = "@Model.Header.moda_req";
+                    const chargeUom = "@Model.Header.charge_uom";
 
                     // Set nilai dropdown
                     $('#origin_id').val(origin).trigger('change');
                     $('#dest_id').val(dest).trigger('change');
                     $('#truck_size').val(truckSize).trigger('change');
+                    $('#serv_moda').val(servModa).trigger('change');
 
                     // Tunggu sebentar agar dropdown-nya terisi, lalu fetch vendor
                     setTimeout(function (){
-                        fetchVendorsEdit(origin, dest, truckSize, selectedVendor)
+                          fetchVendorsEdit(origin, dest, truckSize, servModa, chargeUom)
                     }, 300)
                 </text>
             }
@@ -462,7 +482,7 @@
                 handleSave(); 
             });
 
-            $('#origin_id, #dest_id, #truck_size').on('change', checkAndFetchVendor);
+            $('#origin_id, #dest_id, #truck_size, #serv_moda ,#charge_uom').on('change', checkAndFetchVendor);
             $('#vendorid').on('change', function(){
                 console.log('sssss')
             })
@@ -498,14 +518,16 @@
             }
         }
 
-        function fetchVendorsEdit(originId, destId, truckSize) {
+        function fetchVendorsEdit(originId, destId, truckSize, servModa, chargeUom) {
             $.ajax({
                 url: '/Job/GetVendors',
                 type: 'GET',
                 data: {
                     originId: originId,
                     destId: destId,
-                    truckSize: truckSize
+                    truckSize: truckSize,
+                    servModa: servModa,
+                    chargeUom: chargeUom
                 },
                 success: function (data) {
                     if (data.success && data.vendors.length > 0) {
@@ -530,15 +552,19 @@
             const originId = $('#origin_id').val();
             const destId = $('#dest_id').val();
             const truckSize = $('#truck_size').val();
+            const servModa = $('#serv_moda').val();
+            const chargeUom = $('#charge_uom').val();
 
-            if (originId && destId && truckSize) {
+            if (originId && destId && truckSize && servModa && chargeUom) {
                 $.ajax({
                     url: '/Job/GetVendors',
                     type: 'GET',
                     data: {
                         originId: originId,
                         destId: destId,
-                        truckSize : truckSize
+                        truckSize : truckSize,
+                        servModa: servModa,
+                        chargeUom: chargeUom
                     },
                     success: function (data) {
                         if (data.success && data.vendors.length > 0) {

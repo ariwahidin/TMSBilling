@@ -14,7 +14,8 @@
         }
 
 
-        public class HeaderFormJob {
+        public class HeaderFormJob
+        {
 
             public string job_id { get; set; } = string.Empty;
             public string vendor_id { get; set; } = string.Empty;
@@ -28,6 +29,10 @@
             public string dest_area { get; set; } = string.Empty;
 
             public string truck_size { get; set; } = string.Empty;
+
+            public string serv_moda { get; set; } = string.Empty;
+
+            public string charge_uom { get; set; } = string.Empty;
 
         }
 

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250721093829_CreateTableConfigAddProtocol")]
+    partial class CreateTableConfigAddProtocol
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,8 +92,8 @@ namespace TMSBilling.Migrations
 
                     b.Property<string>("hostname")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("port")
                         .HasMaxLength(50)
@@ -528,10 +531,6 @@ namespace TMSBilling.Migrations
                     b.Property<decimal?>("buy_trip3")
                         .HasColumnType("money");
 
-                    b.Property<string>("charge_uom")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("charge_uom_c")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
@@ -555,10 +554,6 @@ namespace TMSBilling.Migrations
                     b.Property<string>("dest_ori")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("driverhp")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("drivername")
                         .HasMaxLength(30)
@@ -659,10 +654,6 @@ namespace TMSBilling.Migrations
 
                     b.Property<decimal?>("sell_trip3")
                         .HasColumnType("money");
-
-                    b.Property<string>("serv_moda")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("serv_req")
                         .HasMaxLength(10)
@@ -900,9 +891,6 @@ namespace TMSBilling.Migrations
 
                     b.Property<decimal?>("tot_pkgs")
                         .HasColumnType("decimal(9,2)");
-
-                    b.Property<int?>("total_pkgs")
-                        .HasColumnType("int");
 
                     b.Property<string>("truck_size")
                         .HasMaxLength(50)

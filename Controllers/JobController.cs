@@ -311,6 +311,7 @@ namespace TMSBilling.Controllers
                 newJob.moda_req = order?.moda_req;
                 newJob.serv_req = order?.serv_req;
                 newJob.truck_size = order?.truck_size;
+                newJob.charge_uom = CostRate.charge_uom;
                 //newJob.multidrop = ordx.multi
                 newJob.inv_no = order?.inv_no;
                 newJob.origin_id = order?.origin_id;
@@ -364,14 +365,16 @@ namespace TMSBilling.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetVendors(string originId, string destId, string truckSize)
+        public IActionResult GetVendors(string originId, string destId, string truckSize, string servModa, string chargeUom)
         {
             var vendors = _context.PriceBuys
                 .Where(v =>
                     v.active_flag == 1 &&
                     v.origin == originId &&
                     v.dest == destId &&
-                    v.truck_size == truckSize
+                    v.truck_size == truckSize &&
+                    v.serv_moda == servModa &&
+                    v.charge_uom == chargeUom
                 )
                 .OrderBy(v => v.buy1)
                 .Select(v => new {
