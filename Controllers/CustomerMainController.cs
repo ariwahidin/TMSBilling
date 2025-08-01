@@ -24,17 +24,18 @@ namespace TMSBilling.Controllers
 
         }
 
-        public IActionResult Form(string? id)
+        public IActionResult Form(int? id)
         {
-            if (string.IsNullOrEmpty(id))
+            if (id == null)
                 return PartialView("_Form", new CustomerMain());
 
-            var customer = _context.CustomerMains.FirstOrDefault(c => c.MAIN_CUST == id);
+            var customer = _context.CustomerMains.FirstOrDefault(c => c.ID == id);
             if (customer == null)
                 return NotFound();
 
             return PartialView("_Form", customer);
         }
+
 
         [HttpPost]
         public IActionResult Form(CustomerMain model)
@@ -42,15 +43,36 @@ namespace TMSBilling.Controllers
             if (!ModelState.IsValid)
                 return BadRequest();
 
-            var existing = _context.CustomerMains.Find(model.MAIN_CUST);
+            var existing = _context.CustomerMains.Find(model.ID);
+
             if (existing == null)
             {
+
+                bool exists = _context.CustomerMains.Any(v => v.MAIN_CUST == model.MAIN_CUST);
+                if (exists)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Main customer already exists"
+                    });
+                }
+
                 model.ENTRY_DATE = DateTime.Now;
                 model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
                 _context.CustomerMains.Add(model);
             }
             else
             {
+
+                bool duplicate = _context.CustomerMains.Any(v => v.MAIN_CUST == model.MAIN_CUST && v.ID != model.ID);
+                if (duplicate)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Main customer already exists on another record"
+                    });
+                }
+
                 existing.CUST_NAME = model.CUST_NAME;
                 existing.CUST_CITY = model.CUST_CITY;
                 existing.CUST_TEL = model.CUST_TEL;

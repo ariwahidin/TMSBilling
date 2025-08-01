@@ -43,12 +43,32 @@ public class OriginController : Controller
 
         if (existing == null)
         {
+
+            bool exists = _context.Origins.Any(v => v.origin_code == model.origin_code);
+            if (exists)
+            {
+                return BadRequest(new
+                {
+                    message = "Origin already exists"
+                });
+            }
+
             model.entryuser = HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.Origins.Add(model);
         }
         else
         {
+
+            bool duplicate = _context.Origins.Any(v => v.origin_code == model.origin_code && v.id != model.id);
+            if (duplicate)
+            {
+                return BadRequest(new
+                {
+                    message = "Origin already exists on another record"
+                });
+            }
+
             existing.origin_code = model.origin_code;
             existing.origin_loccode = model.origin_loccode;
             existing.updateuser = HttpContext.Session.GetString("username") ?? "System";

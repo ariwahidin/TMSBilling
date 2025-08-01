@@ -34,16 +34,40 @@ namespace TMSBilling.Controllers
         public IActionResult Save(AreaGroup model)
         {
             if (!ModelState.IsValid)
-                return RedirectToAction("Index");
+                return BadRequest(new
+                {
+                    message = "Invalid input data"
+                });
 
             if (model.id_seq == 0)
             {
+
+                bool exists = _context.AreaGroups.Any(v => v.area_name == model.area_name);
+                if (exists)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Area group already exists"
+                    });
+                }
+
                 model.entry_date = DateTime.Now;
                 model.entry_user = HttpContext.Session.GetString("username") ?? "system";
                 _context.AreaGroups.Add(model);
             }
             else
             {
+
+                bool duplicate = _context.AreaGroups.Any(v => v.area_name == model.area_name && v.id_seq != model.id_seq);
+                if (duplicate)
+                {
+
+                    return BadRequest(new
+                    {
+                        message = "Area group already exists on another record"
+                    });
+                }
+
                 var existing = _context.AreaGroups.FirstOrDefault(x => x.id_seq == model.id_seq);
                 if (existing == null) return NotFound();
 
@@ -53,7 +77,7 @@ namespace TMSBilling.Controllers
             }
 
             _context.SaveChanges();
-            return RedirectToAction("Index");
+            return Ok();
         }
 
         [HttpPost]

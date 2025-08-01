@@ -1,0 +1,249 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: #f8f9fa;">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary rounded-circle p-3 me-3">
+                                    <i class="fas fa-tachometer-alt text-white fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1 text-dark fw-semibold">Dashboard</h4>
+                                    <p class="text-muted mb-0 small">TMS Billing System</p>
+                                </div>
+                            </div>
+                            <h2 class="mb-3 text-dark">
+                                Welcome back, <span class="text-primary fw-bold">@ViewBag.Username</span>
+                            </h2>
+                            <p class="text-muted mb-3">
+                                Monitor and manage your billing operations efficiently.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-white border text-muted px-3 py-2">
+                                    <i class="far fa-calendar me-2"></i>
+                                    @DateTime.Now.ToString("dddd, MMMM dd, yyyy")
+                                </span>
+                                <span class="badge bg-white border text-muted px-3 py-2">
+                                    <i class="far fa-clock me-2"></i>
+                                    @* <span id="header-time">@DateTime.Now.ToString("HH:mm")
+                                        
+                                    </span> *@
+                                    <span id="current-time">@DateTime.Now.ToString("HH:mm:ss")</span>
+                                    
+                                </span>
+                                @* <h3 class="text-warning mb-0" id="current-time">
+                                    @DateTime.Now.ToString("HH:mm:ss")
+                                </h3> *@
+                                <span class="badge bg-success text-white px-3 py-2">
+                                    <i class="fas fa-circle me-2" style="font-size: 8px;"></i>
+                                    System Online
+                                </span>
+                            </div>
+                        </div>
+                        @* <div class="col-md-4 text-end">
+                            <div class="text-muted">
+                                <i class="fas fa-chart-line" style="font-size: 4rem; opacity: 0.1;"></i>
+                            </div>
+                        </div> *@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Info Cards -->
+    @* <div class="row mt-4">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-primary text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <i class="fas fa-chart-line fa-lg"></i>
+                    </div>
+                    <h5 class="card-title text-muted">System Status</h5>
+                    <h3 class="text-success mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Online
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-success text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <i class="fas fa-users fa-lg"></i>
+                    </div>
+                    <h5 class="card-title text-muted">Welcome Back</h5>
+                    <h3 class="text-primary mb-0">
+                        <i class="fas fa-smile me-2"></i>
+                        Good to see you!
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-info text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <i class="fas fa-calendar-check fa-lg"></i>
+                    </div>
+                    <h5 class="card-title text-muted">Today's Date</h5>
+                    <h3 class="text-info mb-0">
+                        @DateTime.Now.ToString("MMM dd")
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-warning text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <i class="fas fa-clock fa-lg"></i>
+                    </div>
+                    <h5 class="card-title text-muted">Current Time</h5>
+                    <h3 class="text-warning mb-0" id="current-time">
+                        @DateTime.Now.ToString("HH:mm:ss")
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div> *@
+
+    <!-- Motivational Quote Section -->
+    @* <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-quote-left text-muted" style="font-size: 2rem;"></i>
+                    </div>
+                    <blockquote class="blockquote mb-4">
+                        <p class="fs-4 text-muted fst-italic" id="daily-quote">
+                            "Success is not final, failure is not fatal: it is the courage to continue that counts."
+                        </p>
+                    </blockquote>
+                    <footer class="blockquote-footer">
+                        <cite title="Source Title" class="text-muted">Daily Motivation</cite>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div> *@
+
+    <!-- Quick Actions -->
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0 text-dark fw-semibold">
+                        Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body py-3">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <a href="@Url.Action("ChangePassword", "Account")" class="btn btn-light border w-100 py-2 text-start">
+                                <i class="bi bi-key text-primary me-2"></i>
+                                <span class="fw-medium">Change Password</span>
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="#" onclick="confirmLogout()" class="btn btn-light border w-100 py-2 text-start">
+                                <i class="bi bi-box-arrow-right text-primary me-2"></i>
+                                <span class="fw-medium">Log Out</span>
+                            </a>
+                        </div>
+                        @* <div class="col-md-4">
+                            <a href="#" class="btn btn-light border w-100 py-2 text-start">
+                                <i class="fas fa-cog text-secondary me-2"></i>
+                                <span class="fw-medium">Settings</span>
+                            </a>
+                        </div> *@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Update header time every minute
+        function updateHeaderTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const headerTimeElement = document.getElementById('header-time');
+            if (headerTimeElement) {
+                headerTimeElement.textContent = timeString;
+            }
+        }
+
+        // Update time every second
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('current-time').textContent = timeString;
+        }
+
+        // Update both times
+        updateHeaderTime();
+        updateTime();
+        setInterval(updateHeaderTime, 60000); // Update header time every minute
+        setInterval(updateTime, 1000); // Update detailed time every second
+
+        // Random motivational quotes
+        const quotes = [
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "The way to get started is to quit talking and begin doing.",
+            "Innovation distinguishes between a leader and a follower.",
+            "Your limitation—it's only your imagination.",
+            "Push yourself, because no one else is going to do it for you.",
+            "Great things never come from comfort zones.",
+            "Dream it. Wish it. Do it.",
+            "Success doesn't just find you. You have to go out and get it."
+        ];
+
+        // Change quote every 10 seconds
+        let quoteIndex = 0;
+        function changeQuote() {
+            const quoteElement = document.getElementById('daily-quote');
+            if (quoteElement) {
+                quoteElement.style.opacity = '0';
+                setTimeout(() => {
+                    quoteElement.textContent = `"${quotes[quoteIndex]}"`;
+                    quoteElement.style.opacity = '1';
+                    quoteIndex = (quoteIndex + 1) % quotes.length;
+                }, 500);
+            }
+        }
+
+        // Change quote every 10 seconds
+        setInterval(changeQuote, 10000);
+
+        // Add smooth transition for quote changes
+        const quoteElement = document.getElementById('daily-quote');
+        if (quoteElement) {
+            quoteElement.style.transition = 'opacity 0.5s ease-in-out';
+        }
+    </script>
+}

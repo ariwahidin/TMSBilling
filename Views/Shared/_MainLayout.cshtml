@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="~/css/main_layout.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @RenderSection("Styles", required: false)
 </head>
@@ -43,7 +44,7 @@
 
                 <nav class="nav-menu">
                     <div class="nav-item">
-                        <a href="/Dashboard" class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
+                        <a href="/Dashboard/Index" class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
                             <i class="bi bi-speedometer2 nav-icon"></i>
                             <span class="nav-text">Dashboard</span>
                         </a>
@@ -196,7 +197,7 @@
                     </div>
                 </nav>
 
-                <div class="theme-section">
+                <div class="theme-section d-none">
                     <div class="theme-toggle">
                         <input class="form-check-input" type="checkbox" id="themeSwitch">
                         <label class="theme-label" for="themeSwitch">Dark Mode</label>
@@ -226,8 +227,8 @@
                             <span class="user-name me-2">Hi, @Context.Session.GetString("username")</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                            @* <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li> *@
+                            <li><a class="dropdown-item" href="/Account/ChangePassword"><i class="bi bi-key me-2"></i>Change Password</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" onclick="confirmLogout()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>

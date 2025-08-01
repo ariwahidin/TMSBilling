@@ -8,6 +8,9 @@ namespace TMSBilling.Models
     public class CustomerMain
     {
         [Key]
+        public int ID { get; set; }
+
+        [Required]
         [MaxLength(30)]
         public string MAIN_CUST { get; set; } = string.Empty;
 
@@ -61,6 +64,7 @@ namespace TMSBilling.Models
         [Key]
         public int ID { get; set; }
 
+        [Required]
         [StringLength(50)]
         public string CUST_CODE { get; set; } = string.Empty;
         
@@ -81,8 +85,8 @@ namespace TMSBilling.Models
         public DateTime? UPDATE_DATE { get; set; }
         public int ACTIVE_FLAG { get; set; }  = 1;
         public string MAIN_CUST {  get; set; } = string.Empty;
-        [ForeignKey("MAIN_CUST")]
-        public CustomerMain? CustomerMain { get; set; }
+        //[ForeignKey("MAIN_CUST")]
+        //public CustomerMain? CustomerMain { get; set; }
         public int CUST_CUTOFF { get; set; }
     }
 

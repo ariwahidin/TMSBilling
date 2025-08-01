@@ -44,12 +44,32 @@ public class WarehouseController : Controller
 
         if (existing == null)
         {
+
+            bool exists = _context.Warehouses.Any(v => v.wh_code == model.wh_code);
+            if (exists)
+            {
+                return BadRequest(new
+                {
+                    message = "Warehouse already exists"
+                });
+            }
+
             model.entryuser = HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.Warehouses.Add(model);
         }
         else
         {
+
+            bool duplicate = _context.Warehouses.Any(v => v.wh_code == model.wh_code && v.ID != model.ID);
+            if (duplicate)
+            {
+                return BadRequest(new
+                {
+                    message = "Warehouse already exists on another record"
+                });
+            }
+
             existing.wh_code = model.wh_code;
             existing.wh_name = model.wh_name;
             existing.updateuser = HttpContext.Session.GetString("username") ?? "System";

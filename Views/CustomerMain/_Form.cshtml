@@ -4,7 +4,8 @@
     <div class="mb-3 row">
         <label class="col-sm-3 col-form-label text-end">Customer Main ID</label>
         <div class="col-sm-8">
-            <input asp-for="MAIN_CUST" class="form-control" readonly="@(Model.MAIN_CUST != "" ? "readonly" : null)" />
+            <input asp-for="ID" type="hidden" class="form-control" />
+            <input asp-for="MAIN_CUST" class="form-control" />
         </div>
     </div>
 

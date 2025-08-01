@@ -18,6 +18,9 @@ namespace TMSBilling.Models
         [StringLength(100, MinimumLength = 6, ErrorMessage = "Password minimal 6 karakter.")]
         public string Password { get; set; } = "";
 
+        [Required]
+        public bool IsAdmin { get; set; } = false;
+
         public string? CreatedBy { get; set; }
         public DateTime? CreatedAt { get; set; }
 

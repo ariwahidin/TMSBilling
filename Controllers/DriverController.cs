@@ -52,7 +52,7 @@ public class DriverController : Controller
             .Select(v => new SelectListItem
             {
                 Value = v.SUP_CODE,
-                Text = $"{v.SUP_CODE} - {v.SUP_NAME}"
+                Text = $"{v.SUP_CODE}"
             }).ToList();
 
         ViewBag.ListVendor = listVendor;

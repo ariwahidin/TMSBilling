@@ -2,6 +2,7 @@
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Vendor Vehicle";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
 <div class="mb-3">
@@ -34,9 +35,11 @@
                     <a asp-action="Form" asp-route-id="@item.ID" class="btn btn-sm btn-warning">
                         <i class="bi bi-pencil-square"></i>
                     </a>
+                    @if(isAdmin){
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID">
                         <i class="bi bi-trash"></i>
                     </button>
+                    }
                 </td>
             </tr>
         }
@@ -48,15 +51,53 @@
         $(document).ready(function () {
             $('#truckTable').DataTable();
 
-            $(".btnDelete").click(function () {
-                if (!confirm("Yakin hapus data ini?")) return;
+            // $(".btnDelete").click(function () {
+            //     if (!confirm("Yakin hapus data ini?")) return;
 
-                $.post("/VendorTruck/Delete", { id: $(this).data("id") }, function () {
-                    location.reload();
-                }).fail(function () {
-                    alert("Gagal menghapus data.");
+            //     $.post("/VendorTruck/Delete", { id: $(this).data("id") }, function () {
+            //         location.reload();
+            //     }).fail(function () {
+            //         alert("Gagal menghapus data.");
+            //     });
+            // });
+
+            $(".btnDelete").click(function () {
+                const id = $(this).data("id");
+
+                Swal.fire({
+                    title: "Delete this record?",
+                    text: "This action cannot be undone.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Delete",
+                    cancelButtonText: "Cancel",
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post("/VendorTruck/Delete", { id: $(this).data("id") })
+                            .done(() => {
+                                Swal.fire({
+                                    title: "Deleted",
+                                    text: "Record deleted successfully.",
+                                    icon: "success",
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            })
+                            .fail(() => {
+                                Swal.fire({
+                                    title: "Error",
+                                    text: "Failed to delete the record.",
+                                    icon: "error"
+                                });
+                            });
+                    }
                 });
             });
+
         });
     </script>
 }

@@ -46,12 +46,30 @@ public class CustomerGroupController : Controller
 
         if (model.ID == 0)
         {
+            bool exists = _context.CustomerGroups.Any(v => v.SUB_CODE == model.SUB_CODE);
+            if (exists)
+            {
+                return BadRequest(new
+                {
+                    message = "WMS code already exists"
+                });
+            }
+
             model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
             model.ENTRY_DATE = DateTime.Now;
             _context.CustomerGroups.Add(model);
         }
         else
         {
+            bool duplicate = _context.CustomerGroups.Any(v => v.SUB_CODE == model.SUB_CODE && v.ID != model.ID);
+            if (duplicate)
+            {
+                return BadRequest(new
+                {
+                    message = "WMS code already exists on another record"
+                });
+            }
+
             var data = _context.CustomerGroups.Find(model.ID);
             if (data == null) return NotFound();
 

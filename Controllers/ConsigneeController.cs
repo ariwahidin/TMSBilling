@@ -57,13 +57,20 @@ public class ConsigneeController : Controller
 
         if (existing == null)
         {
+            // Cek apakah CNEE_CODE sudah digunakan oleh record lain
+            bool codeExists = _context.Consignees.Any(c => c.CNEE_CODE == model.CNEE_CODE);
+            if (codeExists)
+            {
+                return BadRequest(new { message = "Cnee Code is already in use. Please choose a different one." });
+            }
+
             model.ENTRY_DATE = DateTime.Now;
             model.ENTRY_USER = HttpContext.Session.GetString("username");
             _context.Consignees.Add(model);
         }
         else
         {
-            // Hanya update properti yang boleh diubah
+            // Update existing record
             existing.CNEE_CODE = model.CNEE_CODE;
             existing.CNEE_NAME = model.CNEE_NAME;
             existing.CNEE_ADDR1 = model.CNEE_ADDR1;
@@ -78,13 +85,12 @@ public class ConsigneeController : Controller
             existing.SUB_CODE = model.SUB_CODE;
             existing.UPDATE_USER = HttpContext.Session.GetString("username");
             existing.UPDATE_DATE = DateTime.Now;
-
-            // Tidak menyentuh existing.ID (identity)
         }
 
         _context.SaveChanges();
         return Ok();
     }
+
 
     [HttpPost]
     public IActionResult Delete(int id)

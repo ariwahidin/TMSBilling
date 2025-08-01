@@ -34,16 +34,39 @@ namespace TMSBilling.Controllers
         public IActionResult Save(ChargeUom model)
         {
             if (!ModelState.IsValid)
-                return RedirectToAction("Index");
+                return BadRequest(new
+                {
+                    message = "Invalid input data"
+                });
 
             if (model.id_seq == 0)
             {
+
+                bool exists = _context.ChargeUoms.Any(v => v.charge_name == model.charge_name);
+                if (exists)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Charge UoM already exists"
+                    });
+                }
+
                 model.entry_date = DateTime.Now;
                 model.entry_user = HttpContext.Session.GetString("username") ?? "system";
                 _context.ChargeUoms.Add(model);
             }
             else
             {
+                bool duplicate = _context.ChargeUoms.Any(v => v.charge_name == model.charge_name && v.id_seq != model.id_seq);
+                if (duplicate)
+                {
+
+                    return BadRequest(new
+                    {
+                        message = "Charge uom already exists on another record"
+                    });
+                }
+
                 var existing = _context.ChargeUoms.FirstOrDefault(x => x.id_seq == model.id_seq);
                 if (existing == null) return NotFound();
 
@@ -53,7 +76,7 @@ namespace TMSBilling.Controllers
             }
 
             _context.SaveChanges();
-            return RedirectToAction("Index");
+            return Ok();
         }
 
         [HttpPost]

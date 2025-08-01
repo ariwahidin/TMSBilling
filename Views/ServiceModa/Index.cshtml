@@ -2,6 +2,7 @@
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Service Moda";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -25,10 +26,13 @@
                     <button class="btn btn-warning btn-sm" onclick="loadForm(@item.id_seq)">
                         <i class="bi bi-pencil-square"></i>
                     </button>
-                    <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete?')">
-                        <input type="hidden" name="id" value="@item.id_seq" />
-                        <button class="btn btn-danger btn-sm" type="submit"><i class="bi bi-trash"></i></button>
-                    </form>
+                    @if (isAdmin)
+                    {
+                        <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete?')">
+                            <input type="hidden" name="id" value="@item.id_seq" />
+                            <button class="btn btn-danger btn-sm" type="submit"><i class="bi bi-trash"></i></button>
+                        </form>
+                    }
                 </td>
             </tr>
         }
@@ -52,6 +56,9 @@
 
 @section Scripts {
     <script>
+
+        let modal = new bootstrap.Modal(document.getElementById("formModal"));
+
         function loadForm(id) {
             $.get('/ServiceModa/Form', { id }, function (html) {
                 $('#formBody').html(html);
@@ -63,5 +70,71 @@
         $(document).ready(function () {
             $('#modaTable').DataTable();
         });
+
+        $(document).on("submit", "#modaForm", function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: "POST",
+                url: "/ServiceModa/Save",
+                data: $(this).serialize(),
+                success: function () {
+                    modal.hide();
+                    location.reload();
+                },
+                error: function () {
+                    // alert("Gagal menyimpan data.");
+                }
+            });
+        });
     </script>
+
+
+    @* <script>
+        $(document).ready(function () {
+            $('#destinationTable').DataTable();
+            let modal = new bootstrap.Modal(document.getElementById("destinationModal"));
+
+            $("#btnAdd").click(function () {
+                $.get("/Destination/Form", function (html) {
+                    $("#modalContent").html(html);
+                    modal.show();
+                });
+            });
+
+            $(".btnEdit").click(function () {
+                const id = $(this).data("id");
+                $.get("/Destination/Form?id=" + id, function (html) {
+                    $("#modalContent").html(html);
+                    modal.show();
+                });
+            });
+
+            $(".btnDelete").click(function () {
+                if (!confirm("Yakin hapus data ini?")) return;
+                const id = $(this).data("id");
+
+                $.post("/Destination/Delete", { id }, function () {
+                    location.reload();
+                }).fail(function () {
+                    alert("Gagal menghapus data.");
+                });
+            });
+
+            $(document).on("submit", "#destinationForm", function (e) {
+                e.preventDefault();
+                $.ajax({
+                    type: "POST",
+                    url: "/Destination/Form",
+                    data: $(this).serialize(),
+                    success: function () {
+                        modal.hide();
+                        location.reload();
+                    },
+                    error: function () {
+                        // alert("Gagal menyimpan data.");
+                    }
+                });
+            });
+        });
+    </script> *@
 }

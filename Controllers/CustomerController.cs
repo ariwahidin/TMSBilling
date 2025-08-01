@@ -22,7 +22,7 @@ namespace TMSBilling.Controllers
 
         public IActionResult Index()
         {
-            var data = _context.Customers.Include(c => c.CustomerMain).ToList();
+            var data = _context.Customers.ToList();
             return View(data);
         }
 
@@ -61,12 +61,32 @@ namespace TMSBilling.Controllers
             var existing = _context.Customers.Find(model.ID);
             if (existing == null)
             {
+
+                bool exists = _context.Customers.Any(v => v.CUST_CODE == model.CUST_CODE);
+                if (exists)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Customer ID already exists"
+                    });
+                }
+
                 model.ENTRY_DATE = DateTime.Now;
                 model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
                 _context.Customers.Add(model);
             }
             else
             {
+
+                bool duplicate = _context.Customers.Any(v => v.CUST_CODE == model.CUST_CODE && v.ID != model.ID);
+                if (duplicate)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Customer ID already exists on another record"
+                    });
+                }
+
                 existing.CUST_CODE = model.CUST_CODE;
                 existing.CUST_NAME = model.CUST_NAME;
                 existing.CUST_ADDR1 = model.CUST_ADDR1;

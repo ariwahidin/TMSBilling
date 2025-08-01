@@ -42,16 +42,38 @@ namespace TMSBilling.Controllers
         public IActionResult Save(ServiceModa model)
         {
             if (!ModelState.IsValid)
-                return RedirectToAction("Index");
+                return BadRequest(new
+                {
+                    message = "Invalid input data"
+                });
 
             if (model.id_seq == 0)
             {
+                bool exists = _context.ServiceModas.Any(v => v.moda_name == model.moda_name);
+                if (exists)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Moda already exists"
+                    });
+                }
+
                 model.entry_date = DateTime.Now;
                 model.entry_user = User.Identity?.Name ?? "system";
                 _context.ServiceModas.Add(model);
             }
             else
             {
+                bool duplicate = _context.ServiceModas.Any(v => v.moda_name == model.moda_name && v.id_seq != model.id_seq);
+                if (duplicate)
+                {
+
+                    return BadRequest(new
+                    {
+                        message = "Moda already exists on another record"
+                    });
+                }
+
                 var existing = _context.ServiceModas.FirstOrDefault(x => x.id_seq == model.id_seq);
                 if (existing == null) return NotFound();
 
@@ -61,7 +83,8 @@ namespace TMSBilling.Controllers
             }
 
             _context.SaveChanges();
-            return RedirectToAction("Index");
+            return Ok();
+            //return RedirectToAction("Index");
         }
 
         [HttpPost]

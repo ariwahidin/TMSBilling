@@ -3,6 +3,7 @@
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Consignee";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
 <button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Data</button>
@@ -29,9 +30,11 @@
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </button>
+                    @if(isAdmin){
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Hapus">
                         <i class="bi bi-trash"></i>
                     </button>
+                    }
                 </td>
             </tr>
         }
@@ -100,7 +103,7 @@
                         location.reload();
                     })
                     .fail(function () {
-                        alert("Gagal menyimpan data.");
+                        // alert("Gagal menyimpan data.");
                     });
             });
         });

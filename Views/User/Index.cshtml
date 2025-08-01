@@ -1,6 +1,7 @@
 ﻿@{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Master User";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
 @* <h2 class="mb-4">User Report</h2> *@
@@ -13,7 +14,10 @@
     <button id="deselect-all">Deselect All</button>
     <button onclick="window.location.href='/User/Create'">Add</button>
     <button onclick="editUser()">Edit</button>
-    <button onclick="deleteUser()">Delete</button>
+    @if (isAdmin)
+    {
+        <button onclick="deleteUser()">Delete</button>
+    }
     <span id="select-stats"></span>
 </div>
 <div class="mt-2 mb-2">

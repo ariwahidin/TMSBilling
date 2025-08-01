@@ -44,12 +44,30 @@ public class DestinationController : Controller
 
         if (existing == null)
         {
+            bool exists = _context.Destinations.Any(v => v.destination_code == model.destination_code);
+            if (exists)
+            {
+                return BadRequest(new
+                {
+                    message = "Destination already exists"
+                });
+            }
+
             model.entryuser = HttpContext.Session.GetString("username") ?? "System";
             model.entrydate = DateTime.Now;
             _context.Destinations.Add(model);
         }
         else
         {
+            bool duplicate = _context.Destinations.Any(v => v.destination_code == model.destination_code && v.ID != model.ID);
+            if (duplicate)
+            {
+                return BadRequest(new
+                {
+                    message = "Destination already exists on another record"
+                });
+            }
+
             existing.destination_code = model.destination_code;
             existing.dest_loccode = model.dest_loccode;
             existing.updateuser = HttpContext.Session.GetString("username") ?? "System"; ;
