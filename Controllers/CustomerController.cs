@@ -55,7 +55,10 @@ namespace TMSBilling.Controllers
                     }
                 }
 
-                return BadRequest(ModelState);
+                BadRequest(new
+                {
+                    message = "Please fill all input field with correct value"
+                });
             }
 
             var existing = _context.Customers.Find(model.ID);
