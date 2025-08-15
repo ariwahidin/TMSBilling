@@ -213,25 +213,25 @@ public class PriceSellController : Controller
     private async Task<(bool isValid, string? errorMessage)> ValidatePriceSellItemAsync(PriceSellDto item)
     {
         if (!await _context.CustomerMains.AnyAsync(c => c.MAIN_CUST == item.cust_code))
-            return (false, $"Kode customer main tidak valid: {item.cust_code}");
+            return (false, $"Main customer code is invalid: {item.cust_code}");
 
         if (!await _context.Origins.AnyAsync(l => l.origin_code == item.origin))
-            return (false, $"Kode origin tidak valid: {item.origin}");
+            return (false, $"Origin is invalid: {item.origin}");
 
         if (!await _context.Destinations.AnyAsync(l => l.destination_code == item.dest))
-            return (false, $"Kode destination tidak valid: {item.dest}");
+            return (false, $"Origin is invalid: {item.dest}");
 
         if (!await _context.ServiceTypes.AnyAsync(s => s.serv_name == item.serv_type))
-            return (false, $"Tipe layanan tidak valid: {item.serv_type}");
+            return (false, $"Service Type is invalid: {item.serv_type}");
 
         if (!await _context.ServiceModas.AnyAsync(s => s.moda_name == item.serv_moda))
-            return (false, $"Moda layanan tidak valid: {item.serv_moda}");
+            return (false, $"Service Moda is invalid: {item.serv_moda}");
 
         if (!await _context.TruckSizes.AnyAsync(t => t.trucksize_code == item.truck_size))
-            return (false, $"Ukuran truk tidak valid: {item.truck_size}");
+            return (false, $"Truck Size is invalid: {item.truck_size}");
 
         if (!await _context.ChargeUoms.AnyAsync(c => c.charge_name == item.charge_uom))
-            return (false, $"UOM tidak valid: {item.charge_uom}");
+            return (false, $"UOM is invalid: {item.charge_uom}");
 
         return (true, null);
     }
@@ -248,21 +248,21 @@ public class PriceSellController : Controller
                     kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
                 );
 
-            return BadRequest(new { message = "Model binding gagal.", errors });
+            return BadRequest(new { message = "Model binding failed.", errors });
         }
 
         if (request?.data == null || !request.data.Any())
-            return BadRequest(new { message = "Data kosong atau tidak bisa dibaca." });
+            return BadRequest(new { message = "Data is empty or unreadable." });
 
         // VALIDASI DUPLIKAT DI FILE
         var duplicates = request.data
             .GroupBy(x => new { x.cust_code, x.origin, x.dest, x.serv_type, x.serv_moda, x.truck_size, x.charge_uom })
             .Where(g => g.Count() > 1)
-            .Select(g => $"Data duplikat ditemukan: {g.Key.cust_code} | {g.Key.origin} | {g.Key.dest} | {g.Key.serv_type} | {g.Key.serv_moda} | {g.Key.truck_size} | {g.Key.charge_uom}")
+            .Select(g => $"Duplicate data found: {g.Key.cust_code} | {g.Key.origin} | {g.Key.dest} | {g.Key.serv_type} | {g.Key.serv_moda} | {g.Key.truck_size} | {g.Key.charge_uom}")
             .ToList();
 
         if (duplicates.Any())
-            return BadRequest(new { message = "Duplikat data ditemukan dalam file upload.", errors = duplicates });
+            return BadRequest(new { message = "Duplicate data found in the uploaded file.", errors = duplicates });
 
         // VALIDASI MODE
         var modeErrors = new List<string>();
@@ -282,14 +282,14 @@ public class PriceSellController : Controller
             var exists = await query.AnyAsync();
 
             if (request.mode == "add" && exists)
-                modeErrors.Add($"(ADD) Data sudah ada: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
+                modeErrors.Add($"(ADD) Data already exists: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
 
             if (request.mode == "edit" && !exists)
-                modeErrors.Add($"(EDIT) Data tidak ditemukan: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
+                modeErrors.Add($"(EDIT) Data not found: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
         }
 
         if (modeErrors.Any())
-            return BadRequest(new { message = "Validasi berdasarkan mode gagal.", errors = modeErrors });
+            return BadRequest(new { message = "Validation based on mode failed.", errors = modeErrors });
 
         // VALIDASI MASTER
         var validationErrors = new List<string>();
@@ -301,7 +301,7 @@ public class PriceSellController : Controller
         }
 
         if (validationErrors.Any())
-            return BadRequest(new { message = "Validasi master gagal.", errors = validationErrors });
+            return BadRequest(new { message = "Master validation failed.", errors = validationErrors });
 
         // INSERT / UPDATE
         foreach (var item in request.data)
@@ -385,7 +385,7 @@ public class PriceSellController : Controller
 
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Data PriceSell berhasil diproses." });
+        return Ok(new { message = "PriceSell data processed successfully." });
     }
 
 

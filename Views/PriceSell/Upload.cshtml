@@ -3,31 +3,42 @@
     ViewData["Title"] = "Import Data Price Sell";
 }
 
-<div class="d-flex align-items-center">
+@* <div class="d-flex align-items-center">
     <form id="uploadForm" enctype="multipart/form-data">
         <a href="/PriceSell/Index" class="btn btn-primary mb-3">Back</a>
         <a href="/PriceSell/DownloadTemplate" class="btn btn-secondary mb-3">Download Template Excel</a>
         <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control mb-3" />
         <button type="button" class="btn btn-primary" onclick="previewExcel()">Preview</button>
     </form>
+</div> *@
+
+<div class="d-flex align-items-center gap-2">
+    <form id="uploadForm" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="/PriceSell/Index" class="btn btn-primary">Back</a>
+        <a href="/PriceSell/DownloadTemplate" class="btn btn-secondary">Download Template Excel</a>
+        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" style="width:auto;">
+        <button type="button" class="btn btn-primary" onclick="previewExcel()">Preview</button>
+    </form>
+    <div class="d-flex align-items-center">
+        <select id="operationType" class="form-select me-3" style="width: 200px;">
+            <option value="add">Add</option>
+            <option value="edit">Edit</option>
+        </select>
+        <button class="btn btn-success" onclick="submitData()">Submit</button>
+    </div>
 </div>
+
 
 <hr />
 
 <h4>Preview Data</h4>
-
-<table class="table table-bordered nowrap" id="previewTable">
+<p>Total rows : <span id="spanRows"></span></p>
+<table class="table table-bordered nowrap" id="previewTable" style="font-size:12px;">
     <thead></thead>
     <tbody></tbody>
 </table>
-<p>Total rows : <span id="spanRows"></span></p>
-<div class="d-flex align-items-center">
-    <select id="operationType" class="form-select me-3" style="width: 200px;">
-        <option value="add">Add</option>
-        <option value="edit">Edit</option>
-    </select>
-    <button class="btn btn-success" onclick="submitData()">Submit</button>
-</div>
+
+
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -111,7 +122,7 @@
         }
 
         function submitData() {
-            if (parsedData.length === 0) return alert("Belum ada data untuk dikirim.");
+            if (parsedData.length === 0) return showToast('Preview the data beforehand', 'error');;
 
             const op = document.getElementById('operationType').value;
 
@@ -122,10 +133,19 @@
             })
             .then(res => res.json())
             .then(result => {
-                if (result.errors) {
-                    showToast(result.errors, 'error');
-                    return;
-                }
+                // if (result.errors) {
+                //     showToast(result.errors, 'error');
+                //     return;
+                // }
+
+            if (result.errors) {
+            const errorMessages = JSON.stringify(result.errors)
+                .replace(/[{"}\[\]]/g, '') // buang kurung & tanda kutip
+                .replace(/,/g, '\n');      // ganti koma jadi newline
+
+            showToast(errorMessages, 'error');
+            return;
+        }
                 showToast(result.message, 'success');
                 setTimeout(() => {
                     window.location.href = '/PriceSell/Index';
