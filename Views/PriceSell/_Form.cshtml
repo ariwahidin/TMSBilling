@@ -258,8 +258,10 @@
 
         // Fungsi format ribuan
         function formatNumber(value) {
-            value = value.replace(/\D/g, ''); // Hapus non-digit
-            return value.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // Tambahkan titik ribuan
+            // value = value.replace(/\D/g, ''); Hapus non-digit
+            // return value.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); Tambahkan titik ribuan
+
+            return value;
         }
 
         // Saat input diketik
