@@ -12,7 +12,7 @@ namespace TMSBilling.Models
         public int ID { get; set; }
 
         [Required]
-        [StringLength(15)]
+        [StringLength(50)]
         public required string SUP_CODE { get; set; }
 
         [StringLength(10)]

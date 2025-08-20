@@ -60,7 +60,28 @@
                 });
             });
 
-            $(".btnEdit").click(function () {
+            // $(".btnEdit").click(function () {
+            //     const id = $(this).data("id");
+            //     $.get("/TruckSize/Form?id=" + id, function (html) {
+            //         $("#modalContent").html(html);
+            //         modal.show();
+            //     });
+            // });
+
+            // $(".btnDelete").click(function () {
+            //     if (!confirm("Yakin hapus data ini?")) return;
+            //     const id = $(this).data("id");
+
+            //     $.post("/TruckSize/Delete", { id }, function () {
+            //         location.reload();
+            //     }).fail(function () {
+            //         alert("Gagal menghapus data.");
+            //     });
+            // });
+
+
+            // Edit
+            $(document).on("click", ".btnEdit", function () {
                 const id = $(this).data("id");
                 $.get("/TruckSize/Form?id=" + id, function (html) {
                     $("#modalContent").html(html);
@@ -68,7 +89,8 @@
                 });
             });
 
-            $(".btnDelete").click(function () {
+            // Delete
+            $(document).on("click", ".btnDelete", function () {
                 if (!confirm("Yakin hapus data ini?")) return;
                 const id = $(this).data("id");
 

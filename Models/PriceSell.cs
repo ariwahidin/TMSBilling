@@ -11,7 +11,7 @@ namespace TMSBilling.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int id_seq { get; set; }
 
-        [StringLength(30)]
+        [StringLength(10)]
         public string? cust_code { get; set; }
 
         [StringLength(50)]

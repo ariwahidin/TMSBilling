@@ -12,7 +12,7 @@ namespace TMSBilling.Models
         public int ID { get; set; }
 
         [Required]
-        [StringLength(50)]
+        [StringLength(10)]
         public required string trucksize_code { get; set; }
 
         [StringLength(50)]

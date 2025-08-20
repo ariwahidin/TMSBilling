@@ -25,7 +25,7 @@ namespace TMSBilling.Models
 
         public DateTime? updatedate { get; set; }
 
-        [StringLength(20)]
+        [StringLength(100)]
         public string? dest_loccode { get; set; }
     }
 }

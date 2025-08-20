@@ -4,37 +4,129 @@
 }
 
 
-<div class="d-flex align-items-center">
-    <form id="uploadForm" enctype="multipart/form-data">
-        <a href="/PriceBuy/Index" class="btn btn-primary mb-3">Back</a>
-        <a href="/PriceBuy/DownloadTemplate" class="btn btn-secondary mb-3">Download Template Excel</a>
-        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control mb-3" />
-        <button type="button" class="btn btn-primary" onclick="previewExcel()">Preview</button>
+
+<div class="d-flex align-items-center gap-2">
+    <form id="uploadForm" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="/PriceBuy/Index" class="btn btn-primary">Back</a>
+        <a href="/PriceBuy/DownloadTemplate" class="btn btn-secondary">Download Template Excel</a>
+        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" style="width:auto;" />
+        <button type="button" class="btn btn-primary" id="previewBtn" onclick="previewExcel()">Preview</button>
     </form>
+    <div class="d-flex align-items-center">
+        <select id="operationType" class="form-select me-3" style="width: 200px;">
+            <option value="add">Add</option>
+            <option value="edit">Edit</option>
+        </select>
+        <button class="btn btn-success" id="submitBtn" onclick="submitData()">Submit</button>
+    </div>
 </div>
-
-
 <hr />
 
 <h4>Preview Data</h4>
+<p>Total rows : <span id="spanRows"></span></p>
 
 <table class="table table-bordered nowrap" id="previewTable">
     <thead></thead>
     <tbody></tbody>
 </table>
-<p>Total rows : <span id="spanRows"></span></p>
-<div class="d-flex align-items-center">
-    <select id="operationType" class="form-select me-3" style="width: 200px;">
-        <option value="add">Add</option>
-        <option value="edit">Edit</option>
-    </select>
-    <button class="btn btn-success" onclick="submitData()">Submit</button>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="text-center">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Processing...</div>
+    </div>
 </div>
+
+@section Styles {
+    <style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 6px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            color: white;
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        @@keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+            .btn-loading::after {
+                content: '';
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                margin: auto;
+                border: 2px solid transparent;
+                border-top-color: #ffffff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+            }
+    </style>
+}
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         let parsedData = [];
+
+        function showLoading(text = 'Processing...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function setButtonLoading(buttonId, isLoading) {
+            const button = document.getElementById(buttonId);
+            if (isLoading) {
+                button.classList.add('btn-loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+            }
+        }
 
         function fixExcelDate(value) {
             if (typeof value === "number") {
@@ -48,44 +140,60 @@
             return "";
         }
 
-
         function previewExcel() {
             const fileInput = document.getElementById('excelFile');
             const file = fileInput.files[0];
 
             if (!file) return alert("Pilih file Excel terlebih dahulu!");
 
+            // Show loading
+            showLoading('Processing Excel file...');
+            setButtonLoading('previewBtn', true);
+
             const reader = new FileReader();
             reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-                parsedData = json.map(row => {
-                    const {
-                        sup_code, origin, dest, serv_type, serv_moda,
-                        truck_size, charge_uom, flag_min, charge_min,
-                        flag_range, min_range, max_range,
-                        buy1, buy2, buy3,
-                        buy_ret_empt, buy_ret_cargo, buy_ovnight, buy_cancel,
-                        buytrip2, buytrip3, buy_diff_area,
-                        valid_date, active_flag, curr, rate_value
-                    } = row;
+                    parsedData = json.map(row => {
+                        const {
+                            sup_code, origin, dest, serv_type, serv_moda,
+                            truck_size, charge_uom, flag_min, charge_min,
+                            flag_range, min_range, max_range,
+                            buy1, buy2, buy3,
+                            buy_ret_empt, buy_ret_cargo, buy_ovnight, buy_cancel,
+                            buytrip2, buytrip3, buy_diff_area,
+                            valid_date, active_flag, curr, rate_value
+                        } = row;
 
-                    return {
-                        sup_code, origin, dest, serv_type, serv_moda,
-                        truck_size, charge_uom, flag_min, charge_min,
-                        flag_range, min_range, max_range,
-                        buy1, buy2, buy3,
-                        buy_ret_empt, buy_ret_cargo, buy_ovnight, buy_cancel,
-                        buytrip2, buytrip3, buy_diff_area,
-                        valid_date :  fixExcelDate(valid_date), active_flag, curr, rate_value
-                    };
-                });
+                        return {
+                            sup_code, origin, dest, serv_type, serv_moda,
+                            truck_size, charge_uom, flag_min, charge_min,
+                            flag_range, min_range, max_range,
+                            buy1, buy2, buy3,
+                            buy_ret_empt, buy_ret_cargo, buy_ovnight, buy_cancel,
+                            buytrip2, buytrip3, buy_diff_area,
+                            valid_date: fixExcelDate(valid_date), active_flag, curr, rate_value
+                        };
+                    });
 
-                renderTable(parsedData);
+                    // Simulate processing delay for better UX
+                    setTimeout(() => {
+                        renderTable(parsedData);
+                        hideLoading();
+                        setButtonLoading('previewBtn', false);
+                    }, 500);
+
+                } catch (error) {
+                    console.error('Error processing file:', error);
+                    alert('Error processing Excel file');
+                    hideLoading();
+                    setButtonLoading('previewBtn', false);
+                }
             };
             reader.readAsArrayBuffer(file);
         }
@@ -116,9 +224,13 @@
         }
 
         function submitData() {
-            if (parsedData.length === 0) return alert("Belum ada data untuk dikirim.");
+            if (parsedData.length === 0) return showToast('Preview the data beforehand', 'error');
 
             const op = document.getElementById('operationType').value;
+
+            // Show loading
+            showLoading('Submitting data...');
+            setButtonLoading('submitBtn', true);
 
             fetch('/PriceBuy/UploadExcel', {
                 method: 'POST',
@@ -129,13 +241,16 @@
             })
             .then(res => res.json())
             .then(result => {
-                if(result.errors){
-                 showToast(result.errors, 'error')
-                 return
+                hideLoading();
+                setButtonLoading('submitBtn', false);
+
+                if (result.errors) {
+                    showToast(result.errors, 'error')
+                    return
                 }
                 showToast(result.message, 'success')
 
-                 setTimeout(() => {
+                setTimeout(() => {
                     window.location.href = '/PriceBuy/Index';
                 }, 1000);
 
@@ -143,6 +258,8 @@
             })
             .catch(err => {
                 console.error(err);
+                hideLoading();
+                setButtonLoading('submitBtn', false);
                 alert("Gagal upload data.");
             });
         }
