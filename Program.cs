@@ -3,9 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using TMSBilling.Data;
 using TMSBilling.Models;
-using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
+builder.Services.AddHttpClient<ProductController>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

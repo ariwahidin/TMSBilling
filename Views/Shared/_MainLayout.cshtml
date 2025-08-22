@@ -61,7 +61,7 @@
                             <span class="nav-text">Master</span>
                         </a>
 
-                        <div class="collapse submenu @(IsControllerActive("Customer", "CustomerGroup", "CustomerMain", "User", "Consignee", "Vendor", "TruckSize", "Origin", "Destination", "Warehouse", "VendorTruck", "Driver", "ServiceModa", "ServiceType", "ChargeUom", "AreaGroup", "PriceBuy", "PriceSell") ? "show" : "")" id="masterMenu">
+                        <div class="collapse submenu @(IsControllerActive("Customer", "CustomerGroup", "CustomerMain", "User", "Consignee", "Vendor", "TruckSize", "Origin", "Destination", "Warehouse", "VendorTruck", "Driver", "ServiceModa", "ServiceType", "ChargeUom", "AreaGroup", "PriceBuy", "PriceSell", "Product") ? "show" : "")" id="masterMenu">
 
                             <a href="/Customer/Index" class="nav-link @(IsControllerActive("Customer", "CustomerGroup", "CustomerMain") ? "active" : "")">
                                 <i class="bi bi-database nav-icon"></i>
@@ -131,6 +131,11 @@
                             <a href="/PriceSell/Index" class="nav-link @(IsControllerActive("PriceSell") ? "active" : "")">
                                 <i class="bi bi-database nav-icon"></i>
                                 <span class="nav-text">Price Sell</span>
+                            </a>
+
+                            <a href="/Product/Index" class="nav-link @(IsControllerActive("Product") ? "active" : "")">
+                                <i class="bi bi-database nav-icon"></i>
+                                <span class="nav-text">Product</span>
                             </a>
 
                             <a href="/User/Index" class="nav-link @(IsActive("User") ? "active" : "")">

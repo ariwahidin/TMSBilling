@@ -1,0 +1,22 @@
+﻿@model TMSBilling.Models.Product
+
+<form id="productForm">
+    <input type="hidden" asp-for="id" />
+
+    <div class="mb-3">
+        <label class="form-label">SKU</label>
+        <input type="text" asp-for="sku" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Product Name</label>
+        <input type="text" asp-for="name" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Price</label>
+        <input type="number" asp-for="price" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
