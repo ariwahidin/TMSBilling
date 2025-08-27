@@ -1,21 +1,50 @@
-﻿@model TMSBilling.Models.Product
+﻿@model TMSBilling.Models.McEasyApiModel.ProductStore
 
-<form id="productForm">
-    <input type="hidden" asp-for="id" />
+<form id="productForm" method="post" asp-action="Form" asp-controller="Product">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" asp-for="Name" class="form-control" />
+    </div>
 
     <div class="mb-3">
         <label class="form-label">SKU</label>
-        <input type="text" asp-for="sku" class="form-control" />
+        <input type="text" asp-for="Sku" class="form-control" />
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Product Name</label>
-        <input type="text" asp-for="name" class="form-control" />
+        <label class="form-label">Description</label>
+        <input type="text" asp-for="Description" class="form-control" />
     </div>
+
+    <div class="mb-3 d-none">
+        <label class="form-label">Product Type</label>
+        <input type="text" asp-for="ProductTypeId" readonly class="form-control" value="d743adbc-241e-413b-82f9-428a2c971a8c" />
+    </div>
+
+    <div class="row">
+        <div class="mb-3 col-md-4">
+            <label class="form-label">Weight</label>
+            <input type="number" asp-for="Weight" class="form-control" />
+        </div>
+
+        <div class="mb-3 col-md-4">
+            <label class="form-label">Volume</label>
+            <input type="number" asp-for="Volume" class="form-control" />
+        </div>
+
+        <div class="mb-3 col-md-4">
+            <label class="form-label">UoM</label>
+            <input type="text" readonly value="PCS" asp-for="Uom" class="form-control" />
+        </div>
+    </div>
+
+
 
     <div class="mb-3">
         <label class="form-label">Price</label>
-        <input type="number" asp-for="price" class="form-control" />
+        <input type="number" asp-for="Price" class="form-control" />
     </div>
 
     <button type="submit" class="btn btn-success">Save</button>

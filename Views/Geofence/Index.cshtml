@@ -1,0 +1,59 @@
+﻿@model List<TMSBilling.Controllers.Geofence>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Geofence "+ ViewBag.CustomerName;
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
+    var customerId = ViewBag.CustomerId ?? "6e18b86d-0528-4ddd-94b5-159a7fa04004"; // default contoh
+}
+
+<div class="mb-3">
+    <a href="/CustomerGroup/Index" class="btn btn-sm btn-primary"> <i class="bi bi-arrow-left"></i> Back</a>
+    <a class="btn btn-primary btn-sm" href="/Geofence/Create?id=@customerId">
+        Add Geofence
+    </a>
+</div>
+
+
+
+<table class="table table-striped table-bordered" style="font-size:12px;">
+    <thead>
+        <tr>
+            <th>Geofence ID</th>
+            <th>Fence Name</th>
+            <th>City</th>
+            <th style="max-width:350px;">Address</th>
+            <th>Customer Group</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var g in Model)
+            {
+                <tr>
+                    <td>@g.geofenceId</td>
+                    <td>@g.fenceName</td>
+                    <td>@g.city</td>
+                    <td style ="max-width:350px;">@g.address</td>
+                    <td>@g.customerName</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5" class="text-center">Tidak ada data</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+
+
+
+@section Scripts {
+
+<script>
+</script>
+}

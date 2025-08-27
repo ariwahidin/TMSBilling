@@ -4,9 +4,9 @@
     ViewData["Title"] = "Customer Group";
     var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
+<button class="btn btn-primary btn-sm mb-3" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Customer Group</button>
 
-<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Sub Group</button>
-<button class="btn btn-primary btn-sm mb-3" onclick="history.back()">Back</button>
 <table class="table table-bordered table-striped" id="dataTable">
     <thead>
         <tr>
@@ -25,6 +25,12 @@
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </button>
+                    @if (!string.IsNullOrEmpty(item.MCEASY_CUST_ID))
+                    {
+                        <a href="/Geofence/Index?id=@item.MCEASY_CUST_ID" class="btn btn-sm btn-success">
+                            <i class="bi bi-map"></i>
+                        </a>
+                    }
                     @if(isAdmin){
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Hapus">
                         <i class="bi bi-trash"></i>

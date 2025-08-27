@@ -16,6 +16,9 @@ namespace TMSBilling.Models
         public required string CNEE_CODE { get; set; }
 
         [StringLength(50)]
+        public int? MCEASY_GEOFENCE_ID { get; set; }
+
+        [StringLength(50)]
         public string? CNEE_NAME { get; set; }
 
         [StringLength(120)]

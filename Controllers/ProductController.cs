@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using TMSBilling.Models;
+using TMSBilling.Models.McEasyApiModel;
 
 public class ProductController : Controller
 {
@@ -33,6 +35,14 @@ public class ProductController : Controller
         }
 
         var json = await response.Content.ReadAsStringAsync();
+
+        // Cek status code
+        Console.WriteLine($"[DEBUG] Status Code: {response.StatusCode}");
+
+        // Cek isi raw JSON
+        Console.WriteLine("[DEBUG] Raw JSON Response:");
+        Console.WriteLine(json);
+
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         var productResponse = JsonSerializer.Deserialize<ProductResponse>(json, options);
@@ -48,7 +58,41 @@ public class ProductController : Controller
     public IActionResult Form(int? id)
     {
         // TODO: bisa bikin form add/edit product di sini
-        return PartialView("_Form", new Product());
+        return PartialView("_Form", new ProductStore());
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Form(ProductStore model)
+    {
+        // serialize body sesuai JSON API
+        var jsonContent = new StringContent(
+            JsonSerializer.Serialize(model),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
+
+        HttpResponseMessage response;
+
+        if (model.Id == Guid.Empty) // create
+        {
+            response = await _httpClient.PostAsync($"{_apiSettings.BaseUrl}/product", jsonContent);
+        }
+        else // update
+        {
+            response = await _httpClient.PutAsync($"{_apiSettings.BaseUrl}/product/{model.Id}", jsonContent);
+        }
+
+        var apiResponse = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return Json(new { success = false, message = $"API Error: {response.StatusCode}", detail = apiResponse });
+        }
+
+        return Json(new { success = true, data = apiResponse });
     }
 
 }

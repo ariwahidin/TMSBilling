@@ -6,8 +6,8 @@
 }
 
 <button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Customer</button>
-<button class="btn btn-primary btn-sm mb-3" onclick="window.location.href='/CustomerGroup/Index'">Add Customer Group</button>
-<button class="btn btn-primary btn-sm mb-3" onclick="window.location.href='/CustomerMain/Index'">Add Main Customer</button>
+<button class="btn btn-primary btn-sm mb-3" onclick="window.location.href='/CustomerGroup/Index'">Customer Group</button>
+<button class="btn btn-primary btn-sm mb-3" onclick="window.location.href='/CustomerMain/Index'">Main Customer</button>
 
 <table class="table table-bordered table-striped" id="customerTable">
     <thead>
@@ -29,6 +29,9 @@
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@c.ID">
                         <i class="bi bi-pencil-square"></i>
                     </button>
+
+                   
+
     @if (isAdmin)
     {
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@c.ID">
@@ -92,17 +95,6 @@
                 });
             });
 
-            // $(".btnDelete").click(function () {
-            //     if (!confirm("Yakin hapus data ini?")) return;
-            //     const id = $(this).data("id");
-
-            //     $.post("/Customer/Delete", { id }, function () {
-            //         location.reload();
-            //     }).fail(function () {
-            //         alert("Gagal menghapus data.");
-            //     });
-            // });
-
             $(".btnDelete").click(function () {
                 const id = $(this).data("id");
 
@@ -117,25 +109,25 @@
                     cancelButtonColor: "#3085d6"
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.post("/Customer/Delete", { id })
-                            .done(() => {
-                                Swal.fire({
-                                    title: "Deleted",
-                                    text: "Record deleted successfully.",
-                                    icon: "success",
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            })
-                            .fail(() => {
-                                Swal.fire({
-                                    title: "Error",
-                                    text: "Failed to delete the record.",
-                                    icon: "error"
-                                });
+                    $.post("/Customer/Delete", { id })
+                        .done(() => {
+                            Swal.fire({
+                                title: "Deleted",
+                                text: "Record deleted successfully.",
+                                icon: "success",
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
                             });
+                        })
+                        .fail(() => {
+                            Swal.fire({
+                                title: "Error",
+                                text: "Failed to delete the record.",
+                                icon: "error"
+                            });
+                        });
                     }
                 });
             });

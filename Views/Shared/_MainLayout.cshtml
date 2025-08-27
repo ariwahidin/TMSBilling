@@ -328,6 +328,16 @@
                 }
             });
         }
+
+
+        // Helper function to convert readable GraphQL to server format
+        function toGraphQLFormat(query) {
+            return query
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .join('\n');
+        }
     </script>
     <!-- Optional Scripts from View -->
     @RenderSection("Scripts", required: false)

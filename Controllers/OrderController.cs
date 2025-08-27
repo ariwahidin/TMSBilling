@@ -1,5 +1,9 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using TMSBilling.Data;
 using TMSBilling.Filters;
@@ -14,10 +18,14 @@ namespace TMSBilling.Controllers
     {
         private readonly AppDbContext _context;
         private readonly SelectListService _selectList;
-        public OrderController(AppDbContext context, SelectListService selectList)
+        private readonly HttpClient _httpClient;
+        private readonly ApiSettings _apiSettings;
+        public OrderController(AppDbContext context, SelectListService selectList, HttpClient httpClient, IOptions<ApiSettings> apiSettings)
         {
             _context = context;
             _selectList = selectList;
+            _httpClient = httpClient;
+            _apiSettings = apiSettings.Value;
         }
 
         public IActionResult Index()
@@ -59,7 +67,7 @@ namespace TMSBilling.Controllers
         }
 
         [HttpPost]
-        public IActionResult Save([FromBody] OrderViewModel model)
+        public async Task<IActionResult> Save([FromBody] OrderViewModel model)
         {
             if (model == null || model.Header == null || model.Details == null || model.Details.Count == 0)
             {
@@ -89,12 +97,6 @@ namespace TMSBilling.Controllers
                 if (_context.Orders.Any(o => o.inv_no == header.inv_no))
                 errors.Add($"Inv No '{header.inv_no}' already exists!");
 
-            //foreach (var detail in details)
-            //{
-            //    if (!_context.Items.Any(i => i.ItemName == detail.item_name))
-            //        errors.Add($"Item '{detail.item_name}' tidak ditemukan");
-            //}
-
             if (errors.Any())
             {
                 return BadRequest(new
@@ -105,6 +107,8 @@ namespace TMSBilling.Controllers
                 });
             }
 
+            var deliveryDateTime = header.delivery_date?.ToString("yyyy-MM-ddTHH:mm:sszzz");
+
             // === Proses Simpan ===
             using var transaction = _context.Database.BeginTransaction();
             try
@@ -113,12 +117,79 @@ namespace TMSBilling.Controllers
 
                 if (header.id_seq == 0)
                 {
+
+
+                    // INSERT KE API
+
+                    // set header Authorization dulu
+                    _httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
+
+                    var payload = new
+                    {
+                        customer_id = "e43b5605-d9c8-4bfb-83e6-80e7cf562e6a", // atau ambil dari field lain kalau beda
+                        billed_customer_id = "e43b5605-d9c8-4bfb-83e6-80e7cf562e6a",
+                        destination_address_id = 9122, // sementara hardcode, nanti bisa mapping
+                        expected_delivered_on = deliveryDateTime,
+                        expected_pickup_on = deliveryDateTime,
+                        origin_address_id = 8898,
+                        shipment_number = header.inv_no
+                    };
+
+                    // ✅ PERBAIKAN: Serialize object langsung dengan options untuk tidak escape karakter
+                    var options = new JsonSerializerOptions
+                    {
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    };
+
+                    var jsonPayload = JsonSerializer.Serialize(payload, options);
+                    var jsonContent = new StringContent(
+                        jsonPayload,
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    Console.WriteLine("=== DEBUG PAYLOAD DETAIL ===");
+                    Console.WriteLine($"customer_id: {payload.customer_id}");
+                    Console.WriteLine($"billed_customer_id: {payload.billed_customer_id}");
+                    Console.WriteLine($"destination_address_id: {payload.destination_address_id}");
+                    Console.WriteLine($"expected_delivered_on: {payload.expected_delivered_on}");
+                    Console.WriteLine($"expected_pickup_on: {payload.expected_pickup_on}");
+                    Console.WriteLine($"origin_address_id: {payload.origin_address_id}");
+                    Console.WriteLine($"shipment_number: {payload.shipment_number}");
+                    Console.WriteLine("=== JSON PAYLOAD ===");
+                    Console.WriteLine(jsonPayload);
+                    Console.WriteLine("=== HEADERS ===");
+                    Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
+                    Console.WriteLine($"Content-Type: application/json");
+                    Console.WriteLine("=====================");
+
+                    var response = await _httpClient.PostAsync(
+                        $"{_apiSettings.BaseUrl}/delivery-order",
+                        jsonContent
+                    );
+
+                    var responseText = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        transaction.Rollback();
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "Gagal kirim ke API ne",
+                            detail = responseText
+                        });
+                    }
+
+                    // KALO BERHASIL BARU LANJUT
+
                     // INSERT
                     header.order_status = 0;
                     header.entry_date = DateTime.Now;
                     header.entry_user = username;
                     _context.Orders.Add(header);
-                    _context.SaveChanges();
+                    await _context.SaveChangesAsync();
                 }
                 else
                 {
@@ -147,10 +218,10 @@ namespace TMSBilling.Controllers
 
                     _context.Orders.Update(existingHeader);
 
-                    // Hapus detail lama
-                    var existingDetails = _context.OrderDetails.Where(d => d.id_seq_order == header.id_seq).ToList();
+                    // hapus detail lama
+                    var existingDetails = await _context.OrderDetails.Where(d => d.id_seq_order == header.id_seq).ToListAsync();
                     _context.OrderDetails.RemoveRange(existingDetails);
-                    _context.SaveChanges();
+                    await _context.SaveChangesAsync();
                 }
 
                 // Insert ulang detail
@@ -165,14 +236,14 @@ namespace TMSBilling.Controllers
                     _context.OrderDetails.Add(detail);
                 }
 
-                _context.SaveChanges();
-                transaction.Commit();
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 return Json(new { success = true, message = "Data berhasil disimpan!" });
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 var msg = ex.InnerException?.Message ?? ex.Message;
                 return StatusCode(500, new { success = false, message = "Terjadi kesalahan: " + msg });
             }

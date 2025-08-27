@@ -16,6 +16,7 @@
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
+            <th>ID</th>
             <th>Name</th>
             <th>UOM</th>
             <th>Weight</th>
@@ -27,6 +28,7 @@
         @foreach (var item in Model)
         {
             <tr>
+                <td>@item.id</td>
                 <td>@item.name</td>
                 <td>@item.uom</td>
                 <td>@item.weight</td>
@@ -98,17 +100,57 @@
             });
 
             $(document).on("submit", "#productForm", function (e) {
+                // e.preventDefault();
+                // $.ajax({
+                //     type: "POST",
+                //     url: "/Product/Form",
+                //     data: $(this).serialize(),
+                //     success: function () {
+                //         modal.hide();
+                //         location.reload();
+                //     },
+                //     error: function () {
+                //         alert("Gagal menyimpan data.");
+                //     }
+                // });
+
                 e.preventDefault();
+
                 $.ajax({
+                    url: '@Url.Action("Form", "Product")',
                     type: "POST",
-                    url: "/Product/Form",
                     data: $(this).serialize(),
-                    success: function () {
-                        modal.hide();
-                        location.reload();
+                    success: function (res) {
+                        if (res.success) {
+                            alert("Product saved!");
+                            // misalnya reload table
+                            location.reload();
+                        } else {
+                            let errorMsg = res.message; // default message
+                            if (res.detail) {
+                                try {
+                                    let detail = JSON.parse(res.detail);
+
+                                    // cek apakah ada detail.errors
+                                    if (detail.errors) {
+                                        // contoh ambil semua error
+                                        let errors = [];
+                                        for (let key in detail.errors) {
+                                            errors.push(key + ": " + detail.errors[key].join(", "));
+                                        }
+                                        errorMsg = errors.join("\n");
+                                    }
+                                } catch (e) {
+                                    console.error("Parse error:", e);
+                                }
+                            }
+
+                            alert("Error:\n" + errorMsg);
+                        }
                     },
-                    error: function () {
-                        alert("Gagal menyimpan data.");
+                    error: function (err) {
+                        alert("Unexpected error");
+                        console.log(err);
                     }
                 });
             });

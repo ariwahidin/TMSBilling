@@ -67,7 +67,10 @@ namespace TMSBilling.Models
         [Required]
         [StringLength(50)]
         public string CUST_CODE { get; set; } = string.Empty;
-        
+
+        [StringLength(50)]
+        public string? MCEASY_CUST_ID { get; set; }
+
         [StringLength(100)]
         public string CUST_NAME { get; set; } = string.Empty;
         
@@ -100,9 +103,14 @@ namespace TMSBilling.Models
         [MaxLength(50)]
         public string SUB_CODE { get; set; } = string.Empty;
 
+
+
         [Required]
         [MaxLength(50)]
         public string CUST_CODE { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string? MCEASY_CUST_ID { get; set; }
 
         [MaxLength(50)]
         public string? ENTRY_USER { get; set; }
