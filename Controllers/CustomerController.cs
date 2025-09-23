@@ -18,22 +18,21 @@ namespace TMSBilling.Controllers
     {
 
         private readonly AppDbContext _context;
-        private readonly HttpClient _httpClient;
-        private readonly ApiSettings _apiSettings;
 
-        public CustomerController(HttpClient httpClient, IOptions<ApiSettings> apiSettings, AppDbContext context)
+        public CustomerController(AppDbContext context)
         {
-            _httpClient = httpClient;
-            _apiSettings = apiSettings.Value;
             _context = context;
         }
 
         public IActionResult Index()
         {
-            var data = _context.Customers.ToList();
+            var data = _context.Customers
+                .OrderByDescending(c => c.ID)
+                .ToList();
             return View(data);
         }
 
+        [HttpGet]
         public IActionResult Form(int? id)
         {
             ViewBag.MainCustomerList = _context.CustomerMains
@@ -69,57 +68,6 @@ namespace TMSBilling.Controllers
             var existing = _context.Customers.Find(model.ID);
             if (existing == null)
             {
-                //_httpClient.DefaultRequestHeaders.Authorization =
-                //        new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
-
-                //var payload = new
-                //{
-                //    name = model.CUST_NAME,
-                //};
-
-                //var options = new JsonSerializerOptions
-                //{
-                //    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                //};
-
-                //var jsonPayload = JsonSerializer.Serialize(payload, options);
-                //var jsonContent = new StringContent(
-                //    jsonPayload,
-                //    Encoding.UTF8,
-                //    "application/json"
-                //);
-
-                //Console.WriteLine("=== DEBUG PAYLOAD DETAIL ===");
-                //Console.WriteLine($"customer_name: {payload.name}");
-                //Console.WriteLine("=== JSON PAYLOAD ===");
-                //Console.WriteLine(jsonPayload);
-                //Console.WriteLine("=== HEADERS ===");
-                //Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
-                //Console.WriteLine($"Content-Type: application/json");
-                //Console.WriteLine("=====================");
-
-                //var response = await _httpClient.PostAsync(
-                //    $"{_apiSettings.BaseUrl}/customer",
-                //    jsonContent
-                //);
-
-                //var responseText = await response.Content.ReadAsStringAsync();
-
-                //if (!response.IsSuccessStatusCode)
-                //{
-                //    return BadRequest(new
-                //    {
-                //        success = false,
-                //        message = "Gagal kirim ke API Customer",
-                //        detail = responseText
-                //    });
-                //}
-
-                //using var doc = JsonDocument.Parse(responseText);
-                //var id = doc.RootElement.GetProperty("data").GetProperty("id").GetString();
-                //model.MCEASY_CUST_ID = id;
-
-
                 bool exists = _context.Customers.Any(v => v.CUST_CODE == model.CUST_CODE);
                 if (exists)
                 {
@@ -158,11 +106,10 @@ namespace TMSBilling.Controllers
                 existing.MAIN_CUST = model.MAIN_CUST;
                 existing.CUST_CUTOFF = model.CUST_CUTOFF;
                 existing.ACTIVE_FLAG = model.ACTIVE_FLAG;
+                existing.API_FLAG = model.API_FLAG;
                 existing.UPDATE_DATE = DateTime.Now;
                 existing.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";
             }
-
-            //_context.SaveChanges();
             await _context.SaveChangesAsync();
             return Ok();
         }

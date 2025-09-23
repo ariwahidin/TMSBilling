@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using TMSBilling.Data;
 using TMSBilling.Models;
+using TMSBilling.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
 builder.Services.AddHttpClient<ProductController>();
+builder.Services.AddSingleton(resolver =>
+    resolver.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiSettings>>().Value);
+// daftarkan HttpClient + ApiService
+builder.Services.AddHttpClient<ApiService>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -19,7 +24,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddSession();
 builder.Services.AddScoped<SelectListService>();
-// Tambahkan sebelum var app = builder.Build();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 

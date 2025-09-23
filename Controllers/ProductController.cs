@@ -21,7 +21,7 @@ public class ProductController : Controller
     public async Task<IActionResult> Index(string search = "", int page = 1, int limit = 10)
     {
         // tambahin search ke query string
-        string url = $"{_apiSettings.BaseUrl}/product?limit={limit}&page={page}&search={search}";
+        string url = $"{_apiSettings.BaseUrl}/order/api/web/v1/product?limit={limit}&page={page}&search={search}";
 
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
@@ -78,11 +78,11 @@ public class ProductController : Controller
 
         if (model.Id == Guid.Empty) // create
         {
-            response = await _httpClient.PostAsync($"{_apiSettings.BaseUrl}/product", jsonContent);
+            response = await _httpClient.PostAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product", jsonContent);
         }
         else // update
         {
-            response = await _httpClient.PutAsync($"{_apiSettings.BaseUrl}/product/{model.Id}", jsonContent);
+            response = await _httpClient.PutAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product/{model.Id}", jsonContent);
         }
 
         var apiResponse = await response.Content.ReadAsStringAsync();
@@ -95,4 +95,17 @@ public class ProductController : Controller
         return Json(new { success = true, data = apiResponse });
     }
 
+    [HttpDelete]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
+        var response = await _httpClient.DeleteAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product/{id}");
+        var apiResponse = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            return Json(new { success = false, message = $"API Error: {response.StatusCode}", detail = apiResponse });
+        }
+        return Json(new { success = true, data = apiResponse });
+    }
 }

@@ -24,12 +24,23 @@ public class SelectListService
             }).ToList();
     }
 
-    public List<SelectListItem> getCustomers() { 
+    public List<SelectListItem> getCustomers()
+    {
         return _context.Customers
             .Select(c => new SelectListItem
             {
                 Value = c.CUST_CODE,
                 Text = c.CUST_CODE,
+            }).ToList();
+    }
+
+    public List<SelectListItem> getCustomerGroup()
+    {
+        return _context.CustomerGroups
+            .Select(c => new SelectListItem
+            {
+                Value = c.SUB_CODE,
+                Text = c.SUB_CODE,
             }).ToList();
     }
 
@@ -94,15 +105,17 @@ public class SelectListService
             .ToList();
     }
 
-    public List<SelectListItem> GetWarehouse() {
+    public List<SelectListItem> GetWarehouse()
+    {
         return _context.Warehouses
             .Select(w => new SelectListItem { Value = w.wh_code, Text = w.wh_code })
             .ToList();
     }
 
-    public List<SelectListItem> GetConsignee() { 
+    public List<SelectListItem> GetConsignee()
+    {
         return _context.Consignees
-            .Select(c => new SelectListItem { Value = c.CNEE_CODE, Text = c.CNEE_CODE  })
+            .Select(c => new SelectListItem { Value = c.CNEE_CODE, Text = c.CNEE_CODE })
             .ToList();
     }
 
@@ -114,4 +127,49 @@ public class SelectListService
             new SelectListItem { Value = "1", Text = "Yes" }
         };
     }
+
+    public List<SelectListItem> GeofenceCategory()
+    {
+        return new List<SelectListItem>
+        {
+            new SelectListItem { Value = "Consignee", Text = "Consignee" },
+            new SelectListItem { Value = "Origin", Text = "Origin" },
+            new SelectListItem { Value = "Destination", Text = "Destination" }
+        };
+    }
+
+    public List<SelectListItem> getCustomerGroupGeofence()
+    {
+        return _context.CustomerGroups
+            .Where(c => c.MCEASY_CUST_ID != null)
+            .Select(c => new SelectListItem
+            {
+                Value = c.MCEASY_CUST_ID,
+                Text = c.SUB_CODE,
+            }).ToList();
+    }
+
+    public List<SelectListItem> GetAreaGroup()
+    {
+        return _context.AreaGroups
+            .Select(v => new SelectListItem
+            {
+                Value = v.area_name,
+                Text = v.area_name
+            }).ToList();
+    }
+
+    public List<SelectListItem> GetArea()
+    {
+        return _context.Destinations
+            .Select(v => v.destination_code)        // ambil kolom destination_code
+            .Distinct()                            // bikin unik
+            .Select(area => new SelectListItem
+            {
+                Value = area,
+                Text = area
+            })
+            .ToList();
+    }
+
 }

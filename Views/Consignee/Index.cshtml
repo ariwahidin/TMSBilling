@@ -7,6 +7,8 @@
 }
 
 <button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Data</button>
+<a href="/Geofence/Form?category=consignee" class="btn btn-success btn-sm mb-3" id="btnAdd">Add Data</a>
+@* <button class="btn btn-primary btn-sm mb-3" id="btnAddGeofenceConsignee">Add Consignee With Geofence</button> *@
 
 <table class="table table-bordered table-striped" id="dataTable">
     <thead>
@@ -53,9 +55,22 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalCustomerGroup" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Customer Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalContentCustomerGroup"></div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         const modal = new bootstrap.Modal(document.getElementById("modalForm"));
+        const modal2 = new bootstrap.Modal(document.getElementById("modalCustomerGroup"));
 
         $(document).ready(function () {
             $('#dataTable').DataTable();
@@ -73,7 +88,16 @@
                 });
             });
 
-            $('.btnEdit').click(function () {
+            $('#btnAddGeofenceConsignee').click(function () {
+                $.get('/Consignee/OptionCustomerGroup', function (html) {
+                    console.log(html)
+                    $('#modalContentCustomerGroup').html(html);
+
+                    modal2.show();
+                });
+            });
+
+            $(document).on("click", ".btnEdit", function () {
                 const id = $(this).data('id');
                 $.get('/Consignee/Form?id=' + id, function (html) {
                     $('#modalContent').html(html);

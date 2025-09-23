@@ -1,0 +1,640 @@
+﻿@model TMSBilling.Models.ViewModels.OrderViewModel
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Order Form";
+}
+
+
+<style>
+    .form-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+
+    .form-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .form-title {
+        color: #2c3e50;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .header-section {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .header-title {
+        color: #495057;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+        .header-title i {
+            margin-right: 8px;
+            color: #6c757d;
+        }
+
+    .select2-container--default .select2-selection--single {
+        height: 25px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 25px;
+            padding-left: 12px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 25px;
+        }
+
+    .detail-section {
+        margin-top: 30px;
+    }
+
+    .detail-title {
+        color: #495057;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+        .detail-title i {
+            margin-right: 8px;
+            color: #6c757d;
+        }
+
+    .excel-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+        .excel-table th {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 8px 6px;
+            text-align: center;
+            font-weight: 600;
+            color: #495057;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .excel-table td {
+            border: 1px solid #dee2e6;
+            padding: 2px;
+            vertical-align: middle;
+        }
+
+        .excel-table input,
+        .excel-table select {
+            width: 100%;
+            border: none;
+            padding: 6px 8px;
+            font-size: 12px;
+            background: transparent;
+            outline: none;
+            min-height: 30px;
+        }
+
+            .excel-table input:focus,
+            .excel-table select:focus {
+                background: #e3f2fd;
+            }
+
+        .excel-table .number-input {
+            text-align: right;
+        }
+
+    .action-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.3s;
+    }
+
+        .action-btn:hover {
+            background: #c82333;
+        }
+
+    .btn-add-row {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+        transition: background 0.3s;
+    }
+
+        .btn-add-row:hover {
+            background: #218838;
+        }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e9ecef;
+        justify-content: flex-end;
+    }
+
+    .btn-save {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+
+        .btn-save:hover {
+            background: #0056b3;
+        }
+
+    .btn-cancel {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+
+        .btn-cancel:hover {
+            background: #545b62;
+        }
+
+    .col-narrow {
+        width: 80px;
+    }
+
+    .col-action {
+        width: 60px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+    }
+
+    .row-number {
+        background: #f8f9fa;
+        text-align: center;
+        font-weight: 600;
+        color: #6c757d;
+        width: 40px;
+    }
+
+    .header-section * {
+        font-size: 12px;
+    }
+</style>
+<a href="/Order/Index" class="btn btn-sm btn-primary mb-2"> <i class="bi bi-arrow-left"></i> Back</a>
+<a href="/Order/Form" class="btn btn-sm btn-warning mb-2"> <i class="bi bi-arrow-clockwise"></i> Reset</a>
+<a href="/Order/FormLoad" class="btn btn-info btn-sm mb-2">
+    <i class="bi bi-box-seam-fill"></i> Order Load
+</a>
+<div class="form-container">
+    
+    <form id="orderForm">
+
+        <div class="header-section">
+
+
+            <div class="row">
+                @* <div class="col-md-1"></div> *@
+
+
+                <div class="col-md-5">
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Delivery Date : </label>
+                        @* <div class="col-sm-8">
+                            <input type="date" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-dd"))" />
+                        </div> *@
+                        <div class="col-sm-8">
+                            <input type="datetime-local" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">WHS Code : </label>
+                        <div class="col-sm-8">
+                            <input type="hidden" id="id_seq" name="id_seq" value="@Model.Header.id_seq" />
+                            @* <input type="text" id="wh_code" name="wh_code" class="form-control" value="@Model.Header.wh_code" /> *@
+                            <select id="wh_code" asp-for="Header.wh_code" asp-items="ViewBag.ListWarehouse" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Sub Customer : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="sub_custid" name="sub_custid" class="form-control" value="@Model.Header.sub_custid" /> *@
+                            <select id="sub_custid" asp-for="Header.sub_custid" asp-items="ViewBag.ListCustomer" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Consignee : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="cnee_code" name="cnee_code" class="form-control" value="@Model.Header.cnee_code" /> *@
+                            <select id="cnee_code" asp-for="Header.cnee_code" asp-items="ViewBag.ListConsignee" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Invoice No : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="inv_no" name="inv_no" class="form-control" value="@Model.Header.inv_no" />
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Origin : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="origin_id" name="origin_id" class="form-control" value="@Model.Header.origin_id" /> *@
+                            <select id="origin_id" asp-for="Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Dest Area : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="dest_area" name="dest_area" class="form-control" value="@Model.Header.dest_area" /> *@
+                            <select id="dest_area" asp-for="Header.dest_area" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Tot Pkgs : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="tot_pkgs" name="tot_pkgs" class="form-control" value="@Model.Header.tot_pkgs" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">UoM : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="uom" name="uom" class="form-control" value="@Model.Header.uom" /> *@
+                            <select id="uom" asp-for="Header.uom" asp-items="ViewBag.ListUoM" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Pallet Consume : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="pallet_consume" name="pallet_consume" class="form-control" value="@Model.Header.pallet_consume" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Pallet Delivery : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="pallet_delivery" name="pallet_delivery" class="form-control" value="@Model.Header.pallet_delivery" />
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="col-md-5">
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">SI No : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="si_no" name="si_no" class="form-control" value="@Model.Header.si_no" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">DO Rcv Date : </label>
+                        <div class="col-sm-8">
+                            <input type="date" id="do_rcv_date" name="do_rcv_date" class="form-control" value="@(Model.Header.do_rcv_date?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">DO Rcv Time : </label>
+                        <div class="col-sm-8">
+                            <input type="time" id="do_rcv_time" name="do_rcv_time" class="form-control" value="@Model.Header.do_rcv_time" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Moda Req : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="moda_req" name="moda_req" class="form-control" value="@Model.Header.moda_req" /> *@
+                            <select id="moda_req" asp-for="Header.moda_req" asp-items="ViewBag.ListModa" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Serv Req : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="serv_req" name="serv_req" class="form-control" value="@Model.Header.serv_req" /> *@
+                            <select id="serv_req" asp-for="Header.serv_req" asp-items="ViewBag.ListServiceType" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
+                        <div class="col-sm-8">
+                            @* <input type="text" id="truck_size" name="truck_size" class="form-control" value="@Model.Header.truck_size" /> *@
+                            <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Remarks : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="remark" name="remark" class="form-control" value="@Model.Header.remark" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row d-none">
+                        <label class="col-sm-4 col-form-label text-end">Status : </label>
+                        <div class="col-sm-8">
+                            <input type="text" id="order_status" readonly name="order_status" class="form-control" value="@Model.Header.order_status" />
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+
+
+            
+        </div>
+
+        <div class="detail-section d-none">
+            <div class="table-container">
+                <table class="excel-table">
+                    <thead>
+                        <tr>
+                            <th class="row-number">#</th>
+                            <th class="col-narrow">Item Name</th>
+                            <th class="col-narrow">Item Category</th>
+                            <th class="col-narrow">Package Unit</th>
+                            <th class="col-narrow">Length</th>
+                            <th class="col-narrow">Width</th>
+                            <th class="col-narrow">Height</th>
+                            <th class="col-narrow">Weight</th>
+                            <th class="col-narrow">Qty</th>
+                            <th class="col-action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" class="btn-add-row" onclick="addRow()">
+                <i class="fas fa-plus"></i> Add Row
+            </button>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn-cancel btn-sm" onclick="resetForm()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="submit" class="btn-save btn-sm" data-action="save">
+                <i class="fas fa-save"></i> Save
+            </button>
+
+            @if (Model.Header.id_seq == 0)
+            {
+                <button type="submit" class="btn btn-info btn-sm" data-action="save_new">
+                    <i class="fas fa-save"></i> Save And New
+                </button>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let rowIndex = 0;
+        const header = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Header))
+        details = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Details))
+
+        $(document).ready(function () {
+
+            $('.select2').select2({
+                placeholder: "Select an Option",
+                allowClear: true,
+                width: '100%' // ini penting biar full lebar
+            });
+
+            if (details.length > 0) {
+                details.forEach((item, i) => {
+                    addRow(item);
+                });
+            } else {
+                addRow();
+            }
+
+            let actionType = "save"; // default value
+
+            // Saat tombol diklik, simpan type-nya
+            $('button[type="submit"]').on('click', function () {
+                actionType = $(this).data('action');
+            });
+
+            $('#orderForm').on('submit', function (e) {
+                e.preventDefault();
+
+                const save_mode = actionType;
+
+                console.log(save_mode);
+
+                // return false;
+
+                const formData = {
+                    header: {
+                        id_seq : parseInt($('#id_seq').val()) || 0,
+                        wh_code: $('#wh_code').val(),
+                        sub_custid: $('#sub_custid').val(),
+                        cnee_code: $('#cnee_code').val(),
+                        inv_no : $('#inv_no').val(),
+                        delivery_date: $('#delivery_date').val(),
+                        origin_id : $('#origin_id').val(),
+                        dest_area : $('#dest_area').val(),
+                        tot_pkgs : parseInt($('#tot_pkgs').val()) || 0,
+                        serv_req : $('#serv_req').val(),
+                        uom : $('#uom').val(),
+                        pallet_consume : $('#pallet_consume').val(),
+                        pallet_delivery : $('#pallet_delivery').val(),
+                        si_no : $('#si_no').val(),
+                        do_rcv_date : $('#do_rcv_date').val(),
+                        do_rcv_time : $('#do_rcv_time').val(),
+                        moda_req : $('#moda_req').val(),
+                        truck_size : $('#truck_size').val(),
+                        remark : $('#remark').val()
+                    },
+                    details: []
+                };
+
+
+
+
+                $('#detailTableBody tr').each(function () {
+                    const row = $(this);
+                    formData.details.push({
+                        id_seq: parseInt(row.find('input[name$=".id_seq"]').val()) || 0,
+                        id_seq_order: parseInt($('#id_seq').val()) || 0,
+                        item_name: row.find('input[name$=".item_name"]').val(),
+                        item_category: row.find('input[name$=".item_category"]').val(),
+                        pkg_unit: row.find('input[name$=".pkg_unit"]').val(),
+                        item_length: parseInt(row.find('input[name$=".item_length"]').val()) || 0,
+                        item_width: parseInt(row.find('input[name$=".item_width"]').val()) || 0,
+                        item_height: parseInt(row.find('input[name$=".item_height"]').val()) || 0,
+                        item_wgt: parseFloat(row.find('input[name$=".item_wgt"]').val()) || 0,
+                        koli_qty: parseInt(row.find('input[name$=".koli_qty"]').val()) || 0
+                    });
+                });
+
+
+                $.ajax({
+                    url: '/Order/Save',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: (res) => {
+                        if (res.success) {
+                            Swal.fire({
+                              position: "top-end",
+                              icon: "success",
+                              title: "Your work has been saved",
+                              showConfirmButton: false,
+                              timer: 1500
+                            }).then(function(){
+                                if(save_mode == 'save'){
+                                    window.location.href = '/Order/Index'
+                                }else{
+                                     $('#inv_no').val('');
+                                     $('#si_no').val('');
+
+
+                                    setTimeout(() => {
+                                      console.log("Focusing now...");
+                                      $('#inv_no').focus();
+                                    }, 300); // tambahkan delay agar pasti
+                                }
+                            })
+                        } else {
+                            Swal.fire("Failed", "Failed saving data!", "error")
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error(xhr.responseText);
+                    }
+                });
+            });
+        });
+
+        function addRow(data = {}) {
+            const row = `<tr>
+                <td class="row-number">${rowIndex + 1}</td>
+                <td>
+                    <input type="hidden" name="details[${rowIndex}].id_seq" value="${data.id_seq || 0}" />
+                    <input type="hidden" name="details[${rowIndex}].id_seq_order" value="${data.id_seq_order || 0}" />
+                    <input type="text" name="details[${rowIndex}].item_name" class="form-control" value="${data.item_name || ''}" />
+                </td>
+                <td><input type="text" name="details[${rowIndex}].item_category" class="form-control" value="${data.item_category || ''}" /></td>
+                <td><input type="text" name="details[${rowIndex}].pkg_unit" class="form-control" value="${data.pkg_unit || ''}" /></td>
+                <td><input type="number" name="details[${rowIndex}].item_length" class="form-control" value="${data.item_length || 0}" /></td>
+                <td><input type="number" name="details[${rowIndex}].item_width" class="form-control" value="${data.item_width || 0}" /></td>
+                <td><input type="number" name="details[${rowIndex}].item_height" class="form-control" value="${data.item_height || 0}" /></td>
+                <td><input type="number" name="details[${rowIndex}].item_wgt" class="form-control" value="${data.item_wgt || 0}" step="0.01" /></td>
+                <td><input type="number" name="details[${rowIndex}].koli_qty" class="form-control" value="${data.koli_qty || 0}" /></td>
+                <td class="text-center"><i class="bi bi-trash text-danger" role="button" onclick="deleteRow(this)"></i></td>
+            </tr>`;
+            $('#detailTableBody').append(row);
+            rowIndex++;
+        }
+
+        function deleteRow(el) {
+            $(el).closest('tr').remove();
+        }
+
+        function resetForm() {
+            $('#orderForm')[0].reset();
+            $('#detailTableBody').empty();
+            rowIndex = 0;
+            addRow();
+        }
+
+
+        // Arrow Key Navigation for Excel-style inputs
+        $(document).on('keydown', '.excel-table input, .excel-table select', function (e) {
+            const key = e.which;
+            const $current = $(this);
+            const $allInputs = $('#detailTableBody').find('input, select').filter(':visible');
+            const index = $allInputs.index(this);
+            const total = $allInputs.length;
+
+            let rowIndex = $current.closest('tr').index();
+            let colIndex = $current.closest('td').index();
+            let $next;
+
+            switch (key) {
+                case 37: // left
+                    $next = $current.closest('td').prev().find('input, select');
+                    break;
+                case 39: // right
+                    $next = $current.closest('td').next().find('input, select');
+                    break;
+                case 38: // up
+                    $next = $('#detailTableBody tr').eq(rowIndex - 1).find('td').eq(colIndex).find('input, select');
+                    break;
+                case 40: // down
+                    $next = $('#detailTableBody tr').eq(rowIndex + 1).find('td').eq(colIndex).find('input, select');
+                    break;
+            }
+
+            if ($next && $next.length) {
+                e.preventDefault(); // prevent scrolling
+                $next.focus();
+            }
+        });
+    </script>
+}

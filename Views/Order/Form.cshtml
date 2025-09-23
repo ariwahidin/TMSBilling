@@ -227,9 +227,69 @@
     .header-section * {
         font-size: 12px;
     }
+
+
+
+    .input-group-append-custom {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+    }
+
+    .form-control-with-button {
+        padding-right: 45px !important;
+    }
+
+    .address-search {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .address-item {
+        cursor: pointer;
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        transition: all 0.3s;
+    }
+
+        .address-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .address-item.disabled {
+            opacity: 0.6;
+            cursor: not-allowed !important;
+            background-color: #f8f9fa;
+        }
+
+            .address-item.disabled:hover {
+                background-color: #f8f9fa !important;
+                border-color: #dee2e6 !important;
+            }
+
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .position-relative-custom {
+        position: relative;
+    }
 </style>
 <a href="/Order/Index" class="btn btn-sm btn-primary mb-2"> <i class="bi bi-arrow-left"></i> Back</a>
 <a href="/Order/Form" class="btn btn-sm btn-warning mb-2"> <i class="bi bi-arrow-clockwise"></i> Reset</a>
+@if (Model.Header.id_seq > 0)
+{
+    <a href="/Order/FormLoad/@Model.Header.id_seq" class="btn btn-info btn-sm mb-2">
+        <i class="bi bi-box-seam-fill"></i> Order Load
+    </a>
+}
 <div class="form-container">
     
     <form id="orderForm">
@@ -238,15 +298,15 @@
 
 
             <div class="row">
-                @* <div class="col-md-1"></div> *@
-
-
                 <div class="col-md-5">
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Delivery Date : </label>
-                        @* <div class="col-sm-8">
-                            <input type="date" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-dd"))" />
-                        </div> *@
+                        <label class="col-sm-4 col-form-label text-end"> Expected pickup on : </label>
+                        <div class="col-sm-8">
+                            <input type="datetime-local" id="pickup_date" name="pickup_date" class="form-control" value="@(Model.Header.pickup_date?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Expected delivered on : </label>
                         <div class="col-sm-8">
                             <input type="datetime-local" id="delivery_date" name="delivery_date" class="form-control" value="@(Model.Header.delivery_date?.ToString("yyyy-MM-ddTHH:mm"))" />
                         </div>
@@ -255,7 +315,6 @@
                         <label class="col-sm-4 col-form-label text-end">WHS Code : </label>
                         <div class="col-sm-8">
                             <input type="hidden" id="id_seq" name="id_seq" value="@Model.Header.id_seq" />
-                            @* <input type="text" id="wh_code" name="wh_code" class="form-control" value="@Model.Header.wh_code" /> *@
                             <select id="wh_code" asp-for="Header.wh_code" asp-items="ViewBag.ListWarehouse" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -264,7 +323,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Sub Customer : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="sub_custid" name="sub_custid" class="form-control" value="@Model.Header.sub_custid" /> *@
                             <select id="sub_custid" asp-for="Header.sub_custid" asp-items="ViewBag.ListCustomer" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -273,7 +331,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Consignee : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="cnee_code" name="cnee_code" class="form-control" value="@Model.Header.cnee_code" /> *@
                             <select id="cnee_code" asp-for="Header.cnee_code" asp-items="ViewBag.ListConsignee" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -290,19 +347,76 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Origin : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="origin_id" name="origin_id" class="form-control" value="@Model.Header.origin_id" /> *@
-                            <select id="origin_id" asp-for="Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
+                            <div class="position-relative-custom">
+                                <input type="text"
+                                       id="origin_id"
+                                       name="origin_id"
+                                       value="@Model.Header.mceasy_origin_name"
+                                       class="form-control form-control-with-button"
+                                       placeholder="Pilih alamat origin..."
+                                       readonly />
+                                <input type="hidden" id="origin_address_id" name="origin_address_id" value="@Model.Header.mceasy_origin_address_id" />
+                                <div class="input-group-append-custom">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm"
+                                            onclick="openAddressModal('origin')"
+                                            title="Pilih Alamat">
+                                        <i class="fas fa-bars"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Dest Area : </label>
+
+
+                    <div class="row mb-3">
+                        <label class="col-sm-4 col-form-label text-end">Origin Area :</label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="dest_area" name="dest_area" class="form-control" value="@Model.Header.dest_area" /> *@
-                            <select id="dest_area" asp-for="Header.dest_area" asp-items="ViewBag.ListDestination" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
+                           
+                            <input type="text"
+                                   id="city"
+                                   name="city"
+                                   class="form-control"
+                                   placeholder="Kota akan terisi otomatis..."
+                                   value="@Model.Header.origin_id"
+                                   readonly />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <label class="col-sm-4 col-form-label text-end">Destination :</label>
+                        <div class="col-sm-8">
+                            <div class="position-relative-custom">
+                                <input type="hidden" id="destination_address_id" name="destination_address_id" value="@Model.Header.mceasy_destination_address_id" />
+                                <input type="text"
+                                       id="destination_id"
+                                       name="destination_id"
+                                       class="form-control form-control-with-button"
+                                       placeholder="Pilih alamat destination..."
+                                       value="@Model.Header.mceasy_dest_name"
+                                       readonly />
+                                <div class="input-group-append-custom">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm"
+                                            onclick="openAddressModal('destination')"
+                                            title="Pilih Alamat">
+                                        <i class="fas fa-bars"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <label class="col-sm-4 col-form-label text-end">Destination Area :</label>
+                        <div class="col-sm-8">
+                            <input type="text"
+                                   id="destination_city"
+                                   name="destination_city"
+                                   value="@Model.Header.dest_area"
+                                   class="form-control"
+                                   placeholder="Kota destination akan terisi otomatis..."
+                                   readonly />
                         </div>
                     </div>
                     <div class="mb-2 row">
@@ -366,7 +480,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Serv Req : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="serv_req" name="serv_req" class="form-control" value="@Model.Header.serv_req" /> *@
                             <select id="serv_req" asp-for="Header.serv_req" asp-items="ViewBag.ListServiceType" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -403,7 +516,68 @@
             
         </div>
 
-        <div class="detail-section">
+
+        <!-- Address Selection Modal -->
+        <div class="modal fade" id="addressModal" tabindex="-1" aria-labelledby="addressModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    @* <div class="modal-header">
+                        <h5 class="modal-title" id="addressModalLabel">
+                            <i class="fas fa-map-marker-alt"></i> Select Origin Address
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div> *@
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addressModalLabel">
+                            <i class="fas fa-map-marker-alt"></i> Select <span id="modalTypeText">Origin</span> Address
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Search Input -->
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text"
+                                       autocomplete="off"
+                                       class="form-control"
+                                       id="addressSearch"
+                                       placeholder="Cari berdasarkan nama, alamat, atau kota..."
+                                       onkeyup="searchAddresses()">
+                            </div>
+                        </div>
+
+                        <!-- Loading Spinner -->
+                        <div class="loading-spinner" id="loadingSpinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading addresses...</p>
+                        </div>
+
+                        <!-- Address List -->
+                        <div class="address-search" id="addressList">
+                            <!-- Address items akan dimuat via JavaScript -->
+                        </div>
+
+                        <!-- No Results -->
+                        <div class="text-center text-muted" id="noResults" style="display: none;">
+                            <i class="fas fa-search fa-2x mb-2"></i>
+                            <p>Tidak ada alamat yang ditemukan</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section d-none">
             <div class="table-container">
                 <table class="excel-table">
                     <thead>
@@ -430,19 +604,19 @@
         </div>
 
         <div class="form-actions">
-            <button type="button" class="btn-cancel btn-sm" onclick="resetForm()">
+            <button type="button" class="btn btn-warning btn-sm" onclick="resetForm()">
                 <i class="fas fa-times"></i> Cancel
             </button>
-            <button type="submit" class="btn-save btn-sm" data-action="save">
+            <button type="submit" class="btn btn-primary btn-sm" data-action="save">
                 <i class="fas fa-save"></i> Save
             </button>
 
-            @if (Model.Header.id_seq == 0)
+            @* @if (Model.Header.id_seq == 0)
             {
                 <button type="submit" class="btn btn-info btn-sm" data-action="save_new">
                     <i class="fas fa-save"></i> Save And New
                 </button>
-            }
+            } *@
         </div>
     </form>
 </div>
@@ -493,8 +667,9 @@
                         cnee_code: $('#cnee_code').val(),
                         inv_no : $('#inv_no').val(),
                         delivery_date: $('#delivery_date').val(),
-                        origin_id : $('#origin_id').val(),
-                        dest_area : $('#dest_area').val(),
+                        pickup_date: $('#pickup_date').val(),
+                        origin_id : $('#city').val(),
+                        dest_area : $('#destination_city').val(),
                         tot_pkgs : parseInt($('#tot_pkgs').val()) || 0,
                         serv_req : $('#serv_req').val(),
                         uom : $('#uom').val(),
@@ -505,10 +680,18 @@
                         do_rcv_time : $('#do_rcv_time').val(),
                         moda_req : $('#moda_req').val(),
                         truck_size : $('#truck_size').val(),
-                        remark : $('#remark').val()
+                        remark : $('#remark').val(),
+                        mceasy_origin_address_id : parseInt($('#origin_address_id').val()),
+                        mceasy_destination_address_id : parseInt($('#destination_address_id').val()),
+                        mceasy_origin_name : $('#origin_id').val(),
+                        mceasy_dest_name : $('#destination_id').val(),
                     },
                     details: []
                 };
+
+                console.log(formData);
+
+                // return;
 
 
 
@@ -529,7 +712,7 @@
                     });
                 });
 
-
+                showLoading();
                 $.ajax({
                     url: '/Order/Save',
                     type: 'POST',
@@ -537,25 +720,19 @@
                     data: JSON.stringify(formData),
                     success: (res) => {
                         if (res.success) {
+                            hideLoading();
                             Swal.fire({
                               position: "top-end",
                               icon: "success",
-                              title: "Your work has been saved",
+                              title: res.message,
                               showConfirmButton: false,
                               timer: 1500
                             }).then(function(){
                                 if(save_mode == 'save'){
-                                    window.location.href = '/Order/Index'
+                                    window.location.href = '/Order/FormLoad/'+res.data.id_seq;
                                 }else{
                                      $('#inv_no').val('');
                                      $('#si_no').val('');
-                                     // $('#inv_no').focus();
-
-                                     // console.log("Before focus");
-                                     // $('#inv_no').focus();
-                                     // console.log("After focus");
-
-
                                     setTimeout(() => {
                                       console.log("Focusing now...");
                                       $('#inv_no').focus();
@@ -638,5 +815,490 @@
                 $next.focus();
             }
         });
+    </script>
+
+
+
+    <script>
+        // Simulasi data dummy (biasanya dari server)
+        const dummyAddresses = [
+            {
+                "geofenceId": 26723,
+                "companyId": 2174,
+                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
+                "fenceName": "CV. AMANAH MULTI JAYA",
+                "type": "C",
+                "polyData": null,
+                "circData": "<(-6.287859,106.882971),100>",
+                "address": "Jl. Pinang Ranti No. 54 Kelurahan Pinang, Jakarta Timur",
+                "addressDetail": "",
+                "province": "Daerah Khusus Ibukota Jakarta",
+                "city": "Jakarta Timur",
+                "postalCode": null,
+                "category": "Customer",
+                "contactName": "Budi Santoso",
+                "phoneNo": "021-8765432",
+                "isGarage": false,
+                "isServiceLoc": false,
+                "isBillingAddr": false,
+                "isDepot": false,
+                "isAlert": true,
+                "serviceStart": null,
+                "serviceEnd": null,
+                "breakStart": null,
+                "breakEnd": null,
+                "serviceLocType": null,
+                "customerName": "BOSCH_BT_NAGRAK_TEST",
+                "hasRelation": false
+            },
+            {
+                "geofenceId": 26724,
+                "companyId": 2174,
+                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
+                "fenceName": "PT. MAJU BERSAMA SEJAHTERA",
+                "type": "C",
+                "polyData": null,
+                "circData": "<(-6.200000,106.816666),150>",
+                "address": "Jl. Sudirman No. 123, Senayan, Jakarta Pusat",
+                "addressDetail": "Gedung Plaza Indonesia Lt. 15",
+                "province": "Daerah Khusus Ibukota Jakarta",
+                "city": "Jakarta Pusat",
+                "postalCode": "10270",
+                "category": "Customer",
+                "contactName": "Siti Nurhaliza",
+                "phoneNo": "021-5551234",
+                "isGarage": false,
+                "isServiceLoc": true,
+                "isBillingAddr": false,
+                "isDepot": false,
+                "isAlert": true,
+                "serviceStart": "08:00",
+                "serviceEnd": "17:00",
+                "breakStart": "12:00",
+                "breakEnd": "13:00",
+                "serviceLocType": "Office",
+                "customerName": "TELKOM_INDONESIA",
+                "hasRelation": true
+            },
+            {
+                "geofenceId": 26725,
+                "companyId": 2174,
+                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
+                "fenceName": "TOKO SUMBER REJEKI",
+                "type": "C",
+                "polyData": null,
+                "circData": "<(-6.175000,106.827000),80>",
+                "address": "Jl. Mangga Besar Raya No. 45, Taman Sari",
+                "addressDetail": "Sebelah Bank BCA",
+                "province": "Daerah Khusus Ibukota Jakarta",
+                "city": "Jakarta Barat",
+                "postalCode": "11180",
+                "category": "Customer",
+                "contactName": "Ahmad Wijaya",
+                "phoneNo": "021-6259876",
+                "isGarage": false,
+                "isServiceLoc": false,
+                "isBillingAddr": true,
+                "isDepot": false,
+                "isAlert": false,
+                "serviceStart": null,
+                "serviceEnd": null,
+                "breakStart": null,
+                "breakEnd": null,
+                "serviceLocType": null,
+                "customerName": "UNILEVER_INDONESIA",
+                "hasRelation": false
+            },
+            {
+                "geofenceId": 26726,
+                "companyId": 2174,
+                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
+                "fenceName": "GUDANG ELEKTRONIK JAYA",
+                "type": "W",
+                "polyData": null,
+                "circData": "<(-6.260000,106.890000),200>",
+                "address": "Jl. Raya Bekasi KM 18, Cakung, Jakarta Timur",
+                "addressDetail": "Kompleks Gudang Blok C-15",
+                "province": "Daerah Khusus Ibukota Jakarta",
+                "city": "Jakarta Timur",
+                "postalCode": "13910",
+                "category": "Warehouse",
+                "contactName": "Bambang Sutrisno",
+                "phoneNo": "021-4608123",
+                "isGarage": false,
+                "isServiceLoc": false,
+                "isBillingAddr": false,
+                "isDepot": true,
+                "isAlert": true,
+                "serviceStart": "07:00",
+                "serviceEnd": "16:00",
+                "breakStart": null,
+                "breakEnd": null,
+                "serviceLocType": "Warehouse",
+                "customerName": "SAMSUNG_ELECTRONICS",
+                "hasRelation": true
+            },
+            {
+                "geofenceId": 26727,
+                "companyId": 2174,
+                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
+                "fenceName": "APOTEK SEHAT BERSAMA",
+                "type": "C",
+                "polyData": null,
+                "circData": "<(-6.225000,106.845000),60>",
+                "address": "Jl. Kebon Sirih No. 88, Menteng, Jakarta Pusat",
+                "addressDetail": "",
+                "province": "Daerah Khusus Ibukota Jakarta",
+                "city": "Jakarta Pusat",
+                "postalCode": "10340",
+                "category": "Customer",
+                "contactName": "Dr. Maya Sari",
+                "phoneNo": "021-3904567",
+                "isGarage": false,
+                "isServiceLoc": true,
+                "isBillingAddr": false,
+                "isDepot": false,
+                "isAlert": true,
+                "serviceStart": "08:30",
+                "serviceEnd": "21:00",
+                "breakStart": null,
+                "breakEnd": null,
+                "serviceLocType": "Pharmacy",
+                "customerName": "KIMIA_FARMA",
+                "hasRelation": false
+            },
+            {
+                "geofenceId": 26728,
+                "companyId": 2174,
+                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
+                "fenceName": "RESTORAN PADANG MINANG",
+                "type": "C",
+                "polyData": null,
+                "circData": "<(-6.195000,106.820000),50>",
+                "address": "Jl. Sabang No. 25, Gambir, Jakarta Pusat",
+                "addressDetail": "Dekat Hotel Indonesia",
+                "province": "Daerah Khusus Ibukota Jakarta",
+                "city": "Jakarta Pusat",
+                "postalCode": "10160",
+                "category": "Customer",
+                "contactName": "Pak Joni",
+                "phoneNo": "021-3456789",
+                "isGarage": false,
+                "isServiceLoc": false,
+                "isBillingAddr": false,
+                "isDepot": false,
+                "isAlert": false,
+                "serviceStart": "10:00",
+                "serviceEnd": "22:00",
+                "breakStart": null,
+                "breakEnd": null,
+                "serviceLocType": "Restaurant",
+                "customerName": "FOOD_DELIVERY_SERVICE",
+                "hasRelation": false
+            }
+        ];
+
+        let allAddresses = [];
+        let filteredAddresses = [];
+
+        // Function untuk membuka modal alamat
+        // async function openAddressModal() {
+        //     // const customerId = document.getElementById('customerId').value;
+        //     const customerId = "6e18b86d-0528-4ddd-94b5-159a7fa04004";
+
+        //     // Show modal
+        //     const addressModal = new bootstrap.Modal(document.getElementById('addressModal'));
+        //     addressModal.show();
+
+        //     // Show loading
+        //     showLoading(true);
+
+        //     // Reset search
+        //     document.getElementById('addressSearch').value = '';
+
+        //     try {
+        //         // Simulasi API call (ganti dengan real API call)
+        //         await loadAddresses(customerId);
+        //     } catch (error) {
+        //         console.error('Error loading addresses:', error);
+        //         showNoResults(true);
+        //     } finally {
+        //         showLoading(false);
+        //     }
+        // }
+
+
+        // Function untuk membuka modal alamat
+        async function openAddressModal(type = 'origin') {
+            currentAddressType = type;
+            const customerId = document.getElementById('sub_custid').value;
+            // const customerId = "d78f7b8d-88fd-4335-b8ef-e198a8f4e113";
+            let category = null;
+
+            if (type == 'origin'){
+                category = 'Origin'
+            }
+
+            if (customerId == null || customerId === '') {
+                // alert('Please select a sub customer first.');
+                showToast('Please select a customer first.', type = 'error')
+                return;
+            }
+
+            // Update modal title
+            const modalTypeText = type === 'origin' ? 'Origin' : 'Destination';
+            document.getElementById('modalTypeText').textContent = modalTypeText;
+
+            // Show modal
+            const addressModal = new bootstrap.Modal(document.getElementById('addressModal'));
+            addressModal.show();
+
+            // Show loading
+            showLoading(true);
+
+            // Reset search
+            document.getElementById('addressSearch').value = '';
+
+            try {
+                // Simulasi API call (ganti dengan real API call)
+                await loadAddresses(customerId, category);
+            } catch (error) {
+                console.error('Error loading addresses:', error);
+                showNoResults(true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Simulasi API call untuk load addresses
+        async function loadAddresses(customerId, category) {
+            // Simulasi delay network
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            if (category == null) {
+                category = 'All';
+            }
+
+            let url = `/Geofence/GetGeofenceByCategory?id=${customerId}&category=${category}`;
+
+            
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch addresses');
+            }
+            const data = await response.json();
+            const addresses = data.data || [];
+
+            console.log(addresses);
+
+            // return;
+            // Untuk demo, gunakan dummy data
+            // allAddresses = addresses.filter(addr => addr.customerId === customerId);
+            allAddresses = addresses;
+            filteredAddresses = [...addresses];
+
+            renderAddresses();
+        }
+
+        // Function untuk render addresses ke DOM
+        function renderAddresses() {
+            const addressList = document.getElementById('addressList');
+            addressList.innerHTML = '';
+
+            if (filteredAddresses.length === 0) {
+                showNoResults(true);
+                return;
+            }
+
+            // Get current selected address untuk comparison
+            let selectedAddress = '';
+            if (currentAddressType === 'origin') {
+                selectedAddress = document.getElementById('destination_id').value;
+            } else {
+                selectedAddress = document.getElementById('origin_id').value;
+            }
+
+            filteredAddresses.forEach((address, index) => {
+                const addressItem = createAddressItem(address, index, selectedAddress);
+                addressList.appendChild(addressItem);
+            });
+
+            showNoResults(false);
+        }
+
+        // Function untuk membuat elemen address item
+        function createAddressItem(address, index, selectedAddress = '') {
+            const div = document.createElement('div');
+            // Check jika address ini sudah dipilih di field lain
+            const isDisabled = selectedAddress && selectedAddress === address.fenceName;
+
+            div.className = `address-item ${isDisabled ? 'disabled' : ''}`;
+
+            if (!isDisabled) {
+                div.onclick = () => selectAddress(address);
+            }
+
+            const categoryBadge = getCategoryBadge(address.category);
+            const serviceBadge = address.isServiceLoc ? '<span class="badge bg-success ms-1">Service Location</span>' : '';
+            const depotBadge = address.isDepot ? '<span class="badge bg-warning ms-1">Depot</span>' : '';
+            const disabledBadge = isDisabled ? '<span class="badge bg-danger ms-1">Already Selected</span>' : '';
+
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-2">
+                            <i class="fas fa-building me-1"></i>
+                            ${address.fenceName}
+                            ${categoryBadge}
+                            ${serviceBadge}
+                            ${depotBadge}
+                            ${disabledBadge}
+                        </h6>
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            ${address.address}
+                            ${address.addressDetail ? '<br><small class="ms-3">' + address.addressDetail + '</small>' : ''}
+                        </p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-map me-1"></i>
+                                    ${address.city}, ${address.province}
+                                    ${address.postalCode ? ' - ' + address.postalCode : ''}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                ${address.contactName ? `
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        ${address.contactName}
+                                        ${address.phoneNo ? ' - ' + address.phoneNo : ''}
+                                    </small>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${address.serviceStart && address.serviceEnd ? `
+                            <small class="text-info">
+                                <i class="fas fa-clock me-1"></i>
+                                Service Time: ${address.serviceStart} - ${address.serviceEnd}
+                            </small>
+                        ` : ''}
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">ID: ${address.geofenceId}</small>
+                    </div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        // Function untuk get category badge
+        function getCategoryBadge(category) {
+            const badges = {
+                'Customer': '<span class="badge bg-primary">Customer</span>',
+                'Warehouse': '<span class="badge bg-info">Warehouse</span>',
+                'Depot': '<span class="badge bg-secondary">Depot</span>'
+            };
+            return badges[category] || '<span class="badge bg-light text-dark">' + category + '</span>';
+        }
+
+        // Function untuk search addresses
+        function searchAddresses() {
+            const searchTerm = document.getElementById('addressSearch').value.toLowerCase();
+
+            console.log('All address', allAddresses);
+            console.log('Searching for:', searchTerm);
+            console.log('All addresses count:', allAddresses.length);
+
+            if (searchTerm === '') {
+                filteredAddresses = [...allAddresses];
+            } else {
+                filteredAddresses = allAddresses.filter(address =>
+                    address.fenceName?.toLowerCase().includes(searchTerm) ||
+                    address.address?.toLowerCase().includes(searchTerm) ||
+                    address.city?.toLowerCase().includes(searchTerm) ||
+                    address.province?.toLowerCase().includes(searchTerm) ||
+                    (address.contactName && address.contactName.toLowerCase().includes(searchTerm)) ||
+                    (address.customerName && address.customerName.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            renderAddresses();
+        }
+
+        // Function untuk select address
+        // function selectAddress(address) {
+        //     // Fill form fields
+        //     document.getElementById('origin_id').value = address.fenceName;
+        //     document.getElementById('city').value = address.city;
+
+        //     // Close modal
+        //     const addressModal = bootstrap.Modal.getInstance(document.getElementById('addressModal'));
+        //     addressModal.hide();
+
+        //     // Optional: Show success feedback
+        //     showSuccessToast(`Address selected: ${address.fenceName}`);
+        // }
+
+        // Function untuk select address
+        function selectAddress(address) {
+            // Fill form fields berdasarkan type
+            if (currentAddressType === 'origin') {
+                document.getElementById('origin_id').value = address.fenceName;
+                document.getElementById('city').value = address.areaGroup;
+                document.getElementById('origin_address_id').value = address.geofenceId;
+            } else if (currentAddressType === 'destination') {
+                document.getElementById('destination_id').value = address.fenceName;
+                document.getElementById('destination_city').value = address.areaGroup;
+                document.getElementById('destination_address_id').value = address.geofenceId;
+            }
+
+            // Close modal
+            const addressModal = bootstrap.Modal.getInstance(document.getElementById('addressModal'));
+            addressModal.hide();
+
+            // Optional: Show success feedback
+            const typeText = currentAddressType === 'origin' ? 'Origin' : 'Destination';
+            showSuccessToast(`${typeText} address selected: ${address.fenceName}`);
+        }
+
+        // Helper functions
+        function showLoading(show) {
+            if(show){
+                showNoResults(false);
+            }
+            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+            document.getElementById('addressList').style.display = show ? 'none' : 'block';
+        }
+
+        function showNoResults(show) {
+            document.getElementById('noResults').style.display = show ? 'block' : 'none';
+        }
+
+        // Simple toast notification
+        function showSuccessToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle me-2"></i>${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            // Remove from DOM after hide
+            toast.addEventListener('hidden.bs.toast', () => {
+                document.body.removeChild(toast);
+            });
+        }
     </script>
 }

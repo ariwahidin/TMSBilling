@@ -23,7 +23,7 @@
             <th>Cnee</th>
             <th>Invoice No</th>
             <th>Delivery Date</th>
-            <th>Origin</th>
+            <th>Origin Area</th>
             <th>Destination Area</th>
             <th>Sts</th>
             <th class="text-center">Action</th>
@@ -45,12 +45,35 @@
                     <td>@item.dest_area</td>
                     <td>@item.order_status</td>
                     <td class="text-center">
-                        <a href="/Order/Form/@item.id_seq" class="text-primary me-2">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <a href="#" class="text-danger" onclick="confirmDelete(@item.id_seq)">
-                            <i class="bi bi-trash"></i>
-                        </a>
+
+                        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="/Order/Form/@item.id_seq" class="dropdown-item">
+                                    <i class="bi bi-pencil-square"></i> Edit
+                                </a>
+                            </li>
+
+                            @if (@item.mceasy_order_id != null && @item.order_status != 1)
+                            {
+                                <li>
+                                    <a href="#" class="dropdown-item" onclick="confirmOrder(`@item.mceasy_order_id`)">
+                                        <i class="bi bi-check-square"></i> Confirm
+                                    </a>
+                                </li>
+                            }
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="#" class="dropdown-item" onclick="confirmDelete(@item.id_seq)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </li>
+                        </ul>
+
+                        
+                        
                     </td>
                 </tr>
                 i++;
@@ -77,12 +100,31 @@
             }
         }
 
+        function confirmOrder(id) {
+            if (confirm('Are you sure you want to confirm this order?')) {
+                const url = `/Order/Confirm/${id}`;
+                fetch(url, {
+                    method: 'POST'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Confirm failed.');
+                    }
+                });
+            }
+        }
+
         $(document).ready(() => {
             $('#tableOrder').DataTable({
                 language: {
                     emptyTable: "No orders available"
                 }
             });
+
+            
         });
     </script>
 }

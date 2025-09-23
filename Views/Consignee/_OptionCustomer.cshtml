@@ -1,0 +1,30 @@
+﻿@model List<CustomerGroup>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@if (Model != null && Model.Any())
+{
+    <div class="list-group">
+        @foreach (var customerGroup in Model)
+        {
+            <a href="#" class="list-group-item list-group-item-action customer-group-item"
+               data-id="@customerGroup.SUB_CODE"
+               data-name="@customerGroup.SUB_CODE"
+               data-code="@customerGroup.SUB_CODE">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">@customerGroup.SUB_CODE</h6>
+                    <small class="text-muted">@customerGroup.SUB_CODE</small>
+                </div>
+                @if (!string.IsNullOrEmpty(customerGroup.CUST_CODE))
+                {
+                    <p class="mb-1 text-muted">@customerGroup.CUST_CODE</p>
+                }
+            </a>
+        }
+    </div>
+}
+else
+{
+    <div class="text-center text-muted py-4">
+        <i class="fas fa-inbox fa-2x mb-3"></i>
+        <p>No customer groups available</p>
+    </div>
+}

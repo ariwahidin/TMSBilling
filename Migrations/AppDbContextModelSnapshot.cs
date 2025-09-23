@@ -121,6 +121,20 @@ namespace TMSBilling.Migrations
                     b.Property<byte?>("ACTIVE_FLAG")
                         .HasColumnType("tinyint");
 
+                    b.Property<string>("ADDRESS")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AREA")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CATEGORY")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CITY")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("CNEE_ADDR1")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
@@ -166,9 +180,16 @@ namespace TMSBilling.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<int?>("MCEASY_GEOFENCE_ID")
+                    b.Property<string>("MCEASY_CUST_ID")
                         .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("MCEASY_GEOFENCE_ID")
                         .HasColumnType("int");
+
+                    b.Property<string>("POSTAL_CODE")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("SUB_CODE")
                         .IsRequired()
@@ -200,6 +221,9 @@ namespace TMSBilling.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
                     b.Property<int>("ACTIVE_FLAG")
+                        .HasColumnType("int");
+
+                    b.Property<int>("API_FLAG")
                         .HasColumnType("int");
 
                     b.Property<string>("CUST_ADDR1")
@@ -397,6 +421,10 @@ namespace TMSBilling.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("area")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("dest_loccode")
                         .HasMaxLength(100)
@@ -626,6 +654,9 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("mceasy_job_id")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("moda_req")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
@@ -742,6 +773,9 @@ namespace TMSBilling.Migrations
                     b.Property<string>("jobid")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("mceasy_job_id")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("update_date")
                         .HasColumnType("datetime2");
@@ -882,6 +916,32 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("mceasy_dest_name")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("mceasy_destination_address_id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("mceasy_do_number")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("mceasy_order_id")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("mceasy_origin_address_id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("mceasy_origin_name")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("mceasy_status")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("moda_req")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
@@ -898,6 +958,9 @@ namespace TMSBilling.Migrations
 
                     b.Property<int?>("pallet_delivery")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("pickup_date")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("remark")
                         .HasMaxLength(50)
@@ -995,6 +1058,9 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("item_qty")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("item_wgt")
                         .HasColumnType("decimal(9,2)");
 
@@ -1003,6 +1069,15 @@ namespace TMSBilling.Migrations
 
                     b.Property<int?>("koli_qty")
                         .HasColumnType("int");
+
+                    b.Property<string>("mceasy_order_dtl_id")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("mceasy_order_id")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("mceasy_product_id")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("pack_unit")
                         .HasMaxLength(20)
@@ -1045,6 +1120,10 @@ namespace TMSBilling.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id"));
+
+                    b.Property<string>("area")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime?>("entrydate")
                         .HasColumnType("datetime2");

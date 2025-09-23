@@ -1,4 +1,7 @@
 ﻿
+
+
+
 function showToast(message, type = 'error') {
     const toast = document.createElement('div');
     toast.className = 'toast-alert';
@@ -24,8 +27,9 @@ function showToast(message, type = 'error') {
 }
 
 
-
+// global.js
 $(function () {
+    // handler global buat AJAX error
     $(document).ajaxError(function (event, jqxhr) {
         const res = jqxhr.responseJSON;
         if (res && res.errors) {
@@ -36,4 +40,35 @@ $(function () {
             showToast('Terjadi kesalahan. Silakan coba lagi.', 'error');
         }
     });
+
+
 });
+
+
+
+
+//$(function () {
+//    $(document).ajaxError(function (event, jqxhr) {
+//        const res = jqxhr.responseJSON;
+//        if (res && res.errors) {
+//            showToast(res.errors.join(', '), 'error');
+//        } else if (res && res.message) {
+//            showToast(res.message, 'error');
+//        } else {
+//            showToast('Terjadi kesalahan. Silakan coba lagi.', 'error');
+//        }
+//    });
+
+//    // global.js
+//    $(document).ready(function () {
+//        // semua elemen select
+//        $('select').select2({
+//            placeholder: "Pilih data",
+//            allowClear: true,
+//            width: '100%'   // biar full lebar
+//        });
+//    });
+
+//});
+
+

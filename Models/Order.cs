@@ -25,6 +25,8 @@ namespace TMSBilling.Models
 
         public DateTime? delivery_date { get; set; }
 
+        public DateTime? pickup_date { get; set; }
+
 
         [StringLength(50)]
         public string? origin_id { get; set; }
@@ -78,6 +80,23 @@ namespace TMSBilling.Models
         public string? jobid { get; set; }
 
         public int? total_pkgs { get; set; }
+
+        [StringLength(50)]
+        public string? mceasy_order_id { get; set; }
+
+        [StringLength(50)]
+        public string? mceasy_do_number { get; set; }
+
+        public int? mceasy_origin_address_id { get; set; }
+        public int? mceasy_destination_address_id { get; set; }
+
+        [StringLength(50)]
+        public string? mceasy_origin_name { get; set; }
+        [StringLength(50)]
+        public string? mceasy_dest_name { get; set; }
+
+        [StringLength(20)]
+        public string? mceasy_status { get; set; }
     }
 
     [Table("TRC_ORDER_DTL")]
@@ -122,6 +141,8 @@ namespace TMSBilling.Models
 
         public int? item_height { get; set; }
 
+        public int? item_qty { get; set; }
+
         [Column(TypeName = "decimal(9,2)")]
         public decimal? item_wgt { get; set; }
 
@@ -144,5 +165,12 @@ namespace TMSBilling.Models
         public string? update_user { get; set; }
 
         public DateTime? update_date { get; set; }
+
+        public string? mceasy_order_dtl_id { get; set; }
+
+        public string? mceasy_order_id { get; set; }
+
+        public string? mceasy_product_id { get; set; }
+
     }
 }

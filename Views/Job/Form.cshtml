@@ -5,549 +5,366 @@
 }
 
 <style>
-    .form-container {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        padding: 30px;
-        margin: 0 auto;
-        max-width: 100%;
-    }
-
-    .form-header {
-        border-bottom: 2px solid #e9ecef;
-        padding-bottom: 20px;
-        margin-bottom: 30px;
-    }
-
-    .form-title {
-        color: #2c3e50;
-        font-size: 24px;
-        font-weight: 600;
-        margin-bottom: 0;
-    }
-
-    .header-section {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 6px;
-        padding: 20px;
-        margin-bottom: 30px;
-    }
-
-    .header-title {
-        color: #495057;
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-    }
-
-        .header-title i {
-            margin-right: 8px;
-            color: #6c757d;
+        .form-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin: 0 auto;
+            max-width: 100%;
         }
 
-    .select2-container--default .select2-selection--single {
-        height: 25px;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-    }
-
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 25px;
-            padding-left: 12px;
-        }
-
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 25px;
-        }
-
-    .detail-section {
-        margin-top: 30px;
-    }
-
-    .detail-title {
-        color: #495057;
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-    }
-
-        .detail-title i {
-            margin-right: 8px;
-            color: #6c757d;
-        }
-
-    .excel-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 12px;
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        overflow: hidden;
-    }
-
-        .excel-table th {
+        .header-section {
             background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 8px 6px;
-            text-align: center;
-            font-weight: 600;
-            color: #495057;
-            font-size: 11px;
-            white-space: nowrap;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 30px;
         }
 
-        .excel-table td {
-            border: 1px solid #dee2e6;
-            padding: 2px;
-            vertical-align: middle;
+        .detail-section {
+            margin-top: 30px;
         }
 
-        .excel-table input,
-        .excel-table select {
+        .excel-table {
             width: 100%;
-            /* border: none; */
-            padding: 6px 8px;
+            border-collapse: collapse;
             font-size: 12px;
-            background: transparent;
-            /* outline: none; */
-            min-height: 20px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            overflow: hidden;
         }
 
-            .excel-table input:focus,
-            .excel-table select:focus {
-                background: #e3f2fd;
+            .excel-table th {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                padding: 8px 6px;
+                text-align: center;
+                font-weight: 600;
+                color: #495057;
+                font-size: 11px;
+                white-space: nowrap;
             }
 
-        .excel-table .number-input {
-            text-align: right;
+            .excel-table td {
+                border: 1px solid #dee2e6;
+                padding: 4px;
+                vertical-align: middle;
+            }
+
+            .excel-table input,
+            .excel-table select {
+                width: 100%;
+                padding: 4px 6px;
+                font-size: 11px;
+                background: transparent;
+                border: 1px solid #ced4da;
+                border-radius: 3px;
+                min-height: 25px;
+            }
+
+                .excel-table input:focus,
+                .excel-table select:focus {
+                    background: #e3f2fd;
+                    outline: none;
+                    border-color: #007bff;
+                }
+
+        .modal-xl {
+            max-width: 95%;
         }
 
-    .action-btn {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 6px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: background 0.3s;
-    }
-
-        .action-btn:hover {
-            background: #c82333;
+        .order-table {
+            font-size: 11px;
         }
 
-    .btn-add-row {
-        background: #28a745;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        margin-top: 10px;
-        transition: background 0.3s;
-    }
+            .order-table th {
+                background: #343a40;
+                color: white;
+                text-align: center;
+                padding: 8px 4px;
+                white-space: nowrap;
+            }
 
-        .btn-add-row:hover {
-            background: #218838;
+            .order-table td {
+                padding: 4px;
+                text-align: center;
+            }
+
+        .btn-add-order {
+            background: #28a745;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
         }
 
-    .form-actions {
-        display: flex;
-        gap: 15px;
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid #e9ecef;
-        justify-content: flex-end;
-    }
+            .btn-add-order:hover {
+                background: #218838;
+            }
 
-    .btn-save {
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        transition: background 0.3s;
-    }
-
-        .btn-save:hover {
-            background: #0056b3;
+        .selected-orders-count {
+            background: #17a2b8;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-left: 10px;
         }
 
-    .btn-cancel {
-        background: #6c757d;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        transition: background 0.3s;
-    }
-
-        .btn-cancel:hover {
-            background: #545b62;
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            max-height: 400px;
         }
+    </style>
 
-    .col-narrow {
-        width: 80px;
-    }
+    <div class="container-fluid py-1">
+        <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-sm btn-primary" onclick="window.location.href='/Job/Index'">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <button class="btn btn-sm btn-warning">
+                <i class="bi bi-arrow-clockwise"></i> Reset
+            </button>
+        </div>
 
-    .col-action {
-        width: 60px;
-    }
-
-    .table-container {
-        overflow-x: auto;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-    }
-
-    .row-number {
-        background: #f8f9fa;
-        text-align: center;
-        font-weight: 600;
-        color: #6c757d;
-        width: 40px;
-    }
-
-    .header-section * {
-        font-size: 12px;
-    }
-</style>
-<a href="/Job/Index" class="btn btn-sm btn-primary mb-2"> <i class="bi bi-arrow-left"></i> Back</a>
-<a href="/Job/Form" class="btn btn-sm btn-warning mb-2"> <i class="bi bi-arrow-clockwise"></i> Reset</a>
-<div class="form-container">
-
-    @* Debug sementara *@
-    @* <p>Origin ID: @Model.Header.origin_id</p>
-    <p>Truck Size: @Model.Header.truck_size</p> *@
-
-    <form id="orderForm">
-        <div class="header-section">
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Job ID : </label>
-                        <div class="col-sm-8">
-                            <input type="text" id="jobid" name="jobid" class="form-control" readonly value="@Model.Header.jobid" />
+        <div class="form-container">
+            <form id="orderForm">
+                <!-- Header Section -->
+                <div class="header-section">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Job ID:</label>
+                                <div class="col-sm-8">
+                                    <input type="text" asp-for="Header.jobid" id="jobid" name="jobid" class="form-control form-control-sm" readonly />
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Delivery Date:</label>
+                                <div class="col-sm-8">
+                                    @* <input type="date" asp-for="Header.dvdate" id="dv_date" name="dv_date" class="form-control form-control-sm" /> *@
+                                <input type="datetime-local" asp-for="Header.dvdate" id="dv_date" name="dv_date" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Origin : </label>
+                                <div class="col-sm-8">
+                                    <select id="origin_id" asp-for="Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
+                                        <option value="">Select an Option</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Destination : </label>
+                                <div class="col-sm-8">
+                                    <select id="dest_id" asp-for="Header.dest_id" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                                        <option value="">Select an Option</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Delivery Date : </label>
-                        <div class="col-sm-8">
-                            <input type="date" id="dv_date" name="dv_date" class="form-control" value="@(Model.Header.dvdate?.ToString("yyyy-MM-dd"))" />
+                        <div class="col-md-4">
+                            <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
+                            <div class="col-sm-8">
+                                <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
+                            </div>
+                            </div>
+                            <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Serv Moda : </label>
+                            <div class="col-sm-8">
+                                <select id="serv_moda" asp-for="Header.moda_req" asp-items="ViewBag.ListModa" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
+                            </div>
+                            </div>
+                            <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Chgr UoM : </label>
+                            <div class="col-sm-8">
+                                <select id="charge_uom" asp-for="Header.charge_uom" asp-items="ViewBag.ListUoM" class="form-select select2" required>
+                                    <option value="">Select an Option</option>
+                                </select>
+                            </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Plan Vendor:</label>
+                                <div class="col-sm-8">
+                                <select asp-for="Header.vendorid" id="vendorid" asp-items="ViewBag.ListVendor" class="form-select form-select-sm">
+                                        <option value="V001" selected>PT Vendor Satu</option>
+                                        <option value="V002">PT Vendor Dua</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Origin : </label>
-                        <div class="col-sm-8">
-                            <select id="origin_id" asp-for="Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>   
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Destination : </label>
-                        <div class="col-sm-8">
-                            <select id="dest_id" asp-for="Header.dest_id" asp-items="ViewBag.ListDestination" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
-                        <div class="col-sm-8">
-                            <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Serv Moda : </label>
-                        <div class="col-sm-8">
-                            <select id="serv_moda" asp-for="Header.serv_moda" asp-items="ViewBag.ListModa" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Chgr UoM : </label>
-                        <div class="col-sm-8">
-                            <select id="charge_uom" asp-for="Header.charge_uom" asp-items="ViewBag.ListUoM" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div>
-
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Plan Vendor : </label>
-                        <div class="col-sm-8">
-                            @* <input type="text" id="vendorid" name="vendorid" class="form-control" readonly value="@Model.Header.vendorid" /> *@
-                            <select id="vendorid" name="vendorid" class="form-select" disabled>
-                                @* <option value="">Select a vendor</option> *@
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Act Vendor : </label>
-                        <div class="col-sm-8">
-                            <select id="vendorid_act" name="vendorid_act" class="form-select" disabled>
-                                @* <option value="">Select a vendor</option> *@
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Truck ID : </label>
-                        <div class="col-sm-8">
-                            <select id="truckid" name="truckid" class="form-select" disabled>
-                                @* <option value="">Select a vendor</option> *@
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Driver Name : </label>
-                        <div class="col-sm-8">
-                            <select id="drivername" name="drivername" class="form-select" disabled>
-                                @* <option value="">Select a vendor</option> *@
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Job Remark : </label>
-                        <div class="col-sm-8">
+                        <div class="col-md-4">
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Act Vendor:</label>
+                                <div class="col-sm-8">
+                                    <select id="vendorid_act" class="form-select form-select-sm">
+                                        <option value="V001" selected>PT Vendor Satu</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Truck ID:</label>
+                                <div class="col-sm-8">
+                                    <select id="truckid" class="form-select form-select-sm">
+                                    <option value="B 1234 AB" selected>B 1234 AB</option>
+                                    <option value="B 1345 SD">B 1345 SD</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Driver Name:</label>
+                                <div class="col-sm-8">
+                                    <select id="drivername" class="form-select form-select-sm">
+                                        <option value="Budi Santoso" selected>Budi Santoso</option>
+                                        <option value="Ahmad Yani">Ahmad Yani</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Multi Drop:</label>
+                                <div class="col-sm-8">
+                                    <select id="multidrop" class="form-select form-select-sm">
+                                        <option value="No" selected>No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Pickup Cargo : </label>
-                        <div class="col-sm-8">
-                            <select id="flag_rc" asp-for="Header.flag_rc" asp-items="ViewBag.ListPickupCargo" class="form-select select2" required>
-                                @* <option value="">Select an Option</option> *@
-                            </select>
+
+                <!-- Add Order Button -->
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-sm btn-success" id="btnAddOrder">
+                        <i class="fas fa-plus"></i> Add Orders
+                    </button>
+                    <span class="selected-orders-count" id="selectedCount" style="display: none;">
+                        0 Orders Selected
+                    </span>
+                </div>
+
+                <!-- Selected Orders Table -->
+                <div class="detail-section">
+                    <div class="table-container">
+                        <table class="excel-table" id="selectedOrdersTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">#</th>
+                                    <th style="width: 50px;">Drop</th>
+                                    <th style="width: 80px;">WH Code</th>
+                                    <th style="width: 100px;">Invoice No</th>
+                                    <th style="width: 80px;">Customer</th>
+                                    <th style="width: 80px;">Consignee</th>
+                                    <th style="width: 100px;">Destination</th>
+                                    <th style="width: 60px;">PKGS</th>
+                                    <th style="width: 60px;">Pallet</th>
+                                    <th style="width: 80px;">Truck Size</th>
+                                    <th style="width: 100px;">Remark</th>
+                                    <th style="width: 80px;">Empty Pallet</th>
+                                    <th style="width: 80px;">Return Cargo</th>
+                                    <th style="width: 80px;">Overnight</th>
+                                    <th style="width: 80px;">Cancel Cargo</th>
+                                    <th style="width: 80px;">Diff Area</th>
+                                    <th style="width: 50px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="selectedOrdersBody">
+                                <tr>
+                                    <td colspan="17" class="text-center text-muted">No orders selected. Click "Add Orders" to select orders.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    @* <button type="button" class="btn btn-info btn-sm" id="btnSaveNew">
+                        <i class="fas fa-save"></i> Save And New
+                    </button> *@
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order Selection Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Orders</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <strong>Available Orders for:</strong>
+                            <span id="modalOrderInfo" class="text-primary"></span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="selectAll">Select All</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAll">Deselect All</button>
                         </div>
                     </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Multi Drop : </label>
-                        <div class="col-sm-8">
-                            <select id="multidrop" asp-for="Header.multidrop" asp-items="ViewBag.ListMultiDrop" class="form-select select2" required>
-                                @* <option value="">Select an Option</option> *@
-                            </select>
-                        </div>
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-sm order-table" id="availableOrdersTable">
+                            <thead class="sticky-top">
+                                <tr>
+                                    <th><input type="checkbox" id="checkAll"></th>
+                                    <th>WH Code</th>
+                                    <th>Invoice No</th>
+                                    <th>Customer</th>
+                                    <th>Consignee</th>
+                                    <th>Destination</th>
+                                    <th>PKGS</th>
+                                    <th>Weight (KG)</th>
+                                    <th>Volume (M³)</th>
+                                    <th>Truck Size</th>
+                                    <th>Service</th>
+                                    <th>Delivery Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="availableOrdersBody">
+                                <!-- Orders will be loaded here -->
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Multi Trip : </label>
-                        <div class="col-sm-8">
-                            <select id="multitrip" asp-for="Header.multitrip" asp-items="ViewBag.ListMultitrip" class="form-select select2" required>
-                                @* <option value="">Select an Option</option> *@
-                            </select>
-                        </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto">
+                        <span class="badge bg-info" id="modalSelectedCount">0 selected</span>
                     </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">No Trip : </label>
-                        <div class="col-sm-8">
-                            <input type="text" id="ritase_seq" name="ritase_seq" class="form-control" readonly value="@Model.Header.ritase_seq" />
-                        </div>
-                    </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Cost/Sell : </label>
-                        <div class="col-sm-8">
-                        </div>
-                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="applySelection">Apply Selection</button>
                 </div>
             </div>
         </div>
-        <div class="detail-section">
-            <div class="table-container">
-                <table class="excel-table">
-                    <thead>
-                        <tr>
-                            <th class="row-number">#</th>
-                            <th class="row-number">Drop</th>
-                            <th class="col-narrow">WH Code</th>
-                            <th class="col-narrow">Invoice No</th>
-                            <th class="col-narrow">Cust Code</th>
-                            <th class="col-narrow">Cnee Code</th>
-                            <th class="col-narrow">Destination</th>
-                            <th class="col-action">Total <br> PKGS</th>
-                            <th class="col-action">Total <br> Pallet</th>
-                            <th class="col-action">Truck <br> Size</th>
-                            <th class="col-action">Remark</th>
-                            <th class="col-action">Empty <br> Pallet</th>
-                            <th class="col-action">Return <br> Cargo</th>
-                            <th class="col-action">Over <br> Night</th>
-                            <th class="col-action">Cancel <br> Cargo</th>
-                            <th class="col-action text-center">Deff <br> Area</th>
-                        </tr>
-                    </thead>
-                    <tbody id="detailTableBody">
-                    </tbody>
-                </table>
-            </div>
-
-            @if (Model.Header.jobid != null)
-            {
-                <button type="button" class="btn btn-sm btn-success mt-2" id="show_order">
-                    <i class="fas fa-plus"></i> Show all order
-                </button>
-            }
-        </div>
-        <div class="form-actions">
-            <button type="button" class="btn-cancel btn-sm" onclick="resetForm()">
-                <i class="fas fa-times"></i> Cancel
-            </button>
-            <button type="submit" class="btn-save btn-sm" data-action="save">
-                <i class="fas fa-save"></i> Save
-            </button>
-
-            @if (Model.Header.id_seq == 0)
-            {
-                <button type="submit" class="btn btn-info btn-sm" data-action="save_new">
-                    <i class="fas fa-save"></i> Save And New
-                </button>
-            }
-        </div>
-    </form>
-</div>
-
+    </div>
 
 @section Scripts{
+
     <script>
-        $(document).ready(function(){
-            @if (Model.Header != null && !string.IsNullOrEmpty(Model.Header.jobid))
-            {
-                <text>
-                    // Mode edit aktif
-                    const origin = "@Model.Header.origin_id";
-                    const dest = "@Model.Header.dest_id";
-                    const truckSize = "@Model.Header.truck_size";
-                    const selectedVendor = "@Model.Header.vendorid";
-                    const servModa = "@Model.Header.moda_req";
-                    const chargeUom = "@Model.Header.charge_uom";
 
-                    // Set nilai dropdown
-                    $('#origin_id').val(origin).trigger('change');
-                    $('#dest_id').val(dest).trigger('change');
-                    $('#truck_size').val(truckSize).trigger('change');
-                    $('#serv_moda').val(servModa).trigger('change');
+        // showLoading();
 
-                    // Tunggu sebentar agar dropdown-nya terisi, lalu fetch vendor
-                    setTimeout(function (){
-                          fetchVendorsEdit(origin, dest, truckSize, servModa, chargeUom)
-                    }, 300)
-                </text>
-            }
-
-            
-
-            $('#dv_date').on('change', function(){
-                const selectedDate = $(this).val(); // Ambil value dari input date
-                console.log("Tanggal dipilih:", selectedDate);
-
-                $.ajax({
-                    url: '/Job/GetOrdersByDate',
-                    type: 'GET',
-                    data: { date: selectedDate },
-                    success: function(response) {
-                            if (response.success) {
-                                renderTable(response.data);
-                            } else {
-                                alert(response.message);
-                            }
-                    },
-                    error: function() {
-                        alert("Terjadi kesalahan saat mengambil data.");
-                    }
-                });
-
-            });
-
-            $('#orderForm').on('submit', function (e) {
-                e.preventDefault();
-                handleSave(); 
-            });
-
-            $('#origin_id, #dest_id, #truck_size, #serv_moda ,#charge_uom').on('change', checkAndFetchVendor);
-            $('#vendorid').on('change', function(){
-                console.log('sssss')
-            })
-
-            $('#show_order').on('click', showOrder)
-        });
-
-        const jobid = $('#jobid').val();
-        if (jobid) {
-            fetchDetail(jobid);
-        }
-
-        function showOrder(){
-            const deliv_date = $('#dv_date').val();
-            const job_id = $('#jobid').val();
-
-            if(job_id != ''){
-                $.ajax({
-                    url: '/Job/GetOrdersByDate',
-                    type: 'GET',
-                    data: { date: deliv_date, jobid : job_id },
-                    success: function(response) {
-                            if (response.success) {
-                                renderTable(response.data);
-                            } else {
-                                alert(response.message);
-                            }
-                    },
-                    error: function() {
-                        alert("Terjadi kesalahan saat mengambil data.");
-                    }
-                });
-            }
-        }
-
-        function fetchVendorsEdit(originId, destId, truckSize, servModa, chargeUom) {
-            $.ajax({
-                url: '/Job/GetVendors',
-                type: 'GET',
-                data: {
-                    originId: originId,
-                    destId: destId,
-                    truckSize: truckSize,
-                    servModa: servModa,
-                    chargeUom: chargeUom
-                },
-                success: function (data) {
-                    if (data.success && data.vendors.length > 0) {
-                        const $vendorSelect = $('#vendorid');
-                        $vendorSelect.empty();
-                        data.vendors.forEach(v => {
-                            $vendorSelect.append(`<option value="${v.supCode}">${v.supName}</option>`);
-                        });
-                        $vendorSelect.prop('disabled', false);
-                        $vendorSelect.val(data.vendors[0].supCode);
-
-                        loadDriversByVendor(data.vendors[0].supCode);
-                    }
-                },
-                error: function () {
-                    Swal.fire('Error', 'Gagal mengambil vendor.', 'error');
-                }
-            });
-        }
-
+        $('#origin_id, #dest_id, #truck_size, #serv_moda ,#charge_uom').on('change', checkAndFetchVendor);
         function checkAndFetchVendor() {
             const originId = $('#origin_id').val();
             const destId = $('#dest_id').val();
@@ -593,166 +410,487 @@
                 });
             }
         }
+    </script>
 
-        function loadDriversByVendor(supCode) {
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2
+            $('.form-select').select2({
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+
+            // Dummy data for available orders
+            // const dummyOrders = [
+            //     { id: 'INV001', whCode: 'WH01', invoiceNo: 'INV/2025/001', customer: 'CUST001', customerName: 'PT Customer A', consignee: 'CNEE001', consigneeName: 'PT Consignee A', destination: 'SBY', destName: 'Surabaya', packages: 50, weight: 250.5, volume: 12.5, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV002', whCode: 'WH01', invoiceNo: 'INV/2025/002', customer: 'CUST002', customerName: 'PT Customer B', consignee: 'CNEE002', consigneeName: 'PT Consignee B', destination: 'SBY', destName: 'Surabaya', packages: 75, weight: 380.2, volume: 18.3, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV003', whCode: 'WH02', invoiceNo: 'INV/2025/003', customer: 'CUST003', customerName: 'PT Customer C', consignee: 'CNEE003', consigneeName: 'PT Consignee C', destination: 'SBY', destName: 'Surabaya', packages: 30, weight: 150.8, volume: 8.7, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV004', whCode: 'WH01', invoiceNo: 'INV/2025/004', customer: 'CUST004', customerName: 'PT Customer D', consignee: 'CNEE004', consigneeName: 'PT Consignee D', destination: 'SBY', destName: 'Surabaya', packages: 90, weight: 420.3, volume: 22.1, truckSize: 'FUSO', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV005', whCode: 'WH02', invoiceNo: 'INV/2025/005', customer: 'CUST005', customerName: 'PT Customer E', consignee: 'CNEE005', consigneeName: 'PT Consignee E', destination: 'SBY', destName: 'Surabaya', packages: 60, weight: 290.7, volume: 15.4, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV006', whCode: 'WH01', invoiceNo: 'INV/2025/006', customer: 'CUST006', customerName: 'PT Customer F', consignee: 'CNEE006', consigneeName: 'PT Consignee F', destination: 'SBY', destName: 'Surabaya', packages: 45, weight: 220.9, volume: 11.2, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV007', whCode: 'WH03', invoiceNo: 'INV/2025/007', customer: 'CUST007', customerName: 'PT Customer G', consignee: 'CNEE007', consigneeName: 'PT Consignee G', destination: 'SBY', destName: 'Surabaya', packages: 85, weight: 390.5, volume: 19.8, truckSize: 'FUSO', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            //     { id: 'INV008', whCode: 'WH02', invoiceNo: 'INV/2025/008', customer: 'CUST008', customerName: 'PT Customer H', consignee: 'CNEE008', consigneeName: 'PT Consignee H', destination: 'SBY', destName: 'Surabaya', packages: 35, weight: 180.3, volume: 9.5, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
+            // ];
+
+            let realOrders = [];
+
+            let selectedOrders = [];
+
+            // Add Order Button Click
+            $('#btnAddOrder').click(function() {
+                loadAvailableOrders();
+                $('#orderModal').modal('show');
+            });
+
+            // Load available orders based on header information
+                    function loadAvailableOrders() {
+            const origin = $('#origin_id option:selected').text();
+            const destination = $('#dest_id option:selected').text();
+            const deliveryDate = $('#dv_date').val();
+
             $.ajax({
-                url: '/Job/GetDriversByVendor',
+                url: '/Job/GetOrders',
                 type: 'GET',
-                data: { supCode: supCode },
-                success: function(response) {
-                    if (response.success) {
-                        const $driverSelect = $('#drivername'); // ganti jika id-nya beda
-                        $driverSelect.empty();
-                        response.drivers.forEach(d => {
-                            $driverSelect.append(`<option value="${d.driverName}">${d.driverName}</option>`);
-                        });
-                        $driverSelect.prop('disabled', false);
-
-
-                        const $truckIdSelect = $('#truckid');
-                        $truckIdSelect.empty();
-                        response.drivers.forEach(d => {
-                            $truckIdSelect.append(`<option value="${d.truckId}">${d.truckId}</option>`);
-                        });
-                        $truckIdSelect.prop('disabled', false);
-                    } else {
-                        Swal.fire('Info', 'Tidak ada driver untuk vendor ini.', 'info');
-                    }
+                data: {
+                    originId: origin,
+                    destArea: destination,
+                    deliveryDate: deliveryDate
                 },
-                error: function () {
-                    Swal.fire('Error', 'Gagal mengambil data driver.', 'error');
-                }
-            });
-        }
-
-        function handleSave() {
-            const rows = $('#detailTableBody tr');
-
-            const header = {
-                            job_id : $('#jobid').val(),
-                            origin_id : $('#origin_id').val(),
-                            dest_area : $('#dest_id').val(),
-                            vendor_id : $('#vendorid').val(),
-                            truck_id : $('#truckid').val(),
-                            driver_name : $('#drivername').val(),
-                            delivery_date : $('#dv_date').val(),
-                            truck_size : $('#truck_size').val(),
-                        };
-            const details = [];
-            
-
-            rows.each(function (i, row) {
-                const isChecked = $(row).find('input[type="checkbox"][name^="Details["]').is(':checked');
-                if (isChecked) {
-                    const detail = {
-                        is_selected: $(row).find('[name*=".IsSelected"]').is(':checked'),
-                        drop_seq: $(row).find('[name*=".drop_seq"]').val(),
-                        wh_code: $(row).find('[name*=".wh_code"]').val(),
-                        inv_no: $(row).find('[name*=".inv_no"]').val(),
-                        sub_custid: $(row).find('[name*=".sub_custid"]').val(),
-                        cnee_code: $(row).find('[name*=".cnee_code"]').val(),
-                        dest_area: $(row).find('[name*=".dest_area"]').val(),
-                        tot_pkgs: $(row).find('[name*=".tot_pkgs"]').val(),
-                        tot_pallet: $(row).find('[name*=".tot_pallet"]').val(),
-                        truck_size: $(row).find('[name*=".truck_size"]').val(),
-                        remark: $(row).find('[name*=".remark"]').val(),
-                        empty_pallet: $(row).find('[name*=".empty_pallet"]').val(),
-                        return_cargo: $(row).find('[name*=".return_cargo"]').val(),
-                        overnight: $(row).find('[name*=".overnight"]').val(),
-                        cancel_cargo: $(row).find('[name*=".cancel_cargo"]').val(),
-                        deff_area: $(row).find('[name*=".deff_area"]').val(),
-                    };
-                    details.push(detail);
-                }
-            });
-
-            const dataToSave = {FormJobHeader : header, FormJobDetails :details}
-
-            // Kirim lewat AJAX
-
-            let url = '/Job/Save';
-            const jobid = $('#jobid').val();
-
-            if(jobid != ""){
-                url = '/Job/Save/'+jobid
-            }
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: JSON.stringify(dataToSave),
-                contentType: 'application/json',
                 success: function (res) {
-                    Swal.fire('Success', res.message, 'success');
+                    console.log("Orders:", res);
+
+                    if (!res.success) {
+                        showToast("Gagal ambil data order", "error");
+                        return;
+                    }
+
+                    const orders = res.data; // ambil array orders
+                    realOrders = orders;
+                    const tbody = $('#availableOrdersBody');
+                    tbody.empty();
+
+                    orders.forEach(function(order, index) {
+                        const row = `
+                            <tr>
+                                <td><input type="checkbox" class="order-checkbox" data-order-id="${order.id_seq}"></td>
+                                <td>${order.wh_code}</td>
+                                <td>${order.inv_no}</td>
+                                <td title="${order.sub_custid}">${order.sub_custid}</td>
+                                <td title="${order.cnee_code}">${order.cnee_code}</td>
+                                <td>${ order.dest_area ?? order.mceasy_dest_name}</td>
+                                <td class="text-end">${order.tot_pkgs ?? ''}</td>
+                                <td class="text-end">${order.uom ?? ''}</td>
+                                <td class="text-end">${order.pallet_consume ?? ''}</td>
+                                <td>${order.truck_size ?? ''}</td>
+                                <td>${order.serv_req ?? ''}</td>
+                                <td>${order.delivery_date ? new Date(order.delivery_date).toLocaleString() : ''}</td>
+                                <td><span class="badge bg-success">${order.mceasy_status ?? ''}</span></td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+
+                    updateModalSelectedCount(); // kalau kamu punya fungsi ini
                 },
-                error: function (e) {
-                    console.log(e)
-                    // Swal.fire('Oops!', 'Terjadi kesalahan saat menyimpan data.', 'error');
+                error: function (xhr) {
+                    console.error("Error:", xhr.responseText);
+                    showToast("Terjadi error saat ambil data order", "error");
                 }
             });
+
+            $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${deliveryDate}`);
         }
 
-        function renderTable(data) {
-            const tbody = $('#detailTableBody');
-            tbody.empty();
 
-            if (!data || data.length === 0) {
-                tbody.append(`<tr><td colspan="15" class="text-center">Tidak ada data</td></tr>`);
-                return;
+
+            // function loadAvailableOrders() {
+            //     const origin = $('#origin_id option:selected').text();
+            //     const destination = $('#dest_id option:selected').text();
+            //     const deliveryDate = $('#dv_date').val();
+
+            //     $.ajax({
+            //         url: '/Job/GetOrders',
+            //         type: 'GET',
+
+            //         data: {
+            //             originId: origin,
+            //             destArea: destination,
+            //             deliveryDate: deliveryDate
+            //         },
+            //         success: function (data) {
+            //             console.log("Orders:", data);
+            //             contoh kalau mau looping
+            //             data.forEach(function(order) {
+            //                 console.log(order.orderNo, order.deliveryDate);
+            //             });
+            //         },
+            //         error: function (xhr) {
+            //             console.error("Error:", xhr.responseText);
+            //         }
+            //     });
+
+            //     $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${deliveryDate}`);
+
+            //     const tbody = $('#availableOrdersBody');
+            //     tbody.empty();
+
+            //     dummyOrders.forEach((order, index) => {
+            //         const isSelected = selectedOrders.some(s => s.id === order.id);
+            //         const row = `
+            //             <tr>
+            //                 <td><input type="checkbox" class="order-checkbox" data-order-id="${order.id}" ${isSelected ? 'checked' : ''}></td>
+            //                 <td>${order.whCode}</td>
+            //                 <td>${order.invoiceNo}</td>
+            //                 <td title="${order.customerName}">${order.customer}</td>
+            //                 <td title="${order.consigneeName}">${order.consignee}</td>
+            //                 <td>${order.destName}</td>
+            //                 <td class="text-end">${order.packages}</td>
+            //                 <td class="text-end">${order.weight}</td>
+            //                 <td class="text-end">${order.volume}</td>
+            //                 <td>${order.truckSize}</td>
+            //                 <td>${order.service}</td>
+            //                 <td>${order.deliveryDate}</td>
+            //                 <td><span class="badge bg-success">${order.status}</span></td>
+            //             </tr>
+            //         `;
+            //         tbody.append(row);
+            //     });
+
+            //     updateModalSelectedCount();
+            // }
+
+            // Check All functionality
+            $('#checkAll').change(function() {
+                const isChecked = $(this).is(':checked');
+                $('.order-checkbox').prop('checked', isChecked);
+                updateModalSelectedCount();
+            });
+
+            // Individual checkbox change
+            $(document).on('change', '.order-checkbox', function() {
+                updateModalSelectedCount();
+                updateCheckAllState();
+            });
+
+            // Select All button
+            $('#selectAll').click(function() {
+                $('.order-checkbox').prop('checked', true);
+                $('#checkAll').prop('checked', true);
+                updateModalSelectedCount();
+            });
+
+            // Deselect All button
+            $('#deselectAll').click(function() {
+                $('.order-checkbox').prop('checked', false);
+                $('#checkAll').prop('checked', false);
+                updateModalSelectedCount();
+            });
+
+            // Update modal selected count
+            function updateModalSelectedCount() {
+                const count = $('.order-checkbox:checked').length;
+                $('#modalSelectedCount').text(`${count} selected`);
             }
 
-            data.forEach((item, index) => {
-                const renderYesNoSelect = (name, selected) => {
-                    return `
-                        <select class="form-select form-select-sm" name="${name}">
-                            <option value="No" ${selected === "No" ? 'selected' : ''}>No</option>
-                            <option value="Yes" ${selected === "Yes" ? 'selected' : ''}>Yes</option>
-                        </select>`;
+            // Update check all state
+            function updateCheckAllState() {
+                const total = $('.order-checkbox').length;
+                const checked = $('.order-checkbox:checked').length;
+                $('#checkAll').prop('checked', total === checked && total > 0);
+            }
+
+            // Apply Selection
+            $('#applySelection').click(function() {
+                selectedOrders = [];
+                $('.order-checkbox:checked').each(function() {
+                    const orderId = $(this).data('order-id');
+                    const orderData = realOrders.find(o => o.id_seq === orderId);
+                    if (orderData) {
+                        selectedOrders.push(orderData);
+                        console.table(orderData)
+                    }
+                });
+
+                renderSelectedOrders();
+                updateSelectedCount();
+                $('#orderModal').modal('hide');
+            });
+
+            // Render selected orders in main table
+            function renderSelectedOrders() {
+                const tbody = $('#selectedOrdersBody');
+                tbody.empty();
+
+                if (selectedOrders.length === 0) {
+                    tbody.append('<tr><td colspan="17" class="text-center text-muted">No orders selected. Click "Add Orders" to select orders.</td></tr>');
+                    return;
+                }
+
+                selectedOrders.forEach((order, index) => {
+                    const renderYesNoSelect = (name, selected = "No") => {
+                        return `
+                            <select class="form-select form-select-sm" name="${name}">
+                                <option value="No" ${selected === "No" ? 'selected' : ''}>No</option>
+                                <option value="Yes" ${selected === "Yes" ? 'selected' : ''}>Yes</option>
+                            </select>`;
+                    };
+
+                    const row = `
+                        <tr data-order-id="${order.id_seq}">
+                            <td class="text-center">${index + 1}</td>
+                            <td>
+                                <input type="number" name="Details[${index}].drop_seq" value="${index + 1}" class="form-control form-control-sm" style="width:50px;" />
+                            </td>
+                            <td><input type="text" name="Details[${index}].wh_code" class="form-control form-control-sm" value="${order.wh_code}" readonly /></td>
+                            <td><input type="text" name="Details[${index}].inv_no" class="form-control form-control-sm" value="${order.inv_no}" readonly /></td>
+                            <td><input type="text" name="Details[${index}].sub_custid" class="form-control form-control-sm" value="${order.sub_custid}" readonly /></td>
+                            <td><input type="text" name="Details[${index}].cnee_code" class="form-control form-control-sm" value="${order.cnee_code}" readonly /></td>
+                            <td><input type="text" name="Details[${index}].dest_area" class="form-control form-control-sm" value="${order.dest_area}" readonly /></td>
+                            <td><input type="number" name="Details[${index}].tot_pkgs" class="form-control form-control-sm text-end" value="${order.tot_pkgs}" readonly /></td>
+                            <td><input type="number" name="Details[${index}].pallet" class="form-control form-control-sm text-end" value="0" /></td>
+                            <td><input type="text" name="Details[${index}].truck_size" class="form-control form-control-sm" value="${order.truck_size}" /></td>
+                            <td><input type="text" name="Details[${index}].remark" class="form-control form-control-sm" value="${order.remark}" /></td>
+                            <td>${renderYesNoSelect(`Details[${index}].empty_pallet`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].return_cargo`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].overnight`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].cancel_cargo`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].diff_area`)}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-danger btn-remove-order" data-order-id="${order.id_seq}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.append(row);
+                });
+            }
+
+            // Remove order from selection
+            $(document).on('click', '.btn-remove-order', function() {
+                const orderId = $(this).data('order-id');
+                selectedOrders = selectedOrders.filter(o => o.id_seq !== orderId);
+                renderSelectedOrders();
+                updateSelectedCount();
+            });
+
+            // Update selected count badge
+            function updateSelectedCount() {
+                const count = selectedOrders.length;
+                const badge = $('#selectedCount');
+                if (count > 0) {
+                    badge.text(`${count} Orders Selected`).show();
+                } else {
+                    badge.hide();
+                }
+            }
+
+            // Form submission
+            $('#orderForm').submit(function(e) {
+                e.preventDefault();
+                handleSave();
+            });
+
+            // Save and New
+            $('#btnSaveNew').click(function() {
+                handleSave(true);
+            });
+
+            // Handle save
+            function handleSave(saveAndNew = false) {
+                const header = {
+                    job_id: $('#jobid').val(),
+                    origin_id: $('#origin_id').val(),
+                    dest_area: $('#dest_id').val(),
+                    dvdate : $('#dv_date').val(),
+                    vendor_id: $('#vendorid').val(),
+                    vendor_act_id: $('#vendorid_act').val(),
+                    truck_id: $('#truckid').val(),
+                    driver_name: $('#drivername').val(),
+                    delivery_date: $('#dv_date').val(),
+                    truck_size: $('#truck_size').val(),
+                    serv_moda: $('#serv_moda').val(),
+                    charge_uom: $('#charge_uom').val(),
+                    multidrop: $('#multidrop').val()
                 };
 
-                const row = `
-                    <tr>
-                        <td class="text-center">
-                            <input type="checkbox" name="Details[${index}].IsSelected" value="true" ${item.order_status === 1 ? 'checked' : ''} />
-                        </td>
-                        <td>
-                            <input type="number" name="Details[${index}].drop_seq" value="${index + 1}" class="form-control form-control-sm" style="width:50px;" />
-                        </td>
-                        <td><input readonly type="text" name="Details[${index}].wh_code" class="form-control form-control-sm" value="${item.wh_code || ''}" /></td>
-                        <td><input readonly type="text" name="Details[${index}].inv_no" class="form-control form-control-sm" value="${item.inv_no || ''}" /></td>
-                        <td><input readonly type="text" name="Details[${index}].sub_custid" class="form-control form-control-sm" value="${item.sub_custid || ''}" /></td>
-                        <td><input readonly type="text" name="Details[${index}].cnee_code" class="form-control form-control-sm" value="${item.sub_custid || ''}" /></td>
-                        <td><input readonly type="text" name="Details[${index}].dest_area" class="form-control form-control-sm" value="${item.dest_area || ''}" /></td>
-                        <td><input readonly type="number" name="Details[${index}].tot_pkgs" class="form-control form-control-sm text-end" value="${item.tot_pkgs || ''}" /></td>
-                        <td><input type="number" name="Details[${index}].tot_pallet" class="form-control form-control-sm text-end" value="${item.tot_pallet || 0}" /></td>
-                        <td><input type="text" name="Details[${index}].truck_size" class="form-control form-control-sm" value="${item.truck_size || ''}" /></td>
-                        <td><input type="text" name="Details[${index}].remark" class="form-control form-control-sm" value="${item.remark || ''}" /></td>
-                        <td>${renderYesNoSelect(`Details[${index}].empty_pallet`, item.empty_pallet)}</td>
-                        <td>${renderYesNoSelect(`Details[${index}].return_cargo`, item.return_cargo)}</td>
-                        <td>${renderYesNoSelect(`Details[${index}].overnight`, item.overnight)}</td>
-                        <td>${renderYesNoSelect(`Details[${index}].cancel_cargo`, item.cancel_cargo)}</td>
-                        <td>${renderYesNoSelect(`Details[${index}].deff_area`, item.deff_area)}</td>
-                    </tr>
-                `;
-                tbody.append(row);
-            });
-        }
+                const details = [];
+                $('#selectedOrdersBody tr[data-order-id]').each(function(index) {
+                    const row = $(this);
+                    const detail = {
+                        id_seq: row.data('order-id'),
+                        drop_seq: row.find('[name*=".drop_seq"]').val(),
+                        wh_code: row.find('[name*=".wh_code"]').val(),
+                        inv_no: row.find('[name*=".inv_no"]').val(),
+                        sub_custid: row.find('[name*=".sub_custid"]').val(),
+                        cnee_code: row.find('[name*=".cnee_code"]').val(),
+                        dest_area: row.find('[name*=".dest_area"]').val(),
+                        tot_pkgs: parseInt(row.find('[name*=".tot_pkgs"]').val()) || 0,
+                        pallet_delivery	: parseInt(row.find('[name*=".pallet"]').val()) || 0,
+                        truck_size: row.find('[name*=".truck_size"]').val(),
+                        remark: row.find('[name*=".remark"]').val(),
+                        empty_pallet: row.find('[name*=".empty_pallet"]').val(),
+                        return_cargo: row.find('[name*=".return_cargo"]').val(),
+                        overnight: row.find('[name*=".overnight"]').val(),
+                        cancel_cargo: row.find('[name*=".cancel_cargo"]').val(),
+                        diff_area: row.find('[name*=".diff_area"]').val()
+                    };
+                    details.push(detail);
+                });
 
-        function fetchDetail(jobid) {
-            $.ajax({
-                url: '/Job/GetJobDetails',
-                type: 'GET',
-                data: { jobid: jobid },
-                success: function (res) {
-                    if (res.success && res.data.length > 0) {
-                        renderTable(res.data);
-                    } else {
-                        console.log('No detail data');
-                    }
-                },
-                error: function () {
-                    Swal.fire('Oops', 'Gagal mengambil data detail', 'error');
+                const dataToPost = {
+                    FormJobHeader: header,
+                    FormJobDetails: details,
+                    SaveAndNew: saveAndNew
+                };
+
+                // Log data to console for debugging
+                console.log('=== DATA TO POST ===');
+                console.log('Header:', header);
+                console.log('Details Count:', details.length);
+                console.log('Details:', details);
+                console.log('Complete Payload:', dataToPost);
+                console.log('===================');
+
+                // Simulate AJAX call - replace with actual endpoint
+                console.log('Simulating AJAX POST to /Job/Save');
+                console.log('Content-Type: application/json');
+                console.log('Method: POST');
+
+
+                // Kirim lewat AJAX
+
+                let url = '/Job/Save';
+                const jobid = $('#jobid').val();
+
+                if(jobid != "Auto Generate"){
+                    url = '/Job/Save/'+jobid
                 }
-            });
-        }
+                showLoading();
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: JSON.stringify(dataToPost),
+                    contentType: 'application/json',
+                    success: function (res) {
+                        hideLoading();
+                        Swal.fire('Success', res.message, 'success').then((result) => {
+                            if (result.isConfirmed || result.isDismissed) {
+                                // contoh redirect
+                                window.location.href = '/Job/Index';
+                            }
+                        });
+                        
+                    },
+                    error: function (e) {
+                        hideLoading();
+                        console.log(e)
+                    }
+                });
+
+
+                // Show success message
+                // alert(`Job saved successfully!\n\nHeader Details:\n- Job ID: ${header.job_id}\n- Origin: ${header.origin_id} → Destination: ${header.dest_id}\n- Delivery Date: ${header.delivery_date}\n- Vendor: ${header.vendor_id}\n- Driver: ${header.driver_name}\n\nOrder Details: ${details.length} orders selected\n\nCheck console for complete data structure.`);
+
+                // if (saveAndNew) {
+                //     console.log('Save and New triggered - would redirect to new form');
+                //     Reset form for new entry
+                //     resetForm();
+                // }
+
+                /*
+                // Actual AJAX implementation would be:
+                $.ajax({
+                    url: '/Job/Save',
+                    type: 'POST',
+                    data: JSON.stringify(dataToPost),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Job saved successfully!');
+                            if (saveAndNew) {
+                                window.location.href = '/Job/Form';
+                            } else {
+                                window.location.href = '/Job/Index';
+                            }
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Save error:', error);
+                        alert('Failed to save job. Please try again.');
+                    }
+                });
+                */
+            }
+
+            // Reset form
+            function resetForm() {
+                $('#orderForm')[0].reset();
+                selectedOrders = [];
+                renderSelectedOrders();
+                updateSelectedCount();
+
+                // Reset select2 dropdowns
+                $('.form-select').val('').trigger('change');
+
+                // Set default values
+                $('#jobid').val('');
+                $('#dv_date').val('2025-01-15');
+                $('#origin_id').val('JKT').trigger('change');
+                $('#dest_id').val('SBY').trigger('change');
+                $('#truck_size').val('CDD').trigger('change');
+                $('#serv_moda').val('DELIVERY').trigger('change');
+                $('#charge_uom').val('TRIP').trigger('change');
+                $('#vendorid').val('V001').trigger('change');
+                $('#vendorid_act').val('V001').trigger('change');
+                $('#truckid').val('T001').trigger('change');
+                $('#drivername').val('Budi Santoso').trigger('change');
+                $('#multidrop').val('No').trigger('change');
+            }
+
+            // Initial load
+            updateSelectedCount();
+
+            const jobid = $('#jobid').val();
+            if (jobid) {
+                fetchDetail(jobid);
+            }
+
+            function fetchDetail(jobid) {
+                $.ajax({
+                    url: '/Job/GetJobDetails',
+                    type: 'GET',
+                    data: { jobid: jobid },
+                    success: function (res) {
+                        if (res.success && res.data.length > 0) {
+                            console.log("Detail Data:", res.data);
+                            res.data.forEach(function(item) {
+                                // console.log("Fetching detail for order ID:", item.id_seq);
+                                // const orderData = realOrders.find(o => o.id_seq === item.id_seq);
+                                // if (orderData) {
+                                //     selectedOrders.push(orderData);
+                                //     console.log("Matched Order Data:", orderData);
+                                // } else {
+                                //     console.warn("Order ID not found in available orders:", item.id_seq);
+                                // }
+
+                                selectedOrders.push(item)
+                            });
+                            renderSelectedOrders();
+                            updateSelectedCount();
+
+                        } else {
+                            console.log('No detail data');
+                        }
+                    },
+                    error: function () {
+                        Swal.fire('Oops', 'Gagal mengambil data detail', 'error');
+                    }
+                });
+            }
+        });
     </script>
+
 }

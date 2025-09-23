@@ -19,7 +19,7 @@
 
             public string job_id { get; set; } = string.Empty;
             public string vendor_id { get; set; } = string.Empty;
-
+            public DateTime? dvdate { get; set; }
             public string truck_id { get; set; } = string.Empty;
 
             public string driver_name { get; set; } = string.Empty;

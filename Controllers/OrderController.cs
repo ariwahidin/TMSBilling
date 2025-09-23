@@ -1,14 +1,19 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Math;
+using DocumentFormat.OpenXml.Office.CoverPageProps;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
+using TMSBilling.Services;
 
 namespace TMSBilling.Controllers
 {
@@ -20,12 +25,15 @@ namespace TMSBilling.Controllers
         private readonly SelectListService _selectList;
         private readonly HttpClient _httpClient;
         private readonly ApiSettings _apiSettings;
-        public OrderController(AppDbContext context, SelectListService selectList, HttpClient httpClient, IOptions<ApiSettings> apiSettings)
+        private readonly ApiService _apiService;
+
+        public OrderController(AppDbContext context, SelectListService selectList, HttpClient httpClient, IOptions<ApiSettings> apiSettings, ApiService apiService)
         {
             _context = context;
             _selectList = selectList;
             _httpClient = httpClient;
             _apiSettings = apiSettings.Value;
+            _apiService = apiService;
         }
 
         public IActionResult Index()
@@ -38,14 +46,15 @@ namespace TMSBilling.Controllers
             return View(orders); // kirim list ke view
         }
 
-        public IActionResult Import() {
+        public IActionResult Import()
+        {
             return View();
         }
 
         public IActionResult Form(int? id)
         {
             var vm = new OrderViewModel();
-            ViewBag.ListCustomer = _selectList.getCustomers();
+            ViewBag.ListCustomer = _selectList.getCustomerGroup();
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
             ViewBag.ListOrigin = _selectList.GetOrigins();
@@ -66,6 +75,8 @@ namespace TMSBilling.Controllers
             return View(vm);
         }
 
+        
+
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] OrderViewModel model)
         {
@@ -75,16 +86,13 @@ namespace TMSBilling.Controllers
             }
 
             var header = model.Header;
-            var details = model.Details;
+            //var details = model.Details;
 
             // ==== Validasi ke master ====
             var errors = new List<string>();
 
             if (!_context.Warehouses.Any(w => w.wh_code == header.wh_code))
                 errors.Add($"Warehouse '{header.wh_code}' tidak ditemukan");
-
-            if (!_context.Customers.Any(s => s.CUST_CODE == header.sub_custid))
-                errors.Add($"SubCustomer '{header.sub_custid}' tidak ditemukan");
 
             if (!_context.Consignees.Any(c => c.CNEE_CODE == header.cnee_code))
                 errors.Add($"Consignee '{header.cnee_code}' tidak ditemukan");
@@ -95,7 +103,7 @@ namespace TMSBilling.Controllers
 
             if (header.id_seq == 0)
                 if (_context.Orders.Any(o => o.inv_no == header.inv_no))
-                errors.Add($"Inv No '{header.inv_no}' already exists!");
+                    errors.Add($"Inv No '{header.inv_no}' already exists!");
 
             if (errors.Any())
             {
@@ -107,7 +115,61 @@ namespace TMSBilling.Controllers
                 });
             }
 
-            var deliveryDateTime = header.delivery_date?.ToString("yyyy-MM-ddTHH:mm:sszzz");
+            var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == header.sub_custid);
+            if (customerGroup == null || string.IsNullOrEmpty(customerGroup.MCEASY_CUST_ID))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Customer Group '{header.sub_custid}' tidak memiliki MCEASY_CUST_ID yang valid."
+                });
+            }
+
+            //var deliveryDateTime = header.delivery_date?.ToString("yyyy-MM-ddTHH:mm:sszzz");
+            var deliveryDateTime = header.delivery_date.HasValue ? header.delivery_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
+            var pickupDateTime = header.pickup_date.HasValue ? header.pickup_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
+
+
+            var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+            if (customer == null)
+            {
+                  return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
+            }
+
+            if (customer.API_FLAG == 1) {
+                var payload = new
+                {
+                    customer_id = customerGroup.MCEASY_CUST_ID,
+                    billed_customer_id = customerGroup.MCEASY_CUST_ID,
+                    origin_address_id = header.mceasy_origin_address_id,
+                    destination_address_id = header.mceasy_destination_address_id,
+                    expected_pickup_on = pickupDateTime,
+                    expected_delivered_on = deliveryDateTime,
+                    shipment_number = header.inv_no
+                };
+
+                var (ok, json) = await _apiService.SendRequestAsync(
+                            HttpMethod.Post,
+                            "order/api/web/v1/delivery-order",
+                            payload
+                        );
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Store Order",
+                        detail = json
+                    });
+                }
+
+                var order_id = json.GetProperty("data").GetProperty("id").GetString();
+                var do_number = json.GetProperty("data").GetProperty("number").GetString();
+                header.mceasy_order_id = order_id;
+                header.mceasy_do_number = do_number;
+            }
+
 
             // === Proses Simpan ===
             using var transaction = _context.Database.BeginTransaction();
@@ -118,78 +180,15 @@ namespace TMSBilling.Controllers
                 if (header.id_seq == 0)
                 {
 
-
-                    // INSERT KE API
-
-                    // set header Authorization dulu
-                    _httpClient.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
-
-                    var payload = new
-                    {
-                        customer_id = "e43b5605-d9c8-4bfb-83e6-80e7cf562e6a", // atau ambil dari field lain kalau beda
-                        billed_customer_id = "e43b5605-d9c8-4bfb-83e6-80e7cf562e6a",
-                        destination_address_id = 9122, // sementara hardcode, nanti bisa mapping
-                        expected_delivered_on = deliveryDateTime,
-                        expected_pickup_on = deliveryDateTime,
-                        origin_address_id = 8898,
-                        shipment_number = header.inv_no
-                    };
-
-                    // ✅ PERBAIKAN: Serialize object langsung dengan options untuk tidak escape karakter
-                    var options = new JsonSerializerOptions
-                    {
-                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                    };
-
-                    var jsonPayload = JsonSerializer.Serialize(payload, options);
-                    var jsonContent = new StringContent(
-                        jsonPayload,
-                        Encoding.UTF8,
-                        "application/json"
-                    );
-
-                    Console.WriteLine("=== DEBUG PAYLOAD DETAIL ===");
-                    Console.WriteLine($"customer_id: {payload.customer_id}");
-                    Console.WriteLine($"billed_customer_id: {payload.billed_customer_id}");
-                    Console.WriteLine($"destination_address_id: {payload.destination_address_id}");
-                    Console.WriteLine($"expected_delivered_on: {payload.expected_delivered_on}");
-                    Console.WriteLine($"expected_pickup_on: {payload.expected_pickup_on}");
-                    Console.WriteLine($"origin_address_id: {payload.origin_address_id}");
-                    Console.WriteLine($"shipment_number: {payload.shipment_number}");
-                    Console.WriteLine("=== JSON PAYLOAD ===");
-                    Console.WriteLine(jsonPayload);
-                    Console.WriteLine("=== HEADERS ===");
-                    Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
-                    Console.WriteLine($"Content-Type: application/json");
-                    Console.WriteLine("=====================");
-
-                    var response = await _httpClient.PostAsync(
-                        $"{_apiSettings.BaseUrl}/delivery-order",
-                        jsonContent
-                    );
-
-                    var responseText = await response.Content.ReadAsStringAsync();
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        transaction.Rollback();
-                        return BadRequest(new
-                        {
-                            success = false,
-                            message = "Gagal kirim ke API ne",
-                            detail = responseText
-                        });
-                    }
-
-                    // KALO BERHASIL BARU LANJUT
-
                     // INSERT
+                    header.mceasy_origin_address_id = header.mceasy_origin_address_id;
+                    header.mceasy_destination_address_id = header.mceasy_destination_address_id;
+                    header.mceasy_origin_name = header.mceasy_origin_name;
+                    header.mceasy_dest_name = header.mceasy_dest_name;
                     header.order_status = 0;
                     header.entry_date = DateTime.Now;
                     header.entry_user = username;
                     _context.Orders.Add(header);
-                    await _context.SaveChangesAsync();
                 }
                 else
                 {
@@ -217,29 +216,12 @@ namespace TMSBilling.Controllers
                     existingHeader.update_user = username;
 
                     _context.Orders.Update(existingHeader);
-
-                    // hapus detail lama
-                    var existingDetails = await _context.OrderDetails.Where(d => d.id_seq_order == header.id_seq).ToListAsync();
-                    _context.OrderDetails.RemoveRange(existingDetails);
-                    await _context.SaveChangesAsync();
-                }
-
-                // Insert ulang detail
-                foreach (var detail in details)
-                {
-                    detail.id_seq = 0; // pastikan selalu reset
-                    detail.id_seq_order = header.id_seq;
-                    detail.entry_date = DateTime.Now;
-                    detail.entry_user = username;
-                    detail.update_date = DateTime.Now;
-                    detail.update_user = username;
-                    _context.OrderDetails.Add(detail);
                 }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return Json(new { success = true, message = "Data berhasil disimpan!" });
+                return Json(new { success = true, message = "Created order successfully", data = header });
             }
             catch (Exception ex)
             {
@@ -247,6 +229,84 @@ namespace TMSBilling.Controllers
                 var msg = ex.InnerException?.Message ?? ex.Message;
                 return StatusCode(500, new { success = false, message = "Terjadi kesalahan: " + msg });
             }
+        }
+
+
+       
+
+
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> Confirm(Guid? id)
+        {
+            if (id == null)
+                return BadRequest("ID tidak valid");
+            var order = _context.Orders.FirstOrDefault(o => o.mceasy_order_id == id.ToString());
+
+            if (order == null)
+                return NotFound("Data tidak ditemukan");
+            if (order.order_status != 0)
+                return BadRequest("Order sudah dikonfirmasi atau diproses lebih lanjut.");
+
+            // set header Authorization dulu
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
+
+            var payload = new
+            {
+                status = "CONFIRMED"
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+
+            var jsonPayload = JsonSerializer.Serialize(payload, options);
+            var jsonContent = new StringContent(
+                jsonPayload,
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            Console.WriteLine("=== JSON PAYLOAD ===");
+            Console.WriteLine(jsonPayload);
+            Console.WriteLine("=== HEADERS ===");
+            Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
+            Console.WriteLine($"Content-Type: application/json");
+            Console.WriteLine("=====================");
+
+            var response = await _httpClient.PostAsync(
+                $"{_apiSettings.BaseUrl}/order/api/web/v1/delivery-order/{id}/transition",
+                jsonContent
+            );
+
+            var responseText = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorJson = JObject.Parse(responseText);
+                // Ambil 1 pesan error pertama
+                var firstError = errorJson["errors_v2"]?["issues"]?
+                                    .FirstOrDefault()?["message"]?.ToString();
+
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = firstError ?? "Gagal kirim API",
+                    detail = responseText
+                });
+            }
+            order.mceasy_status = payload.status;
+            order.order_status = 1; // misal 1 = confirmed
+            order.update_date = DateTime.Now;
+            order.update_user = HttpContext.Session.GetString("username") ?? "System";
+            _context.Orders.Update(order);
+            _context.SaveChanges();
+            return Ok(new { success = true, message = "Order berhasil dikonfirmasi." });
         }
 
         [HttpGet]
@@ -502,6 +562,285 @@ namespace TMSBilling.Controllers
             return Ok(new { success = true, message = "Data berhasil disimpan." });
         }
 
+
+
+
+        public async Task<IActionResult> FormLoad(int? id)
+        {
+            var (ok, json) = await _apiService.SendRequestAsync(
+                HttpMethod.Get,
+                $"/order/api/web/v1/product?limit={1000}&page={1}&search={""}",
+                new { }
+            );
+            if (!ok)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Gagal kirim ke API Add Order Load",
+                    detail = json
+                });
+            }
+            var productsJson = json.GetProperty("data").GetProperty("paginated_result");
+            var products = JsonSerializer.Deserialize<List<Product>>(
+                productsJson.GetRawText(),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            var query = _context.Orders
+            .Where(o => o.id_seq == id);
+
+            Console.WriteLine($"Query id_seq: {id}");
+            Console.WriteLine(query.ToQueryString());
+
+            var order = await query.FirstOrDefaultAsync();
+            if (order == null)
+            {
+                return NotFound( new {message = "Order not found"});
+            }
+
+
+            var orderLoad = await _context.OrderDetails
+                .Where(od => od.id_seq_order == order.id_seq)
+                .ToListAsync();
+
+            ViewBag.OrderIDMcEasy = order?.mceasy_order_id;
+            ViewBag.MasterProducts = products;
+            ViewBag.OrderLoad = orderLoad;
+            ViewBag.Order = order;
+
+            return View();
+        }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> SaveProduct([FromBody] ProductViewModel model)
+        {
+
+            Console.WriteLine("=== DEBUG REQUEST PAYLOAD ===");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(model));
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "All fields must be filled in" });
+            }
+
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.id_seq == model.order_h_id);
+
+            if (order == null)
+            {
+                return NotFound(new { message = "Order not found" });
+            }
+
+            var customerGroup = await _context.CustomerGroups.FirstOrDefaultAsync(cg => cg.SUB_CODE == order.sub_custid);
+
+            if (customerGroup == null) {
+                return BadRequest(new { message = $"Customer group not found" });
+            }
+
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+            if (customer == null) {
+                return BadRequest(new { message = $"Customer not found" });
+            }
+
+            
+
+            var NewOrderDetail = new OrderDetail
+            {
+                id_seq_order = model.order_h_id ?? 0,
+                wh_code = order.wh_code,
+                sub_custid = order.sub_custid,
+                cnee_code = order.cnee_code,
+                inv_no = order.inv_no,
+                delivery_date = order.delivery_date,
+                pkg_unit = model.uom,
+                item_name = model.name,
+                item_length = model.length,
+                item_category = model.category,
+                item_height = model.height,
+                item_width = model.width,
+                item_wgt = (int?)model.weight,
+                item_qty = (int?)model.quantity,
+                pack_unit = model.uom,
+                entry_date = DateTime.Now,
+                entry_user = HttpContext.Session.GetString("username") ?? "System"
+            };
+
+            if (customer.API_FLAG == 1)
+            {
+
+                var payload = new
+                {
+                    product_id = model.product_id,
+                    quantity = model.quantity,
+                    uom = model.uom,
+                    note = model.note,
+                };
+
+                var (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Post,
+                    "order/api/web/v1/delivery-order/" + model.order_id + "/load",
+                    payload
+                );
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Add Order Load",
+                        detail = json
+                    });
+                }
+
+                NewOrderDetail.mceasy_order_id = order.mceasy_order_id;
+                NewOrderDetail.mceasy_order_dtl_id = json.GetProperty("data").GetProperty("id").GetString();
+                NewOrderDetail.mceasy_product_id = model.product_id;
+
+            }
+
+            _context.OrderDetails.Add(NewOrderDetail);
+            await _context.SaveChangesAsync();
+
+            return Ok(new {message = "Created order load succesfully", data = NewOrderDetail});
+
+        }
+
+
+        [HttpPatch] 
+        public async Task<IActionResult> EditProduct([FromBody] ProductViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "All fields must be filled in" });
+            }
+            var orderLoad = await _context.OrderDetails.FirstOrDefaultAsync(od => od.id_seq == (int?)model.id_seq);
+            if (orderLoad == null)
+            {
+                return NotFound(new { message = "Order load not found" });
+            }
+
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.id_seq == model.order_h_id);
+            if (order == null)
+            {
+                return NotFound(new { message = "Order not found" });
+            }
+
+            var customerGroup = await _context.CustomerGroups.FirstOrDefaultAsync(cg => cg.SUB_CODE == order.sub_custid);
+            if (customerGroup == null) {
+                return BadRequest(new { message = $"Customer group not found" });
+            }
+
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.CUST_CODE == customerGroup.CUST_CODE);
+            if (customer == null) {
+                return BadRequest(new { message = $"Customer not found" });
+            }
+
+            orderLoad.item_name = model.name;
+            orderLoad.item_length = model.length;
+            orderLoad.item_category = model.category;
+            orderLoad.item_height = model.height;
+            orderLoad.item_width = model.width;
+            orderLoad.item_wgt = (int?)model.weight;
+            orderLoad.item_qty = (int?)model.quantity;
+            orderLoad.pkg_unit = model.uom;
+            orderLoad.pack_unit = model.uom;
+            orderLoad.update_date = DateTime.Now;
+            orderLoad.update_user = HttpContext.Session.GetString("username") ?? "System";
+            
+            if (customer.API_FLAG == 1 && orderLoad.mceasy_order_dtl_id != null)
+            {
+                var payload = new
+                {
+                    product_id = orderLoad.mceasy_product_id,
+                    quantity = model.quantity,
+                    uom = model.uom,
+                    note = model.note,
+                };
+                var (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Patch,
+                    "delivery-order/" + model.order_id + "/load/" + orderLoad.mceasy_order_dtl_id,
+                    payload
+                );
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Edit Order Load",
+                        detail = json
+                    });
+                }
+            }
+
+            _context.OrderDetails.Update(orderLoad);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Updated order load succesfully", data = orderLoad });
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> DeleteLoad(int? id)
+        {
+            if (id == null)
+                return BadRequest("ID tidak valid");
+           
+            var orderLoad = await _context.OrderDetails.FirstOrDefaultAsync(od => od.id_seq == id);
+
+            if(orderLoad == null)
+            {
+                return NotFound(new { message = "Order load not found" });
+            }
+
+            if (orderLoad.mceasy_order_dtl_id != null)
+            {
+                var (ok, json) = await _apiService.SendRequestAsync(
+                   HttpMethod.Delete,
+                   $"delivery-order/{orderLoad.mceasy_order_id}/load/{orderLoad.mceasy_order_dtl_id}",
+                   new { }
+               );
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Delete Order Load",
+                        detail = json
+                    });
+                }
+            }
+            _context.OrderDetails.Remove(orderLoad);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Order load berhasil dihapus." });
+        }
+    }
+
+    public class ProductViewModel
+    {
+
+        public int? id_seq { get; set; }
+        public int? order_h_id { get; set; }
+        public string? order_id { get; set; }
+        public string? product_id { get; set; }
+        public string? name { get; set; }
+        public string? sku { get; set; }
+        public string? description { get; set; }
+        public string? uom { get; set; }
+        public decimal? weight { get; set; }
+        public decimal? volume { get; set; }
+        public decimal? price { get; set; }
+        public decimal? quantity { get; set; }
+        public string? note { get; set; }
+        public int? length { get; set; }
+
+        public int? width { get; set; }
+
+        public int? height { get; set; }
+
+        public string? category { get; set; }
     }
 
 }
+
+

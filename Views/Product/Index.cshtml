@@ -22,6 +22,7 @@
             <th>Weight</th>
             <th>Volume</th>
             <th>Price</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -34,6 +35,10 @@
                 <td>@item.weight</td>
                 <td>@item.volume</td>
                 <td>@item.price</td>
+                <td>
+                    @* <button class="btn btn-sm btn-warning btnEdit" data-id="@item.id">Edit</button> *@
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.id">Delete</button>
+                </td>
             </tr>
         }
     </tbody>
@@ -92,27 +97,28 @@
                 if (!confirm("Yakin hapus data ini?")) return;
                 const id = $(this).data("id");
 
-                $.post("/Product/Delete", { id }, function () {
-                    location.reload();
-                }).fail(function () {
-                    alert("Gagal menghapus data.");
+                $.ajax({
+                    url: '/Product/Delete/'+id,
+                    type: 'DELETE',
+                    data: { id: id },
+                    success: function (result) {
+                        alert("Product deleted!");
+                        location.reload();
+                    },
+                    error: function (err) {
+                        alert("Gagal menghapus data.");
+                        console.log(err);
+                    }
                 });
+
+                // $.delete("/Product/Delete", { id }, function () {
+                //     location.reload();
+                // }).fail(function () {
+                //     alert("Gagal menghapus data.");
+                // });
             });
 
             $(document).on("submit", "#productForm", function (e) {
-                // e.preventDefault();
-                // $.ajax({
-                //     type: "POST",
-                //     url: "/Product/Form",
-                //     data: $(this).serialize(),
-                //     success: function () {
-                //         modal.hide();
-                //         location.reload();
-                //     },
-                //     error: function () {
-                //         alert("Gagal menyimpan data.");
-                //     }
-                // });
 
                 e.preventDefault();
 

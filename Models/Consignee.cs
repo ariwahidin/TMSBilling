@@ -13,9 +13,10 @@ namespace TMSBilling.Models
         [Key]
         [Required]
         [StringLength(30)]
-        public required string CNEE_CODE { get; set; }
+        public string? CNEE_CODE { get; set; }
 
         [StringLength(50)]
+        public string? MCEASY_CUST_ID { get; set; }
         public int? MCEASY_GEOFENCE_ID { get; set; }
 
         [StringLength(50)]
@@ -33,11 +34,24 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? CNEE_ADDR4 { get; set; }
 
+        [StringLength(50)]
+        public string? CATEGORY { get; set; }
+
+        public string? ADDRESS { get; set; }
+
+        [StringLength(50)]
+        public string? CITY { get; set; }
+
+        public string? AREA { get; set; }
+
         [StringLength(20)]
         public string? CNEE_TEL { get; set; }
 
         [StringLength(20)]
         public string? CNEE_FAX { get; set; }
+
+        [StringLength(50)]
+        public string? POSTAL_CODE { get; set; }
 
         [StringLength(50)]
         public string? CNEE_PIC { get; set; }

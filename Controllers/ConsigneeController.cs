@@ -22,6 +22,12 @@ public class ConsigneeController : Controller
         return View(list);
     }
 
+    public IActionResult OptionCustomerGroup() {
+        var list = _context.CustomerGroups.ToList();
+        return PartialView("_OptionCustomer", list);
+    }
+
+    [HttpGet]
     public IActionResult Form(int? id)
     {
         var subCodeList = _context.CustomerGroups
@@ -90,7 +96,6 @@ public class ConsigneeController : Controller
         _context.SaveChanges();
         return Ok();
     }
-
 
     [HttpPost]
     public IActionResult Delete(int id)

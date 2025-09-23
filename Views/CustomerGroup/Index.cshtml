@@ -25,12 +25,12 @@
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </button>
-                    @if (!string.IsNullOrEmpty(item.MCEASY_CUST_ID))
+                    @* @if (!string.IsNullOrEmpty(item.MCEASY_CUST_ID))
                     {
                         <a href="/Geofence/Index?id=@item.MCEASY_CUST_ID" class="btn btn-sm btn-success">
                             <i class="bi bi-map"></i>
                         </a>
-                    }
+                    } *@
                     @if(isAdmin){
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Hapus">
                         <i class="bi bi-trash"></i>
@@ -75,7 +75,7 @@
                 });
             });
 
-            $(".btnEdit").click(function () {
+            $(document).on("click", ".btnEdit", function () {
                 const id = $(this).data("id");
                 $.get("/CustomerGroup/Form?id=" + id, function (html) {
                     $("#modalContent").html(html);

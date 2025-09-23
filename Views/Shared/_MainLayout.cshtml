@@ -25,11 +25,23 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="~/css/main_layout.css" rel="stylesheet" />
+    <link href="~/css/loading.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @RenderSection("Styles", required: false)
 </head>
 <body>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="loading-container">
+            <div class="custom-spinner"></div>
+            <div class="loading-text">
+                Loading<span class="loading-dots"></span>
+            </div>
+        </div>
+    </div>
+
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <div class="wrapper">
@@ -37,7 +49,6 @@
         <div class="sidebar" id="sidebar">
             <div class="sidebar-content">
                 <div class="logo">
-                    @* <span class="logo-icon">🌐</span> *@
                     <img src="~/img/wings-yusen.png" alt="Yusen Logistics" width="45" style="margin-left:-7px" class="login-logo" />
                     <span class="logo-text">TMS Billing</span>
                 </div>
@@ -176,24 +187,6 @@
                     </div>
 
 
-
-                    @* <div class="nav-item">
-                        <a class="nav-link"
-                           href="#ReportMenu"
-                           data-bs-toggle="collapse"
-                           role="button"
-                           aria-expanded="true">
-                            <i class="bi bi-bar-chart nav-icon"></i>
-                            <span class="nav-text">Reports</span>
-                        </a>
-                        <div class="collapse submenu @(IsControllerActive("Reporting") ? "show" : "")" id="ReportMenu">
-                            <a href="/Reporting/Index" class="nav-link @(IsControllerActive("Reporting") ? "active" : "")">
-                                <i class="bi bi-card-checklist"></i>
-                                <span class="nav-text">Index</span>
-                            </a>
-                        </div>
-                    </div> *@
-
                     <div class="nav-item">
                         <a href="/Reporting/Index" class="nav-link">
                             <i class="bi bi-bar-chart nav-icon"></i>
@@ -252,6 +245,23 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/global.js"></script>
     <script>
+
+        // Fungsi utama untuk menampilkan loading
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('show');
+            // Mencegah scroll pada body saat loading aktif
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Fungsi utama untuk menyembunyikan loading
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('show');
+            // Mengembalikan scroll pada body
+            document.body.style.overflow = 'auto';
+        }
+
         const sidebar = document.getElementById("sidebar");
         const toggleSidebar = document.getElementById("toggleSidebar");
         const sidebarOverlay = document.getElementById("sidebarOverlay");

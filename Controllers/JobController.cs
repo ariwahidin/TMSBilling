@@ -5,6 +5,7 @@ using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
+using TMSBilling.Services;
 using static TMSBilling.Models.ViewModels.JobViewModel;
 
 namespace TMSBilling.Controllers
@@ -16,10 +17,12 @@ namespace TMSBilling.Controllers
 
         private readonly AppDbContext _context;
         private readonly SelectListService _selectList;
-        public JobController(AppDbContext context, SelectListService selectList)
+        private readonly ApiService _apiService;
+        public JobController(AppDbContext context, SelectListService selectList, ApiService apiService)
         {
             _context = context;
             _selectList = selectList;
+            _apiService = apiService;
         }
 
         public IActionResult Index()
@@ -27,6 +30,7 @@ namespace TMSBilling.Controllers
             var jobs = _context.Jobs
                 .ToList()
                 .GroupBy(j => j.jobid)
+                .OrderByDescending(g => g.Key)
                 .Select(g => new JobListViewModel
                 {
                     JobId = g.Key,
@@ -59,6 +63,7 @@ namespace TMSBilling.Controllers
             ViewBag.ListPickupCargo = _selectList.GetYesNo();
             ViewBag.ListMultiDrop = _selectList.GetYesNo();
             ViewBag.ListMultitrip = _selectList.GetYesNo();
+            ViewBag.ListVendor = _selectList.GetVendors();
 
             if (!string.IsNullOrEmpty(jobid))
             {
@@ -95,15 +100,24 @@ namespace TMSBilling.Controllers
 
                 if (!string.IsNullOrEmpty(jobid))
                 {
+                    //query = query.Where(o =>
+                    //    (o.delivery_date == parsedDate && o.order_status == 0) ||
+                    //    o.jobid == jobid
+                    //);
+
                     query = query.Where(o =>
-                        (o.delivery_date == parsedDate && o.order_status == 0) ||
-                        o.jobid == jobid
+                        (EF.Functions.DateDiffDay(o.delivery_date, parsedDate) == 0 && o.order_status == 0)
+                        || o.jobid == jobid
                     );
                 }
                 else
                 {
+                    //query = query.Where(o =>
+                    //    o.delivery_date == parsedDate && o.order_status == 0
+                    //);
+
                     query = query.Where(o =>
-                        o.delivery_date == parsedDate && o.order_status == 0
+                        EF.Functions.DateDiffDay(o.delivery_date, parsedDate) == 0 && o.order_status == 0
                     );
                 }
 
@@ -135,7 +149,7 @@ namespace TMSBilling.Controllers
 
         [HttpPost]
         [Route("Job/Save/{jobid?}")]
-        public IActionResult Save([FromBody] JobViewModel model, string? jobid)
+        public async Task<IActionResult> Save([FromBody] JobViewModel model, string? jobid)
         {
 
 
@@ -149,6 +163,8 @@ namespace TMSBilling.Controllers
             Console.WriteLine("JOB FORM HEADER " + System.Text.Json.JsonSerializer.Serialize(model.FormJobHeader));
             Console.WriteLine("JOB FORM DETAIL " + System.Text.Json.JsonSerializer.Serialize(model.FormJobDetails));
 
+            //return Ok(new { success = true, message = $"masok 1" });
+
             var Header = model.FormJobHeader;
             var Details = model.FormJobDetails;
 
@@ -156,9 +172,27 @@ namespace TMSBilling.Controllers
 
             if (Details == null || Details.Count == 0)
             {
-                return BadRequest(new { success = false, message = "Tidak ada data job yang ditemukan atau dikirim." });
+                return BadRequest(new { success = false, message = "Order detail not found." });
 
             }
+
+
+            if (!string.IsNullOrEmpty(jobid))
+            {
+                // delete existing job first
+                var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
+
+                if (jobExistingList.Any())
+                {
+                    _context.Jobs.RemoveRange(jobExistingList); 
+                    _context.SaveChanges();
+                }
+
+                _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
+
+            }
+
+
 
             var CostRate = _context.PriceBuys.FirstOrDefault(hm =>
             hm.sup_code == Header.vendor_id
@@ -193,7 +227,13 @@ namespace TMSBilling.Controllers
                     return BadRequest(new { success = false, message = $"Cost rate mismatch for INV {ord.inv_no}" });
                 }
 
-                var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == orderExisting.sub_custid);
+                var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == orderExisting.sub_custid);
+
+                if (customerGroup == null) {
+                    return NotFound(new { success = false, message = "Customer group not found" });
+                }
+
+                var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
 
                 if (customer == null) {
                     return BadRequest(new { success = false, message = "Customer not found" });
@@ -227,50 +267,25 @@ namespace TMSBilling.Controllers
             // Buat jobid baru
             string newJobId = jobid ?? GenerateJobId(existingCount + 1);
 
-            if (jobid != null)
-            {
-                var jobHeader = _context.JobHeaders.FirstOrDefault(jo => jo.jobid == jobid);
-                if (jobHeader != null)
-                {
-                    jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
-                    jobHeader.update_date = DateTime.Now;
-                    _context.JobHeaders.Update(jobHeader);
-
-                    var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
-
-                    if (jobExistingList.Any())
-                    {
-                        _context.Jobs.RemoveRange(jobExistingList); // hapus banyak
-                        _context.SaveChanges();
-                    }
-
-                    _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
-
-                }
-                else
-                {
-
-                    return BadRequest(new { success = false, message = "Data job not found!" });
-
-                }
-            }
-            else
-            {
-
-                var jobHeader = new JobHeader();
-                jobHeader.jobid = newJobId;
-                jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
-                jobHeader.entry_date = DateTime.Now;
-                _context.JobHeaders.Add(jobHeader);
-            }
+            //return Json(new { success = true, message = "BOLEH LANJUT, JOB ID : "+jobid });
 
 
+
+            // awal kosong
+            var deliveryOrderIds = new List<string>();
+            var mceasy_job_id = string.Empty;
+
+
+            // BAGIAN INSERT NEW JOB ADA DISINI
             foreach (var ordx in Details)
             {
                 var order = _context.Orders.FirstOrDefault(j => j.inv_no == ordx.inv_no);
-                if (order == null){
+                if (order == null)
+                {
                     return BadRequest(new { success = false, message = "Order not found" });
-                }else {
+                }
+                else
+                {
                     order.order_status = 1;
                     order.jobid = newJobId;
                     order.update_user = HttpContext.Session.GetString("username") ?? "System";
@@ -279,14 +294,30 @@ namespace TMSBilling.Controllers
                 }
 
 
+                var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == order.sub_custid);
 
-                    var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == order.sub_custid);
+                if (customerGroup == null)
+                {
+                    return NotFound(new { success = false, message = "Customer group not found" });
+                }
+
+
+
+                var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+                
 
                 if (customer == null)
                 {
                     return BadRequest(new { success = false, message = "Customer not found" });
                 }
 
+                if (customer.API_FLAG == 1) {
+                    if (!string.IsNullOrEmpty(order.mceasy_order_id))
+                    {
+                        deliveryOrderIds.Add(order.mceasy_order_id);
+                    }
+                }
 
                 var SellRate = _context.PriceSells.FirstOrDefault(sr =>
                                     sr.cust_code == customer.MAIN_CUST
@@ -302,7 +333,6 @@ namespace TMSBilling.Controllers
                     return BadRequest(new { success = false, message = "Sell rate not found for INV " + order.inv_no });
                 }
 
-
                 var newJob = new Job();
                 newJob.jobid = newJobId;
                 newJob.vendorid = CostRate.sup_code;
@@ -312,11 +342,10 @@ namespace TMSBilling.Controllers
                 newJob.serv_req = order?.serv_req;
                 newJob.truck_size = order?.truck_size;
                 newJob.charge_uom = CostRate.charge_uom;
-                //newJob.multidrop = ordx.multi
                 newJob.inv_no = order?.inv_no;
                 newJob.origin_id = order?.origin_id;
                 newJob.dest_id = order?.dest_area;
-                newJob.dvdate = order?.delivery_date;
+                newJob.dvdate = Header.dvdate;
 
                 newJob.buy1 = CostRate.buy1;
                 newJob.buy2 = CostRate.buy2;
@@ -350,7 +379,140 @@ namespace TMSBilling.Controllers
 
                 _context.Jobs.Add(newJob);
             }
-            _context.SaveChanges();
+
+            if (deliveryOrderIds.Count > 0 && string.IsNullOrEmpty(jobid))
+            {
+                var payload = new
+                {
+                    delivery_order_ids = deliveryOrderIds,
+                    //transit_delivery_orders = new[]
+                    //{
+                    //    new {
+                    //        delivery_order_ids = deliveryOrderIds,
+                    //        transit_address_id = 0
+                    //    }
+                    //}
+                };
+
+                var (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Post,
+                    "fleet-planning/api/web/v1/fleet-task",
+                    payload
+                );
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Store Fleet Task",
+                        detail = json
+                    });
+                }
+
+                mceasy_job_id = json.GetProperty("data").GetProperty("id").GetString();
+
+
+                var payload2 = new
+                {
+                    expected_departure_on = Header.dvdate.HasValue ? Header.dvdate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null,
+                    shipment_reference = newJobId,
+                };
+
+                var (ok2, json2) = await _apiService.SendRequestAsync(
+                    HttpMethod.Patch,
+                    $"fleet-planning/api/web/v1/fleet-task/{mceasy_job_id}",
+                    payload2
+                );
+                if (!ok2)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Patch Fleet Task",
+                        detail = json2
+                    });
+                }
+
+                var payload3 = new
+                {
+                    status = "DRAFT"
+                };
+
+                var (ok3, json3) = await _apiService.SendRequestAsync(
+                    HttpMethod.Post,
+                    $"fleet-planning/api/web/v1/fleet-task/{mceasy_job_id}/transition",
+                    payload3
+                );
+                if (!ok3)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Do Transition Fleet Task",
+                        detail = json3
+                    });
+                }
+
+            }
+
+            if (!string.IsNullOrEmpty(jobid))
+            {
+
+                var jobHeader = _context.JobHeaders.FirstOrDefault(jo => jo.jobid == jobid);
+                if (jobHeader != null)
+                {
+                    if (!string.IsNullOrEmpty(jobHeader.mceasy_job_id))
+                    {
+                        var payload = new
+                        {
+                            //delivery_order_ids = deliveryOrderIds,
+                            //expected_departure_on = "2024-09-05T15:51:28.071Z",
+                            expected_departure_on = Header.dvdate.HasValue
+                            ? Header.dvdate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            : null,
+                            shipment_reference = jobid,
+                        };
+
+                        var (ok, json) = await _apiService.SendRequestAsync(
+                            HttpMethod.Patch,
+                            $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}",
+                            payload
+                        );
+                        if (!ok)
+                        {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Gagal kirim ke API Patch Fleet Task",
+                                detail = json
+                            });
+                        }
+                    }
+                    jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
+                    jobHeader.update_date = DateTime.Now;
+                    if (!string.IsNullOrEmpty(mceasy_job_id))
+                    {
+                        jobHeader.mceasy_job_id = mceasy_job_id;
+                    }
+                    _context.JobHeaders.Update(jobHeader);
+                }
+                else
+                {
+                    return BadRequest(new { success = false, message = "Data job not found!" });
+                }
+            }
+            else
+            {
+
+                var jobHeader = new JobHeader();
+                jobHeader.jobid = newJobId;
+                jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
+                jobHeader.entry_date = DateTime.Now;
+                jobHeader.mceasy_job_id = mceasy_job_id;
+                _context.JobHeaders.Add(jobHeader);
+            }
+
+            await _context.SaveChangesAsync();
             return Json(new { success = true, message = "Job saved successfully" });
         }
 
@@ -425,5 +587,34 @@ namespace TMSBilling.Controllers
 
             return Json(new { success = true, data = details });
         }
+
+
+        //[HttpGet("GetOrders")]
+
+        public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate)
+        {
+
+        var nextDay = deliveryDate.AddDays(1);
+            Console.WriteLine($"deliveryDate: {deliveryDate:yyyy-MM-dd HH:mm:ss}");
+            Console.WriteLine($"nextDay: {nextDay:yyyy-MM-dd HH:mm:ss}");
+
+            //var result = await _context.Orders
+            //    .Where(o => o.origin_id == originId
+            //     && o.dest_area == destArea
+            //     && o.delivery_date >= deliveryDate
+            //     && o.delivery_date < nextDay
+            //     && o.order_status == 1)
+
+            var result = await _context.Orders
+            .Where(o => o.origin_id == originId
+                && o.dest_area == destArea
+                && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
+                && o.order_status == 1)
+            .ToListAsync();
+            return Ok(new {success = true, data = result}); // hasilnya JSON
+        }
+
+
+
     }
 }

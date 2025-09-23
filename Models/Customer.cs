@@ -86,10 +86,9 @@ namespace TMSBilling.Models
         public DateTime? ENTRY_DATE {  get; set; }
         public string UPDATE_USER {  get; set; } = string.Empty;
         public DateTime? UPDATE_DATE { get; set; }
-        public int ACTIVE_FLAG { get; set; }  = 1;
+        public int ACTIVE_FLAG { get; set; } = 1;
+        public int API_FLAG { get; set; } = 0;
         public string MAIN_CUST {  get; set; } = string.Empty;
-        //[ForeignKey("MAIN_CUST")]
-        //public CustomerMain? CustomerMain { get; set; }
         public int CUST_CUTOFF { get; set; }
     }
 

@@ -9,19 +9,18 @@ using System.Text.Json;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
+using TMSBilling.Services;
 
 [SessionAuthorize]
 public class CustomerGroupController : Controller
 {
     private readonly AppDbContext _context;
-    private readonly HttpClient _httpClient;
-    private readonly ApiSettings _apiSettings;
+    private readonly ApiService _apiService;
 
-    public CustomerGroupController(AppDbContext context, HttpClient httpClient, IOptions<ApiSettings> apiSettings)
+    public CustomerGroupController(AppDbContext context, ApiService apiService)
     {
         _context = context;
-        _httpClient = httpClient;
-        _apiSettings = apiSettings.Value;
+        _apiService = apiService;
     }
 
     public IActionResult Index()
@@ -64,57 +63,31 @@ public class CustomerGroupController : Controller
                 });
             }
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
-
-            var payload = new
-            {
-                name = model.SUB_CODE,
-            };
-
-            var options = new JsonSerializerOptions
-            {
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-
-            var jsonPayload = JsonSerializer.Serialize(payload, options);
-            var jsonContent = new StringContent(
-                jsonPayload,
-                Encoding.UTF8,
-                "application/json"
-            );
-
-            Console.WriteLine("=== DEBUG PAYLOAD DETAIL ===");
-            Console.WriteLine($"customer_name: {payload.name}");
-            Console.WriteLine("=== JSON PAYLOAD ===");
-            Console.WriteLine(jsonPayload);
-            Console.WriteLine("=== HEADERS ===");
-            Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
-            Console.WriteLine($"Content-Type: application/json");
-            Console.WriteLine("=====================");
-
-            var response = await _httpClient.PostAsync(
-                $"{_apiSettings.BaseUrl}/customer",
-                jsonContent
-            );
-
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return BadRequest(new
+            var customer = _context.Customers.FirstOrDefault(v => v.CUST_CODE == model.CUST_CODE);
+            if (customer?.API_FLAG == 1) {
+                var payload = new
                 {
-                    success = false,
-                    message = "Gagal kirim ke API Customer",
-                    detail = responseText
-                });
+                    name = model.SUB_CODE,
+                };
+                var (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Post,
+                    "customer",
+                    payload
+                );
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API Customer",
+                        detail = json
+                    });
+                }
+                var id = json.GetProperty("data").GetProperty("id").GetString();
+                model.MCEASY_CUST_ID = id;
             }
 
-            using var doc = JsonDocument.Parse(responseText);
-            var id = doc.RootElement.GetProperty("data").GetProperty("id").GetString();
-            model.MCEASY_CUST_ID = id;
-
-
+            
             model.ENTRY_USER = HttpContext.Session.GetString("username") ?? "System";
             model.ENTRY_DATE = DateTime.Now;
             _context.CustomerGroups.Add(model);

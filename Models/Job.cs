@@ -164,6 +164,8 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? entry_user { get; set; }
 
+        //public string? mceasy_job_id { get; set; }
+
         public DateTime? entry_date { get; set; }
 
         [StringLength(50)]
@@ -181,6 +183,8 @@ namespace TMSBilling.Models
 
         [StringLength(30)]
         public string? jobid { get; set; }
+
+        public string? mceasy_job_id { get; set; }
 
         [StringLength(50)]
         public string? entry_user { get; set; }

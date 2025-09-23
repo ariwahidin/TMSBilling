@@ -13,7 +13,7 @@ namespace TMSBilling.Models
 
         [Required]
         [StringLength(100)]
-        public required string destination_code { get; set; }
+        public string? destination_code { get; set; }
 
         [StringLength(50)]
         public string? entryuser { get; set; }
@@ -27,5 +27,8 @@ namespace TMSBilling.Models
 
         [StringLength(100)]
         public string? dest_loccode { get; set; }
+
+        [StringLength(20)]
+        public string? area { get; set; }
     }
 }

@@ -1,0 +1,933 @@
+﻿@model TMSBilling.Controllers.GeofenceViewModel
+@{
+    ViewData["Title"] = "New Geofence " + ViewBag.CustomerName ;
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+}
+
+@section Styles {
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #e0e0e0;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+            .form-control:focus, .form-select:focus {
+                border-color: #0d6efd;
+                box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            }
+
+        #map {
+            height: 400px;
+            border-radius: 0.5rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+            .suggestion-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .suggestion-item:last-child {
+                border-bottom: none;
+            }
+
+        /* .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+        } */
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .required {
+            color: #dc3545;
+        }
+
+        .geofence-tools {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .tool-btn {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .leaflet-draw-toolbar a {
+            background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/images/spritesheet.png');
+        }
+    </style>
+}
+
+<div class="container-fluid" style="font-size : 12px;">
+    <div class="mb-3">
+        <a href="/Geofence/Index?id=@ViewBag.CustomerId" class="btn btn-sm btn-primary"> <i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                @* <div class="card-header bg-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-map-marked-alt me-2 text-primary"></i>
+                        New Geofence [ @ViewBag.CustomerName ]
+                    </h4>
+                </div> *@
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Form Section -->
+                        <div class="col-lg-5">
+                            <form id="geofenceForm" asp-action="CreateGeofence" asp-controller="Geofence" method="post">
+                                @Html.AntiForgeryToken()
+
+                                <!-- Informasi Alamat -->
+                                <div class="mb-4">
+                                    <h5 class="text-primary mb-3">Informasi Alamat</h5>
+
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label">Nama Lokasi <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="fenceName" name="FenceName" required>
+                                        <span asp-validation-for="FenceName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Kategori Alamat <span class="required">*</span></label>
+                                        <select class="form-select" id="category" name="Category" required>
+                                            <option value="">Pilih Kategori Alamat</option>
+                                            <option value="Customer" selected>Customer</option>
+                                        </select>
+                                        <span asp-validation-for="Category" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label">Alamat Lengkap <span class="required">*</span></label>
+                                        <textarea class="form-control" id="address" name="Address" rows="3" placeholder="Masukkan alamat lengkap..."></textarea>
+                                        <div class="suggestions" id="addressSuggestions"></div>
+                                        <span asp-validation-for="Address" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Provinsi <span class="required">*</span></label>
+                                                <input type="text" class="form-control" id="province" name="Province" required>
+                                                <span asp-validation-for="Province" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Kota <span class="required">*</span></label>
+                                                <input type="text" class="form-control" id="city" name="City" required>
+                                                <span asp-validation-for="City" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Kode Pos</label>
+                                        <input type="text" class="form-control" id="postalCode" name="PostalCode">
+                                        <span asp-validation-for="PostalCode" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Garis Lintang & Bujur <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="coordinates" name="Coordinates" placeholder="(-6.302038599999999, 106.8989924)" readonly>
+                                        <span asp-validation-for="Coordinates" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Radius (m)</label>
+                                        <input type="number" class="form-control" id="radius" name="Radius" value="100" min="10">
+                                        <span asp-validation-for="Radius" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Detail Alamat</label>
+                                        <textarea class="form-control" id="addressDetail" name="AddressDetail" rows="2" placeholder="Detail tambahan (Cth: Blok/Unit No, Patokan)"></textarea>
+                                        <span asp-validation-for="AddressDetail" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Informasi Kontak -->
+                                <div class="mb-4">
+                                    <h5 class="text-primary mb-3">Informasi Kontak</h5>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Nama Kontak</label>
+                                                <input type="text" class="form-control" id="contactName" name="ContactName">
+                                                <span asp-validation-for="ContactName" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Nomor Telepon</label>
+                                                <input type="tel" class="form-control" id="phoneNo" name="PhoneNo">
+                                                <span asp-validation-for="PhoneNo" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Customer Group</label>
+                                        <input type="text" class="form-control" id="customerName" name="CustomerName" value="@ViewBag.CustomerName" readonly>
+                                        <span asp-validation-for="CustomerName" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Aktivitas -->
+                                <div class="mb-4 d-none">
+                                    <h5 class="text-primary mb-3">Aktivitas</h5>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Waktu Operasional Mulai</label>
+                                                <input type="time" class="form-control" id="serviceStart" name="ServiceStart">
+                                                <span asp-validation-for="ServiceStart" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Waktu Operasional Selesai</label>
+                                                <input type="time" class="form-control" id="serviceEnd" name="ServiceEnd">
+                                                <span asp-validation-for="ServiceEnd" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Waktu Istirahat Mulai</label>
+                                                <input type="time" class="form-control" id="breakStart" name="BreakStart">
+                                                <span asp-validation-for="BreakStart" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Waktu Istirahat Selesai</label>
+                                                <input type="time" class="form-control" id="breakEnd" name="BreakEnd">
+                                                <span asp-validation-for="BreakEnd" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Tipe Service Location</label>
+                                        <select class="form-select" id="serviceLocType" name="ServiceLocType">
+                                            <option value="">Pilih Tipe</option>
+                                            <option value="pickup">Pickup</option>
+                                            <option value="delivery">Delivery</option>
+                                            <option value="both">Both</option>
+                                        </select>
+                                        <span asp-validation-for="ServiceLocType" class="text-danger"></span>
+                                    </div>
+
+                                    <!-- Checkboxes -->
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="isGarage" name="IsGarage" value="true">
+                                                <input name="IsGarage" type="hidden" value="false" />
+                                                <label class="form-check-label" for="isGarage">Is Garage</label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="isServiceLoc" name="IsServiceLoc" value="true">
+                                                <input name="IsServiceLoc" type="hidden" value="false" />
+                                                <label class="form-check-label" for="isServiceLoc">Is Service Location</label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="isBillingAddr" name="IsBillingAddr" value="true">
+                                                <input name="IsBillingAddr" type="hidden" value="false" />
+                                                <label class="form-check-label" for="isBillingAddr">Is Billing Address</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="isDepot" name="IsDepot" value="true">
+                                                <input name="IsDepot" type="hidden" value="false" />
+                                                <label class="form-check-label" for="isDepot">Is Depot</label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="isAlert" name="IsAlert" value="true">
+                                                <input name="IsAlert" type="hidden" value="false" />
+                                                <label class="form-check-label" for="isAlert">Is Alert</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden Fields -->
+                                <input type="hidden" id="geofenceId" name="GeofenceId">
+                                <input type="hidden" id="companyId" name="CompanyId">
+                                <input type="hidden" id="customerId" name="CustomerId" value="@ViewBag.CustomerId">
+                                <input type="hidden" id="type" name="Type" value="circle">
+                                <input type="hidden" id="polyData" name="PolyData">
+                                <input type="hidden" id="circData" name="CircData">
+                                <input type="hidden" name="CreatedOn" id="createdOn">
+                                <input type="hidden" name="HasRelation" id="hasRelation" value="false">
+
+                                <!-- Submit Buttons -->
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-secondary" onclick="cancelForm()">
+                                        <i class="fas fa-times me-1"></i> Batal
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i> Simpan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Map Section -->
+                        <div class="col-lg-7">
+                            <!-- Map Search -->
+                            <div class="mb-3 position-relative">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="mapSearch" placeholder="Cari lokasi di peta..." autocomplete="off">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                <div class="suggestions" id="mapSearchSuggestions"></div>
+                            </div>
+
+                            <div class="geofence-tools d-none">
+                                <h6 class="mb-3">Tool Geofence</h6>
+                                <button type="button" class="btn btn-outline-primary btn-sm tool-btn" id="circleBtn">
+                                    <i class="fas fa-circle me-1"></i> Circle
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm tool-btn" id="polygonBtn">
+                                    <i class="fas fa-draw-polygon me-1"></i> Polygon
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm tool-btn" id="clearBtn">
+                                    <i class="fas fa-trash me-1"></i> Clear
+                                </button>
+                            </div>
+                            <div id="map"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Initialize map
+        let map = L.map('map').setView([-6.2088, 106.8456], 10); // Jakarta center
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Variables for geofence
+        let currentGeofence = null;
+        let isDrawing = false;
+        let drawingMode = null;
+
+        // OpenStreetMap Nominatim API for geocoding
+        const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
+
+        // Address search functionality for form field
+        const addressInput = document.getElementById('address');
+        const suggestionsDiv = document.getElementById('addressSuggestions');
+        let searchTimeout;
+
+        // Map search functionality
+        const mapSearchInput = document.getElementById('mapSearch');
+        const mapSearchSuggestions = document.getElementById('mapSearchSuggestions');
+        const searchBtn = document.getElementById('searchBtn');
+        let mapSearchTimeout;
+
+        addressInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 3) {
+                hideSuggestions();
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                searchAddresses(query, 'address');
+            }, 500);
+        });
+
+        mapSearchInput.addEventListener('input', function() {
+            clearTimeout(mapSearchTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 3) {
+                hideMapSearchSuggestions();
+                return;
+            }
+
+            mapSearchTimeout = setTimeout(() => {
+                searchAddresses(query, 'map');
+            }, 500);
+        });
+
+        searchBtn.addEventListener('click', function() {
+            const query = mapSearchInput.value.trim();
+            if (query.length >= 3) {
+                searchAddresses(query, 'map');
+            }
+        });
+
+        mapSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query.length >= 3) {
+                    searchAddresses(query, 'map');
+                }
+            }
+        });
+
+        async function searchAddresses(query, type) {
+            try {
+                // Add Indonesia bounds to limit search to Indonesia
+                const url = `${NOMINATIM_API}?format=json&q=${encodeURIComponent(query + ', Indonesia')}&limit=5&countrycodes=id&addressdetails=1&extratags=1&namedetails=1&bounded=1&viewbox=95,-11,141,6`;
+
+                const response = await fetch(url, {
+                  headers: {
+                    "Accept-Language": "id" // minta hasil bahasa Indonesia
+                  }
+                });
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+                const addresses = data.map(item => ({
+                    display_name: item.display_name,
+                    lat: parseFloat(item.lat),
+                    lon: parseFloat(item.lon),
+                    province: getProvinceFromAddress(item.address),
+                    city: getCityFromAddress(item.address),
+                    postcode: item.address.postcode || '',
+                    address_components: item.address
+                }));
+
+                if (type === 'address') {
+                    showSuggestions(addresses);
+                } else {
+                    showMapSearchSuggestions(addresses);
+                }
+
+            } catch (error) {
+                console.error('Error searching addresses:', error);
+                // Fallback to empty results
+                if (type === 'address') {
+                    hideSuggestions();
+                } else {
+                    hideMapSearchSuggestions();
+                }
+            }
+        }
+
+        function getProvinceFromAddress(address) {
+            // Try different fields that might contain province info
+            return address.state || address.province || address.region || '';
+        }
+
+        function getCityFromAddress(address) {
+            // Try different fields that might contain city info
+            return address.city || address.town || address.village || address.municipality || address.county || '';
+        }
+
+        function showSuggestions(addresses) {
+            suggestionsDiv.innerHTML = '';
+
+            if (addresses.length === 0) {
+                hideSuggestions();
+                return;
+            }
+
+            addresses.forEach(address => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                    <div style="font-weight: 500; margin-bottom: 2px;">${getShortName(address.display_name)}</div>
+                    <small class="text-muted">${address.display_name}</small>
+                `;
+                item.addEventListener('click', () => selectAddress(address, 'address'));
+                suggestionsDiv.appendChild(item);
+            });
+
+            suggestionsDiv.style.display = 'block';
+        }
+
+        function showMapSearchSuggestions(addresses) {
+            mapSearchSuggestions.innerHTML = '';
+
+            if (addresses.length === 0) {
+                hideMapSearchSuggestions();
+                return;
+            }
+
+            addresses.forEach(address => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                    <div style="font-weight: 500; margin-bottom: 2px;">${getShortName(address.display_name)}</div>
+                    <small class="text-muted">${address.display_name}</small>
+                `;
+                item.addEventListener('click', () => selectAddress(address, 'map'));
+                mapSearchSuggestions.appendChild(item);
+            });
+
+            mapSearchSuggestions.style.display = 'block';
+        }
+
+        function getShortName(fullName) {
+            // Extract the first part of the address as the short name
+            return fullName.split(',')[0];
+        }
+
+        function hideSuggestions() {
+            suggestionsDiv.style.display = 'none';
+        }
+
+        function hideMapSearchSuggestions() {
+            mapSearchSuggestions.style.display = 'none';
+        }
+
+        function selectAddress(address, source) {
+            console.log(source);
+            console.log(address);
+            if (source === 'map') {
+                // Fill form fields
+                document.getElementById('address').value = address.display_name;
+                document.getElementById('province').value = address.province;
+                document.getElementById('city').value = address.city;
+                if (address.postcode) {
+                    document.getElementById('postalCode').value = address.postcode;
+                }
+                hideSuggestions();
+                hideMapSearchSuggestions();
+            } else {
+                // Update map search input
+                mapSearchInput.value = getShortName(address.display_name);
+                hideMapSearchSuggestions();
+            }
+
+            // Update coordinates field
+            updateCoordinatesField(address.lat, address.lon);
+
+            // Center map on selected location
+            map.setView([address.lat, address.lon], 16);
+
+            // Add marker
+            if (window.currentMarker) {
+                map.removeLayer(window.currentMarker);
+            }
+            window.currentMarker = L.marker([address.lat, address.lon])
+                .addTo(map)
+                .bindPopup(`<strong>${getShortName(address.display_name)}</strong><br>${address.display_name}<br>Lat: ${address.lat}<br>Lng: ${address.lon}`)
+                .openPopup();
+
+            // Create default circular geofence
+            const radius = parseInt(document.getElementById('radius').value) || 100;
+            createCircularGeofence(address.lat, address.lon, radius);
+
+            // If source is map search, also update the address form field
+            // if (source === 'map' && !document.getElementById('address').value) {
+            //     document.getElementById('address').value = address.display_name;
+            //     document.getElementById('province').value = address.province;
+            //     document.getElementById('city').value = address.city;
+            //     if (address.postcode) {
+            //         document.getElementById('postalCode').value = address.postcode;
+            //     }
+            // }
+        }
+
+        function updateCoordinatesField(lat, lng) {
+            const coordinates = `(${lat}, ${lng})`;
+            document.getElementById('coordinates').value = coordinates;
+        }
+
+        function createCircularGeofence(lat, lng, radius) {
+            if (currentGeofence) {
+                map.removeLayer(currentGeofence);
+            }
+
+            currentGeofence = L.circle([lat, lng], {
+                color: '#0d6efd',
+                fillColor: '#0d6efd',
+                fillOpacity: 0.2,
+                radius: radius
+            }).addTo(map);
+
+            // Update coordinates field
+            updateCoordinatesField(lat, lng);
+
+            // Store circle data
+            document.getElementById('type').value = 'circle';
+            document.getElementById('circData').value = JSON.stringify({
+                center: [lat, lng],
+                radius: radius
+            });
+            document.getElementById('polyData').value = '';
+        }
+
+        // Drawing tools
+        document.getElementById('circleBtn').addEventListener('click', function() {
+            drawingMode = 'circle';
+            map.getContainer().style.cursor = 'crosshair';
+            this.classList.add('active');
+            document.getElementById('polygonBtn').classList.remove('active');
+        });
+
+        document.getElementById('polygonBtn').addEventListener('click', function() {
+            drawingMode = 'polygon';
+            map.getContainer().style.cursor = 'crosshair';
+            this.classList.add('active');
+            document.getElementById('circleBtn').classList.remove('active');
+
+            // Start polygon drawing
+            if (window.polygonPoints) {
+                window.polygonPoints = [];
+            } else {
+                window.polygonPoints = [];
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if (currentGeofence) {
+                map.removeLayer(currentGeofence);
+                currentGeofence = null;
+            }
+            if (window.currentMarker) {
+                map.removeLayer(window.currentMarker);
+                window.currentMarker = null;
+            }
+            if (window.polygonPoints) {
+                window.polygonPoints = [];
+            }
+
+            document.getElementById('type').value = '';
+            document.getElementById('circData').value = '';
+            document.getElementById('polyData').value = '';
+            document.getElementById('coordinates').value = '';
+
+            drawingMode = null;
+            map.getContainer().style.cursor = '';
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        });
+
+
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            // Update coordinates field
+            updateCoordinatesField(lat, lng);
+
+            // === REVERSE GEOCODING ke Nominatim ===
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+                const response = await fetch(url, {
+                    headers: {
+                        "Accept-Language": "id" // coba pakai bahasa Indonesia
+                    }
+                });
+                const data = await response.json();
+                console.log("Data : ", data)
+                let address = data.display_name || "Alamat tidak ditemukan";
+
+                // Bisa tampilkan di popup marker
+                if (window.currentMarker) {
+                    map.removeLayer(window.currentMarker);
+                }
+                window.currentMarker = L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`<strong>Lokasi Terpilih</strong><br>Lat: ${lat}<br>Lng: ${lng}<br>${address}`)
+                    .openPopup();
+
+                // Kalau mau juga simpan ke form field
+                document.getElementById('address').value = address;
+                document.getElementById('province').value = getProvinceFromAddress(data.address);
+                document.getElementById('city').value = getCityFromAddress(data.address);
+                if (data.address.postcode) {
+                    document.getElementById('postalCode').value = data.address.postcode;
+                }
+
+            } catch (err) {
+                console.error("Gagal ambil alamat:", err);
+            }
+
+            // ====== kode geofence kamu tetap jalan di sini ======
+            // if (drawingMode === 'circle') {
+            //     const radius = parseInt(document.getElementById('radius').value) || 100;
+            //     createCircularGeofence(lat, lng, radius);
+            //     drawingMode = null;
+            //     map.getContainer().style.cursor = '';
+            //     document.getElementById('circleBtn').classList.remove('active');
+            // } else if (drawingMode === 'polygon') {
+            //     if (!window.polygonPoints) {
+            //         window.polygonPoints = [];
+            //     }
+            //     window.polygonPoints.push([lat, lng]);
+            //     L.circleMarker([lat, lng], {
+            //         radius: 5,
+            //         fillColor: '#ff7800',
+            //         color: '#000',
+            //         weight: 1,
+            //         opacity: 1,
+            //         fillOpacity: 0.8
+            //     }).addTo(map);
+
+            //     if (window.polygonPoints.length >= 3) {
+            //         if (currentGeofence) {
+            //             map.removeLayer(currentGeofence);
+            //         }
+            //         currentGeofence = L.polygon(window.polygonPoints, {
+            //             color: '#0d6efd',
+            //             fillColor: '#0d6efd',
+            //             fillOpacity: 0.2
+            //         }).addTo(map);
+
+            //         document.getElementById('type').value = 'polygon';
+            //         document.getElementById('polyData').value = JSON.stringify(window.polygonPoints);
+            //         document.getElementById('circData').value = '';
+            //     }
+            // } else if (!drawingMode) {
+            //     const radius = parseInt(document.getElementById('radius').value) || 100;
+            //     createCircularGeofence(lat, lng, radius);
+            // }
+        });
+
+
+        // Map click handler for drawing
+        // map.on('click', function(e) {
+        //     // Update coordinates when clicking on map
+        //     updateCoordinatesField(e.latlng.lat, e.latlng.lng);
+
+        //     if (drawingMode === 'circle') {
+        //         const radius = parseInt(document.getElementById('radius').value) || 100;
+        //         createCircularGeofence(e.latlng.lat, e.latlng.lng, radius);
+        //         drawingMode = null;
+        //         map.getContainer().style.cursor = '';
+        //         document.getElementById('circleBtn').classList.remove('active');
+
+        //     } else if (drawingMode === 'polygon') {
+        //         if (!window.polygonPoints) {
+        //             window.polygonPoints = [];
+        //         }
+
+        //         window.polygonPoints.push([e.latlng.lat, e.latlng.lng]);
+
+        //         // Add point marker
+        //         L.circleMarker([e.latlng.lat, e.latlng.lng], {
+        //             radius: 5,
+        //             fillColor: '#ff7800',
+        //             color: '#000',
+        //             weight: 1,
+        //             opacity: 1,
+        //             fillOpacity: 0.8
+        //         }).addTo(map);
+
+        //         // If we have at least 3 points, we can create/update the polygon
+        //         if (window.polygonPoints.length >= 3) {
+        //             if (currentGeofence) {
+        //                 map.removeLayer(currentGeofence);
+        //             }
+
+        //             currentGeofence = L.polygon(window.polygonPoints, {
+        //                 color: '#0d6efd',
+        //                 fillColor: '#0d6efd',
+        //                 fillOpacity: 0.2
+        //             }).addTo(map);
+
+        //             document.getElementById('type').value = 'polygon';
+        //             document.getElementById('polyData').value = JSON.stringify(window.polygonPoints);
+        //             document.getElementById('circData').value = '';
+        //         }
+        //     } else if (!drawingMode) {
+        //         // Regular click - add/move marker
+        //         if (window.currentMarker) {
+        //             map.removeLayer(window.currentMarker);
+        //         }
+        //         window.currentMarker = L.marker([e.latlng.lat, e.latlng.lng])
+        //             .addTo(map)
+        //             .bindPopup(`<strong>Lokasi Terpilih</strong><br>Lat: ${e.latlng.lat}<br>Lng: ${e.latlng.lng}`)
+        //             .openPopup();
+
+        //         // Create default circular geofence
+        //         const radius = parseInt(document.getElementById('radius').value) || 100;
+        //         createCircularGeofence(e.latlng.lat, e.latlng.lng, radius);
+        //     }
+        // });
+
+        // Map move handler to update coordinates based on center
+        map.on('moveend', function() {
+            const center = map.getCenter();
+            if (!window.currentMarker && !drawingMode) {
+                updateCoordinatesField(center.lat, center.lng);
+            }
+        });
+
+        // Double-click to finish polygon
+        map.on('dblclick', function(e) {
+            if (drawingMode === 'polygon' && window.polygonPoints && window.polygonPoints.length >= 3) {
+                drawingMode = null;
+                map.getContainer().style.cursor = '';
+                document.getElementById('polygonBtn').classList.remove('active');
+
+                // Clear point markers
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.CircleMarker) {
+                        map.removeLayer(layer);
+                    }
+                });
+            }
+        });
+
+        // Radius change handler
+        document.getElementById('radius').addEventListener('change', function() {
+            if (currentGeofence && document.getElementById('type').value === 'circle') {
+                const circData = JSON.parse(document.getElementById('circData').value);
+                createCircularGeofence(circData.center[0], circData.center[1], parseInt(this.value));
+            }
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.position-relative')) {
+                hideSuggestions();
+                hideMapSearchSuggestions();
+            }
+        });
+
+        // Form submission
+        // document.getElementById('geofenceForm').addEventListener('submit', function(e) {
+        //     e.preventDefault();
+        //     console.log('Submitting form...');
+        //     return true;
+        // });
+
+        $('#geofenceForm').on('submit', function (e) {
+            e.preventDefault();
+
+            let formData = {};
+            $(this).serializeArray().forEach(item => {
+                formData[item.name] = item.value;
+            });
+
+            console.log("Payload yang dikirim:", formData);
+
+            console.log("dataToPost", formData);
+
+            $.ajax({
+                url: '/Geofence/CreateGeofence',
+                type: 'POST',
+                contentType: 'application/json',   // kirim sebagai JSON
+                data: JSON.stringify(formData),   // ubah objek ke JSON
+                success: function (response) {
+                    console.log('Sukses:', response);
+                    // alert(response.message);
+
+                    Swal.fire({
+                      position: "top-end",
+                      icon: "success",
+                      title: "Your work has been saved",
+                      showConfirmButton: false,
+                      timer: 1500
+                    }).then(() => {
+                      window.location.href = "/Geofence/Index?id=@ViewBag.CustomerId";
+                    });
+                },
+                error: function (xhr) {
+                    console.error('Error:', xhr.responseText);
+                    // alert('Gagal menyimpan data');
+                    Swal.fire("Failed", "Failed saving data!", "error")
+                }
+            });
+        });
+
+
+        function cancelForm() {
+            if (confirm('Apakah Anda yakin ingin membatalkan? Data yang belum disimpan akan hilang.')) {
+                document.getElementById('geofenceForm').reset();
+                document.getElementById('coordinates').value = '';
+                if (currentGeofence) {
+                    map.removeLayer(currentGeofence);
+                    currentGeofence = null;
+                }
+                if (window.currentMarker) {
+                    map.removeLayer(window.currentMarker);
+                    window.currentMarker = null;
+                }
+
+                // Redirect to index or previous page
+                // window.location.href = '@Url.Action("Index?id=", "Geofence")';
+                window.location.href = '/Geofence/Create?id=@ViewBag.CustomerId'
+            }
+        }
+
+        // Initialize with Jakarta bounds
+        map.setMaxBounds([
+            [-11.0, 95.0],  // Southwest corner of Indonesia
+            [6.0, 141.0]    // Northeast corner of Indonesia
+        ]);
+
+        // Initialize coordinates with map center
+        updateCoordinatesField(-6.2088, 106.8456);
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
