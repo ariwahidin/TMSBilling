@@ -71,7 +71,7 @@ public class CustomerGroupController : Controller
                 };
                 var (ok, json) = await _apiService.SendRequestAsync(
                     HttpMethod.Post,
-                    "customer",
+                    "order/api/web/v1/customer",
                     payload
                 );
                 if (!ok)
