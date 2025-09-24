@@ -1,13 +1,12 @@
-﻿@model IEnumerable<TMSBilling.Models.Product>
+﻿@model IEnumerable<TMSBilling.Models.ProductType>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
-    ViewData["Title"] = "Product";
+    ViewData["Title"] = "Product Type";
     var metadata = ViewBag.Metadata as TMSBilling.Models.Metadata;
 }
 
-<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Product</button>
-<a href="/Product/Type" class="btn btn-primary btn-sm mb-3">Product Type</a>
-<a href="/Product/Category" class="btn btn-primary btn-sm mb-3">Product Category</a>
+<a href="/Product/Index" class="btn btn-primary btn-sm mb-3">Back</a>
+<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Type</button>
 <form asp-action="Index" class="mb-3">
     <div class="input-group">
         <input type="text" name="search" class="form-control" value="@ViewBag.Search" placeholder="Search..." />
@@ -20,11 +19,7 @@
         <tr>
             <th>ID</th>
             <th>Name</th>
-            <th>Type</th>
-            <th>UOM</th>
-            <th>Weight</th>
-            <th>Volume</th>
-            <th>Price</th>
+            <th>Category</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -34,13 +29,9 @@
             <tr>
                 <td>@item.id</td>
                 <td>@item.name</td>
-                <td>@item?.product_type?.name</td>
-                <td>@item?.uom</td>
-                <td>@item?.weight</td>
-                <td>@item?.volume</td>
-                <td>@item?.price</td>
+                <td>@item?.product_category?.name</td>
                 <td>
-                    @* <button class="btn btn-sm btn-warning btnEdit" data-id="@item.id">Edit</button> *@
+                    <button class="btn btn-sm btn-warning btnEdit" data-id="@item?.id">Edit</button>
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item?.id">Delete</button>
                 </td>
             </tr>
@@ -48,7 +39,7 @@
     </tbody>
 </table>
 
-@if (metadata != null)
+@* @if (metadata != null)
 {
     <nav>
         <ul class="pagination">
@@ -60,15 +51,15 @@
             }
         </ul>
     </nav>
-}
+} *@
 
 
 
-<div class="modal fade" id="productModal" tabindex="-1">
+<div class="modal fade" id="typeModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Form Product</h5>
+                <h5 class="modal-title">Form Product Type</h5>
                 <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="modalContent"></div>
@@ -79,19 +70,22 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            $('#productTable').DataTable();
-            let modal = new bootstrap.Modal(document.getElementById("productModal"));
+            // $('#productTable').DataTable();
+            let modal = new bootstrap.Modal(document.getElementById("typeModal"));
+            let isEdit = false;
 
             $("#btnAdd").click(function () {
-                $.get("/Product/Form", function (html) {
+                isEdit = false;
+                $.get("/Product/FormType", function (html) {
                     $("#modalContent").html(html);
                     modal.show();
                 });
             });
 
             $(".btnEdit").click(function () {
+                isEdit = true;
                 const id = $(this).data("id");
-                $.get("/Product/Form?id=" + id, function (html) {
+                $.get("/Product/FormType?id=" + id, function (html) {
                     $("#modalContent").html(html);
                     modal.show();
                 });
@@ -102,11 +96,11 @@
                 const id = $(this).data("id");
 
                 $.ajax({
-                    url: '/Product/Delete/'+id,
+                    url: '/Product/DeleteType/'+id,
                     type: 'DELETE',
                     data: { id: id },
                     success: function (result) {
-                        alert("Product deleted!");
+                        alert("Product Type deleted!");
                         location.reload();
                     },
                     error: function (err) {
@@ -114,36 +108,28 @@
                         console.log(err);
                     }
                 });
-
-                // $.delete("/Product/Delete", { id }, function () {
-                //     location.reload();
-                // }).fail(function () {
-                //     alert("Gagal menghapus data.");
-                // });
             });
 
-            $(document).on("submit", "#productForm", function (e) {
+            $(document).on("submit", "#productTypeForm", function (e) {
 
                 e.preventDefault();
 
+                let url = isEdit ? '@Url.Action("EditType", "Product")' : '@Url.Action("FormType", "Product")';
+
                 $.ajax({
-                    url: '@Url.Action("Form", "Product")',
+                    url: url,
                     type: "POST",
                     data: $(this).serialize(),
                     success: function (res) {
                         if (res.success) {
-                            alert("Product saved!");
-                            // misalnya reload table
+                            alert("Product Type saved!");
                             location.reload();
                         } else {
-                            let errorMsg = res.message; // default message
+                            let errorMsg = res.message; 
                             if (res.detail) {
                                 try {
                                     let detail = JSON.parse(res.detail);
-
-                                    // cek apakah ada detail.errors
                                     if (detail.errors) {
-                                        // contoh ambil semua error
                                         let errors = [];
                                         for (let key in detail.errors) {
                                             errors.push(key + ": " + detail.errors[key].join(", "));

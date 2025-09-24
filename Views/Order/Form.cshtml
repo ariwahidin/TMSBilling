@@ -4,7 +4,6 @@
     ViewData["Title"] = "Order Form";
 }
 
-
 <style>
     .form-container {
         background: white;
@@ -295,8 +294,6 @@
     <form id="orderForm">
 
         <div class="header-section">
-
-
             <div class="row">
                 <div class="col-md-5">
                     <div class="mb-2 row">
@@ -321,7 +318,7 @@
                         </div>
                     </div>
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Sub Customer : </label>
+                        <label class="col-sm-4 col-form-label text-end">Customer : </label>
                         <div class="col-sm-8">
                             <select id="sub_custid" asp-for="Header.sub_custid" asp-items="ViewBag.ListCustomer" class="form-select select2" required>
                                 <option value="">Select an Option</option>
@@ -353,7 +350,7 @@
                                        name="origin_id"
                                        value="@Model.Header.mceasy_origin_name"
                                        class="form-control form-control-with-button"
-                                       placeholder="Pilih alamat origin..."
+                                       placeholder="Select origin address..."
                                        readonly />
                                 <input type="hidden" id="origin_address_id" name="origin_address_id" value="@Model.Header.mceasy_origin_address_id" />
                                 <div class="input-group-append-custom">
@@ -372,12 +369,11 @@
                     <div class="row mb-3">
                         <label class="col-sm-4 col-form-label text-end">Origin Area :</label>
                         <div class="col-sm-8">
-                           
                             <input type="text"
                                    id="city"
                                    name="city"
                                    class="form-control"
-                                   placeholder="Kota akan terisi otomatis..."
+                                   placeholder=""
                                    value="@Model.Header.origin_id"
                                    readonly />
                         </div>
@@ -392,7 +388,7 @@
                                        id="destination_id"
                                        name="destination_id"
                                        class="form-control form-control-with-button"
-                                       placeholder="Pilih alamat destination..."
+                                       placeholder="Select destination address..."
                                        value="@Model.Header.mceasy_dest_name"
                                        readonly />
                                 <div class="input-group-append-custom">
@@ -415,7 +411,7 @@
                                    name="destination_city"
                                    value="@Model.Header.dest_area"
                                    class="form-control"
-                                   placeholder="Kota destination akan terisi otomatis..."
+                                   placeholder=""
                                    readonly />
                         </div>
                     </div>
@@ -507,13 +503,7 @@
                         </div>
                     </div>
                 </div>
-
-
-            </div>
-
-
-
-            
+            </div>            
         </div>
 
 
@@ -521,12 +511,6 @@
         <div class="modal fade" id="addressModal" tabindex="-1" aria-labelledby="addressModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    @* <div class="modal-header">
-                        <h5 class="modal-title" id="addressModalLabel">
-                            <i class="fas fa-map-marker-alt"></i> Select Origin Address
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div> *@
                     <div class="modal-header">
                         <h5 class="modal-title" id="addressModalLabel">
                             <i class="fas fa-map-marker-alt"></i> Select <span id="modalTypeText">Origin</span> Address
@@ -627,126 +611,118 @@
         const header = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Header))
         details = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Details))
 
-        $(document).ready(function () {
+        // $(document).ready(function () {
+        // });
 
-            $('.select2').select2({
-                placeholder: "Select an Option",
-                allowClear: true,
-                width: '100%' // ini penting biar full lebar
+         $('.select2').select2({
+            placeholder: "Select an Option",
+            allowClear: true,
+            width: '100%' // ini penting biar full lebar
+        });
+
+        if (details.length > 0) {
+            details.forEach((item, i) => {
+                addRow(item);
+            });
+        } else {
+            addRow();
+        }
+
+        let actionType = "save"; // default value
+
+        // Saat tombol diklik, simpan type-nya
+        $('button[type="submit"]').on('click', function () {
+            actionType = $(this).data('action');
+        });
+
+        $('#orderForm').on('submit', function (e) {
+            e.preventDefault();
+            showLoading();
+            const save_mode = actionType;
+            console.log(save_mode);
+            // return false;
+            const formData = {
+                header: {
+                    id_seq : parseInt($('#id_seq').val()) || 0,
+                    wh_code: $('#wh_code').val(),
+                    sub_custid: $('#sub_custid').val(),
+                    cnee_code: $('#cnee_code').val(),
+                    inv_no : $('#inv_no').val(),
+                    delivery_date: $('#delivery_date').val(),
+                    pickup_date: $('#pickup_date').val(),
+                    origin_id : $('#city').val(),
+                    dest_area : $('#destination_city').val(),
+                    tot_pkgs : parseInt($('#tot_pkgs').val()) || 0,
+                    serv_req : $('#serv_req').val(),
+                    uom : $('#uom').val(),
+                    pallet_consume : $('#pallet_consume').val(),
+                    pallet_delivery : $('#pallet_delivery').val(),
+                    si_no : $('#si_no').val(),
+                    do_rcv_date : $('#do_rcv_date').val(),
+                    do_rcv_time : $('#do_rcv_time').val(),
+                    moda_req : $('#moda_req').val(),
+                    truck_size : $('#truck_size').val(),
+                    remark : $('#remark').val(),
+                    mceasy_origin_address_id : parseInt($('#origin_address_id').val()),
+                    mceasy_destination_address_id : parseInt($('#destination_address_id').val()),
+                    mceasy_origin_name : $('#origin_id').val(),
+                    mceasy_dest_name : $('#destination_id').val(),
+                },
+                details: []
+            };
+            console.log(formData);
+
+     
+            $('#detailTableBody tr').each(function () {
+                const row = $(this);
+                formData.details.push({
+                    id_seq: parseInt(row.find('input[name$=".id_seq"]').val()) || 0,
+                    id_seq_order: parseInt($('#id_seq').val()) || 0,
+                    item_name: row.find('input[name$=".item_name"]').val(),
+                    item_category: row.find('input[name$=".item_category"]').val(),
+                    pkg_unit: row.find('input[name$=".pkg_unit"]').val(),
+                    item_length: parseInt(row.find('input[name$=".item_length"]').val()) || 0,
+                    item_width: parseInt(row.find('input[name$=".item_width"]').val()) || 0,
+                    item_height: parseInt(row.find('input[name$=".item_height"]').val()) || 0,
+                    item_wgt: parseFloat(row.find('input[name$=".item_wgt"]').val()) || 0,
+                    koli_qty: parseInt(row.find('input[name$=".koli_qty"]').val()) || 0
+                });
             });
 
-            if (details.length > 0) {
-                details.forEach((item, i) => {
-                    addRow(item);
-                });
-            } else {
-                addRow();
-            }
 
-            let actionType = "save"; // default value
-
-            // Saat tombol diklik, simpan type-nya
-            $('button[type="submit"]').on('click', function () {
-                actionType = $(this).data('action');
-            });
-
-            $('#orderForm').on('submit', function (e) {
-                e.preventDefault();
-
-                const save_mode = actionType;
-
-                console.log(save_mode);
-
-                // return false;
-
-                const formData = {
-                    header: {
-                        id_seq : parseInt($('#id_seq').val()) || 0,
-                        wh_code: $('#wh_code').val(),
-                        sub_custid: $('#sub_custid').val(),
-                        cnee_code: $('#cnee_code').val(),
-                        inv_no : $('#inv_no').val(),
-                        delivery_date: $('#delivery_date').val(),
-                        pickup_date: $('#pickup_date').val(),
-                        origin_id : $('#city').val(),
-                        dest_area : $('#destination_city').val(),
-                        tot_pkgs : parseInt($('#tot_pkgs').val()) || 0,
-                        serv_req : $('#serv_req').val(),
-                        uom : $('#uom').val(),
-                        pallet_consume : $('#pallet_consume').val(),
-                        pallet_delivery : $('#pallet_delivery').val(),
-                        si_no : $('#si_no').val(),
-                        do_rcv_date : $('#do_rcv_date').val(),
-                        do_rcv_time : $('#do_rcv_time').val(),
-                        moda_req : $('#moda_req').val(),
-                        truck_size : $('#truck_size').val(),
-                        remark : $('#remark').val(),
-                        mceasy_origin_address_id : parseInt($('#origin_address_id').val()),
-                        mceasy_destination_address_id : parseInt($('#destination_address_id').val()),
-                        mceasy_origin_name : $('#origin_id').val(),
-                        mceasy_dest_name : $('#destination_id').val(),
-                    },
-                    details: []
-                };
-
-                console.log(formData);
-
-                // return;
-
-
-
-
-                $('#detailTableBody tr').each(function () {
-                    const row = $(this);
-                    formData.details.push({
-                        id_seq: parseInt(row.find('input[name$=".id_seq"]').val()) || 0,
-                        id_seq_order: parseInt($('#id_seq').val()) || 0,
-                        item_name: row.find('input[name$=".item_name"]').val(),
-                        item_category: row.find('input[name$=".item_category"]').val(),
-                        pkg_unit: row.find('input[name$=".pkg_unit"]').val(),
-                        item_length: parseInt(row.find('input[name$=".item_length"]').val()) || 0,
-                        item_width: parseInt(row.find('input[name$=".item_width"]').val()) || 0,
-                        item_height: parseInt(row.find('input[name$=".item_height"]').val()) || 0,
-                        item_wgt: parseFloat(row.find('input[name$=".item_wgt"]').val()) || 0,
-                        koli_qty: parseInt(row.find('input[name$=".koli_qty"]').val()) || 0
-                    });
-                });
-
-                showLoading();
-                $.ajax({
-                    url: '/Order/Save',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(formData),
-                    success: (res) => {
-                        if (res.success) {
-                            hideLoading();
-                            Swal.fire({
-                              position: "top-end",
-                              icon: "success",
-                              title: res.message,
-                              showConfirmButton: false,
-                              timer: 1500
-                            }).then(function(){
-                                if(save_mode == 'save'){
-                                    window.location.href = '/Order/FormLoad/'+res.data.id_seq;
-                                }else{
-                                     $('#inv_no').val('');
-                                     $('#si_no').val('');
-                                    setTimeout(() => {
-                                      console.log("Focusing now...");
-                                      $('#inv_no').focus();
-                                    }, 300); // tambahkan delay agar pasti
-                                }
-                            })
-                        } else {
-                            Swal.fire("Failed", "Failed saving data!", "error")
-                        }
-                    },
-                    error: (xhr) => {
-                        console.error(xhr.responseText);
+            $.ajax({
+                url: '/Order/Save',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: (res) => {
+                    if (res.success) {
+                        hideLoading();
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: res.message,
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(function(){
+                            if(save_mode == 'save'){
+                                window.location.href = '/Order/FormLoad/'+res.data.id_seq;
+                            }else{
+                                    $('#inv_no').val('');
+                                    $('#si_no').val('');
+                                setTimeout(() => {
+                                    console.log("Focusing now...");
+                                    $('#inv_no').focus();
+                                }, 300); // tambahkan delay agar pasti
+                            }
+                        })
+                    } else {
+                        Swal.fire("Failed", "Failed saving data!", "error")
                     }
-                });
+                },
+                error: (xhr) => {
+                    console.error(xhr.responseText);
+                }
             });
         });
 

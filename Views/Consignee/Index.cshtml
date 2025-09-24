@@ -6,7 +6,7 @@
     var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
-<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Data</button>
+<button class="btn btn-primary btn-sm mb-3 d-none" id="btnAdd">Add Data</button>
 <a href="/Geofence/Form?category=consignee" class="btn btn-success btn-sm mb-3" id="btnAdd">Add Data</a>
 @* <button class="btn btn-primary btn-sm mb-3" id="btnAddGeofenceConsignee">Add Consignee With Geofence</button> *@
 
@@ -29,9 +29,10 @@
                 <td>@item.CNEE_NAME</td>
                 <td>@(item.ACTIVE_FLAG == 1 ? "Active" : "Inactive")</td>
                 <td>
-                    <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID" title="Edit">
+                    <button class="btn btn-sm btn-warning btnEdit d-none" data-id="@item.ID" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </button>
+                    <a href="/Geofence/Form?category=consignee&id=@item.ID" class="btn btn-sm btn-success"><i class="bi bi-pencil-square"></i></a>
                     @if(isAdmin){
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Hapus">
                         <i class="bi bi-trash"></i>
@@ -73,7 +74,9 @@
         const modal2 = new bootstrap.Modal(document.getElementById("modalCustomerGroup"));
 
         $(document).ready(function () {
-            $('#dataTable').DataTable();
+            $('#dataTable').DataTable({
+                ordering: false
+            });
 
             $('#btnAdd').click(function () {
                 $.get('/Consignee/Form', function (html) {

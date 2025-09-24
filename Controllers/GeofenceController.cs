@@ -81,92 +81,6 @@ namespace TMSBilling.Controllers
             if (customer.API_FLAG == 1)
             {
 
-                //if (category == "All")
-                //{
-                //    category = null;
-                //}
-
-                //var (ok, result) = await _apiService.ExecuteGraphQLAsync(
-                //                @"query Geofences($filter: GetGeofencesFilter) {
-                //            geofences(filter: $filter) {
-                //                status
-                //                isSuccessful
-                //                geofences {
-                //                    data {
-                //                        geofenceId
-                //                        companyId
-                //                        customerId
-                //                        fenceName
-                //                        type
-                //                        polyData
-                //                        circData
-                //                        address
-                //                        addressDetail
-                //                        province
-                //                        city
-                //                        postalCode
-                //                        category
-                //                        contactName
-                //                        phoneNo
-                //                        isGarage
-                //                        isServiceLoc
-                //                        isBillingAddr
-                //                        isDepot
-                //                        isAlert
-                //                        serviceStart
-                //                        serviceEnd
-                //                        breakStart
-                //                        breakEnd
-                //                        serviceLocType
-                //                        customerName
-                //                        hasRelation
-                //                    }
-                //                }
-                //            }
-                //        }",
-                //            new
-                //            {
-                //                filter = new
-                //                {
-                //                    customerId = customerGroup.MCEASY_CUST_ID,
-                //                    category = category,
-                //                    isCustomer = true,
-                //                    pagination = new
-                //                    {
-                //                        page = 1,
-                //                        show = 100
-                //                    }
-                //                }
-                //            },
-                //        "Geofences"
-                //    );
-
-                //if (!ok)
-                //{
-                //    return BadRequest(new
-                //    {
-                //        success = false,
-                //        message = "GraphQL request failed",
-                //        detail = result.ToString()
-                //    });
-                //}
-
-                //var data = result.GetProperty("data")
-                // .GetProperty("geofences")
-                // .GetProperty("geofences")
-                // .GetProperty("data");
-
-                //var geofences = JsonSerializer.Deserialize<List<Geofence>>(data.GetRawText());
-
-                //return Ok(new
-                //{
-                //    success = true,
-                //    message = "Address from API",
-                //    data = geofences,
-                //});
-
-                //var consignees = await _context.Consignees.ToListAsync();
-
                 var consignees = await _context.Consignees
                 .Where(c => c.MCEASY_GEOFENCE_ID != null)
                 .ToListAsync();
@@ -292,7 +206,6 @@ namespace TMSBilling.Controllers
             ViewBag.CustomerId = id.Value;
             ViewBag.CustomerName = customer.SUB_CODE; // <- ganti sesuai field yg ada
             ViewBag.ListCategory = _selectList.GeofenceCategory();
-            //ViewBag.ListCustomerGroupGeofence = _selectList.getCustomerGroupGeofence();
             ViewBag.ListCustomerGroupGeofence = _context.CustomerGroups
                 .Where(c => c.MCEASY_CUST_ID != null)
                 .Select(c => new SelectListItem
@@ -310,14 +223,173 @@ namespace TMSBilling.Controllers
 
 
 
-        public IActionResult Form(String? category) {
+        public IActionResult Form(String? category, int? id) {
             ViewBag.Category = category;
             ViewBag.ListCategory = _selectList.GeofenceCategory();
             ViewBag.ListArea = _selectList.GetArea();
             ViewBag.ListCustomerGroupGeofence = _selectList.getCustomerGroup();
             var model = new GeofenceViewModel();
+            model.ID = 0;
+
+            if (!String.IsNullOrEmpty(category) && id != null) {
+                if (category == "consignee") {
+                    var consignee = _context.Consignees.FirstOrDefault(o=> o.ID == id);
+                    if (consignee == null)
+                    {
+                        return View("Form", model);
+                    }
+                    else {
+                        model.ID = consignee.ID;
+                        model.FenceID = consignee.CNEE_CODE;
+                        model.FenceName = consignee.CNEE_NAME;
+                        model.CUST_GROUP_CODE = consignee.SUB_CODE;
+                        model.AreaGroup = consignee.AREA;
+                        model.Address = consignee.ADDRESS;
+                        model.PostalCode = consignee.POSTAL_CODE;
+                        model.Coordinates = consignee.CORDINATES;
+                        model.Radius = consignee.RADIUS;
+                        model.ContactName = consignee.CNEE_PIC;
+                        model.Province = consignee.PROVINCE;
+                        model.PhoneNo = consignee.CNEE_TEL;
+                        model.City = consignee.CITY;
+                    }
+                }
+            }
+
             return View("Form", model);
         }
+
+        //    [HttpPost]
+        //    public async Task<IActionResult> CreateGeofence([FromBody] GeofenceViewModel model)
+        //    {
+        //        if (!ModelState.IsValid)
+        //        {
+        //            return BadRequest(new { message = "All fields must be filled in" });
+        //        }
+
+        //        var customerGroup = await _context.CustomerGroups
+        //            .Where(c => c.SUB_CODE == model.CUST_GROUP_CODE)
+        //            .FirstOrDefaultAsync();
+
+        //        if (customerGroup == null)
+        //        {
+        //            return NotFound(new { message = "Customer group not found" });
+        //        }
+
+        //        var customer = await _context.Customers.Where(c => c.CUST_CODE == customerGroup.CUST_CODE).FirstOrDefaultAsync();
+
+        //        if (customer == null)
+        //        {
+        //            return NotFound(new { message = "Customer not found" });
+        //        }
+
+        //        var groupCustomer = customerGroup.SUB_CODE;
+        //        var user = HttpContext.Session.GetString("username") ?? "System";
+        //        var date = DateTime.Now;
+
+
+        //        if (model.ID > 0)
+        //        {
+
+        //        }
+        //        else {
+        //            var newConsignee = new Models.Consignee
+        //            {
+        //                CNEE_CODE = model.FenceName,
+        //                CNEE_NAME = model.FenceName,
+        //                MCEASY_CUST_ID = model.MCEasyCustId,
+        //                CNEE_ADDR1 = model.City,
+        //                CNEE_ADDR2 = model.City,
+        //                ACTIVE_FLAG = 1,
+        //                SUB_CODE = groupCustomer,
+        //                CNEE_PIC = model.ContactName,
+        //                CNEE_TEL = model.PhoneNo,
+        //                ENTRY_DATE = date,
+        //                ENTRY_USER = user,
+        //                CITY = model.City,
+        //                CATEGORY = model.Category,
+        //                POSTAL_CODE = model.PostalCode,
+        //                ADDRESS = model.Address,
+        //                AREA = model.AreaGroup,
+        //                CORDINATES = model.Coordinates,
+        //                RADIUS = model.Radius,
+        //                PROVINCE = model.Province,
+        //            };
+
+        //            if (customer.API_FLAG == 1)
+        //            {
+
+        //                var graphqlVariables = new
+        //                {
+        //                    input = new
+        //                    {
+        //                        circData = $"<{model.Coordinates},{model.Radius}>",
+        //                        polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
+        //                        fenceName = model.FenceName,
+        //                        type = model.Type,
+        //                        address = model.Address,
+        //                        addressDetail = model.AddressDetail,
+        //                        province = model.Province,
+        //                        city = model.City,
+        //                        postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
+        //                        category = model.Category,
+        //                        contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
+        //                        phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
+        //                        serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
+        //                        serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
+        //                        breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
+        //                        breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
+        //                        isDepot = model.IsDepot == "true",
+        //                        isBillingAddr = model.IsBillingAddr == "true",
+        //                        customerName = customerGroup.SUB_CODE,
+        //                        customerId = customerGroup.MCEASY_CUST_ID
+        //                    }
+        //                };
+        //                var (ok, result) = await _apiService.ExecuteGraphQLAsync(
+        //                    @"mutation CreateGeofence($input: CreateGeofenceInput!) {
+        //                createGeofence(input: $input) {
+        //                    isSuccessful
+        //                    message
+        //                    geofence {
+        //                        geofenceId
+        //                        fenceName
+        //                        city
+        //                    }
+        //                }
+        //            }",
+        //                   graphqlVariables,
+        //                    "CreateGeofence"
+        //                );
+        //                if (!ok)
+        //                {
+        //                    return BadRequest(new
+        //                    {
+        //                        success = false,
+        //                        message = "GraphQL request failed",
+        //                        detail = result.ToString()
+        //                    });
+        //                }
+        //                var data = result.GetProperty("data")
+        //                     .GetProperty("createGeofence")
+        //                     .GetProperty("geofence");
+
+        //                var geofenceId = data.TryGetProperty("geofenceId", out var idProp) ? idProp.GetInt32() : 0;
+        //                newConsignee.MCEASY_GEOFENCE_ID = geofenceId;
+        //                newConsignee.MCEASY_CUST_ID = customerGroup.MCEASY_CUST_ID;
+
+        //            }
+        //            _context.Consignees.Add(newConsignee);
+        //        }
+
+        //        await _context.SaveChangesAsync();
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            message = "Consignee Created Successfully",
+        //        });
+        //    }
+
 
         [HttpPost]
         public async Task<IActionResult> CreateGeofence([FromBody] GeofenceViewModel model)
@@ -336,7 +408,9 @@ namespace TMSBilling.Controllers
                 return NotFound(new { message = "Customer group not found" });
             }
 
-            var customer = await _context.Customers.Where(c => c.CUST_CODE == customerGroup.CUST_CODE).FirstOrDefaultAsync();
+            var customer = await _context.Customers
+                .Where(c => c.CUST_CODE == customerGroup.CUST_CODE)
+                .FirstOrDefaultAsync();
 
             if (customer == null)
             {
@@ -347,110 +421,246 @@ namespace TMSBilling.Controllers
             var user = HttpContext.Session.GetString("username") ?? "System";
             var date = DateTime.Now;
 
-
-            var newConsignee = new Models.Consignee
+            if (model.ID > 0)
             {
-                CNEE_CODE = model.FenceName,
-                CNEE_NAME = model.FenceName,
-                MCEASY_CUST_ID = model.MCEasyCustId,
-                CNEE_ADDR1 = model.City,
-                CNEE_ADDR2 = model.City,
-                ACTIVE_FLAG = 1,
-                SUB_CODE = groupCustomer,
-                CNEE_PIC = model.ContactName,
-                CNEE_TEL = model.PhoneNo,
-                ENTRY_DATE = date,
-                ENTRY_USER = user,
-                CITY = model.City,
-                CATEGORY = model.Category,
-                POSTAL_CODE = model.PostalCode,
-                ADDRESS = model.Address,
-                AREA = model.AreaGroup,
-            };
+                // EDIT
+                var existingConsignee = await _context.Consignees
+                    .FirstOrDefaultAsync(c => c.ID == model.ID);
 
-            
-
-            if (customer.API_FLAG == 1)
-            {
-
-                var graphqlVariables = new
+                if (existingConsignee == null)
                 {
-                    input = new
-                    {
-                        circData = $"<{model.Coordinates},{model.Radius}>",
-                        polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
-                        fenceName = model.FenceName,
-                        type = model.Type,
-                        address = model.Address,
-                        addressDetail = model.AddressDetail,
-                        province = model.Province,
-                        city = model.City,
-                        postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
-                        category = model.Category,
-                        contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
-                        phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
-                        serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
-                        serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
-                        breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
-                        breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
-                        isDepot = model.IsDepot == "true",
-                        isBillingAddr = model.IsBillingAddr == "true",
-                        customerName = customerGroup.SUB_CODE,
-                        customerId = customerGroup.MCEASY_CUST_ID
-                    }
-                };
-                var (ok, result) = await _apiService.ExecuteGraphQLAsync(
-                    @"mutation CreateGeofence($input: CreateGeofenceInput!) {
-                    createGeofence(input: $input) {
-                        isSuccessful
-                        message
-                        geofence {
-                            geofenceId
-                            fenceName
-                            city
-                        }
-                    }
-                }",
-                   graphqlVariables,
-                    "CreateGeofence"
-                );
-                if (!ok)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "GraphQL request failed",
-                        detail = result.ToString()
-                    });
+                    return NotFound(new { message = "Consignee not found" });
                 }
-                var data = result.GetProperty("data")
-                     .GetProperty("createGeofence")
-                     .GetProperty("geofence");
 
-                var geofenceId = data.TryGetProperty("geofenceId", out var idProp) ? idProp.GetInt32() : 0;
-                newConsignee.MCEASY_GEOFENCE_ID = geofenceId;
-                newConsignee.MCEASY_CUST_ID = customerGroup.MCEASY_CUST_ID;
+               
 
+                // Kalau pakai API external juga update
+                if (customer.API_FLAG == 1 && existingConsignee.MCEASY_GEOFENCE_ID > 0)
+                {
+                    //var graphqlVariables = new
+                    //{
+                    //    input = new
+                    //    {
+                    //        geofenceId = existingConsignee.MCEASY_GEOFENCE_ID,
+                    //        circData = $"<{model.Coordinates},{model.Radius}>",
+                    //        polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
+                    //        fenceName = model.FenceName,
+                    //        type = model.Type,
+                    //        address = model.Address,
+                    //        addressDetail = model.AddressDetail,
+                    //        province = model.Province,
+                    //        city = model.City,
+                    //        postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
+                    //        category = model.Category,
+                    //        contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
+                    //        phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
+                    //        serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
+                    //        serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
+                    //        breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
+                    //        breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
+                    //        isDepot = model.IsDepot == "true",
+                    //        isBillingAddr = model.IsBillingAddr == "true",
+                    //        customerName = customerGroup.SUB_CODE,
+                    //        customerId = customerGroup.MCEASY_CUST_ID
+                    //    }
+                    //};
+
+                    var graphqlVariables = new
+                    {
+                        input = new
+                        {
+                            geofenceId = existingConsignee.MCEASY_GEOFENCE_ID,
+                            oldData = new
+                            {
+                                fenceName = existingConsignee.CNEE_NAME,
+                                city = existingConsignee.CITY,
+                                address = existingConsignee.ADDRESS,
+                                postalCode = existingConsignee.POSTAL_CODE,
+                                province = existingConsignee.PROVINCE,
+                                category = existingConsignee.CATEGORY,
+                                contactName = existingConsignee.CNEE_PIC,
+                                phoneNo = existingConsignee.CNEE_TEL,
+                                circData = $"<{existingConsignee.CORDINATES},{existingConsignee.RADIUS}>",
+                                //polyData = existingConsignee.POLYDATA,
+                                //isDepot = existingConsignee.IS_DEPOT == 1,
+                                //isBillingAddr = existingConsignee.IS_BILLING_ADDR == 1
+                            },
+                            newData = new
+                            {
+                                fenceName = model.FenceName,
+                                city = model.City,
+                                address = model.Address,
+                                postalCode = model.PostalCode,
+                                province = model.Province,
+                                category = model.Category,
+                                contactName = model.ContactName,
+                                phoneNo = model.PhoneNo,
+                                circData = $"<{model.Coordinates},{model.Radius}>",
+                                //polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
+                                //isDepot = model.IsDepot == "true",
+                                //isBillingAddr = model.IsBillingAddr == "true"
+                            }
+                        }
+                    };
+
+
+                    var (ok, result) = await _apiService.ExecuteGraphQLAsync(
+                        @"mutation UpdateGeofence($input: UpdateGeofenceInput!) {
+                            updateGeofence(input: $input) {
+                                isSuccessful
+                                message
+                                geofence {
+                                    geofenceId
+                                    fenceName
+                                    city
+                                }
+                            }
+                        }",
+                        graphqlVariables,
+                        "UpdateGeofence"
+                    );
+
+                    if (!ok)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "GraphQL update request failed",
+                            detail = result.ToString()
+                        });
+                    }
+
+                    // Update fields
+                    //existingConsignee.CNEE_CODE = model.FenceID;
+                    existingConsignee.CNEE_NAME = model.FenceName;
+                    //existingConsignee.MCEASY_CUST_ID = model.MCEasyCustId;
+                    existingConsignee.CNEE_ADDR1 = model.City;
+                    existingConsignee.CNEE_ADDR2 = model.City;
+                    existingConsignee.SUB_CODE = groupCustomer;
+                    existingConsignee.CNEE_PIC = model.ContactName;
+                    existingConsignee.CNEE_TEL = model.PhoneNo;
+                    existingConsignee.CITY = model.City;
+                    existingConsignee.CATEGORY = model.Category;
+                    existingConsignee.POSTAL_CODE = model.PostalCode;
+                    existingConsignee.ADDRESS = model.Address;
+                    existingConsignee.AREA = model.AreaGroup;
+                    existingConsignee.CORDINATES = model.Coordinates;
+                    existingConsignee.RADIUS = model.Radius;
+                    existingConsignee.PROVINCE = model.Province;
+                    existingConsignee.UPDATE_DATE = date;
+                    existingConsignee.UPDATE_USER = user;
+                }
+            }
+            else
+            {
+                // CREATE
+                var newConsignee = new Models.Consignee
+                {
+                    CNEE_CODE = model.FenceID,
+                    CNEE_NAME = model.FenceName,
+                    MCEASY_CUST_ID = model.MCEasyCustId,
+                    CNEE_ADDR1 = model.City,
+                    CNEE_ADDR2 = model.City,
+                    ACTIVE_FLAG = 1,
+                    SUB_CODE = groupCustomer,
+                    CNEE_PIC = model.ContactName,
+                    CNEE_TEL = model.PhoneNo,
+                    ENTRY_DATE = date,
+                    ENTRY_USER = user,
+                    CITY = model.City,
+                    CATEGORY = model.Category,
+                    POSTAL_CODE = model.PostalCode,
+                    ADDRESS = model.Address,
+                    AREA = model.AreaGroup,
+                    CORDINATES = model.Coordinates,
+                    RADIUS = model.Radius,
+                    PROVINCE = model.Province,
+                };
+
+                if (customer.API_FLAG == 1)
+                {
+                    var graphqlVariables = new
+                    {
+                        input = new
+                        {
+                            circData = $"<{model.Coordinates},{model.Radius}>",
+                            polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
+                            fenceName = model.FenceName,
+                            type = model.Type,
+                            address = model.Address,
+                            addressDetail = model.AddressDetail,
+                            province = model.Province,
+                            city = model.City,
+                            postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
+                            category = model.Category,
+                            contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
+                            phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
+                            serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
+                            serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
+                            breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
+                            breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
+                            isDepot = model.IsDepot == "true",
+                            isBillingAddr = model.IsBillingAddr == "true",
+                            customerName = customerGroup.SUB_CODE,
+                            customerId = customerGroup.MCEASY_CUST_ID
+                        }
+                    };
+
+                    var (ok, result) = await _apiService.ExecuteGraphQLAsync(
+                        @"mutation CreateGeofence($input: CreateGeofenceInput!) {
+                            createGeofence(input: $input) {
+                                isSuccessful
+                                message
+                                geofence {
+                                    geofenceId
+                                    fenceName
+                                    city
+                                }
+                            }
+                        }",
+                        graphqlVariables,
+                        "CreateGeofence"
+                    );
+
+                    if (!ok)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "GraphQL request failed",
+                            detail = result.ToString()
+                        });
+                    }
+
+                    var data = result.GetProperty("data")
+                         .GetProperty("createGeofence")
+                         .GetProperty("geofence");
+
+                    var geofenceId = data.TryGetProperty("geofenceId", out var idProp) ? idProp.GetInt32() : 0;
+                    newConsignee.MCEASY_GEOFENCE_ID = geofenceId;
+                    newConsignee.MCEASY_CUST_ID = customerGroup.MCEASY_CUST_ID;
+                }
+
+                _context.Consignees.Add(newConsignee);
             }
 
-
-
-
-
-            // Insert ke DB
-            _context.Consignees.Add(newConsignee);
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 success = true,
-                message = "Consignee Created Successfully",
+                message = model.ID > 0 ? "Consignee Updated Successfully" : "Consignee Created Successfully"
             });
         }
+
+
     }
+
+
 
     public class GeofenceViewModel
     {
+        public int? ID { get; set; }
         [Required]
         public string? FenceID { get; set; }
         [Required]

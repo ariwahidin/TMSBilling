@@ -1,0 +1,20 @@
+﻿@model TMSBilling.Models.ProductTypeStore
+
+<form id="productTypeForm" method="post" asp-action="FormType" asp-controller="Product">
+    @* <input type="hidden" asp-for="Id" /> *@
+    <div class="row">
+        <div class="mb-3 col-md-12">
+            <label class="form-label">Name</label>
+            <input type="hidden" asp-for="id" />
+            <input type="text" asp-for="name" class="form-control" />
+        </div>
+        <div class="mb-3 col-md-12">
+            <label class="form-label">Category</label>
+            <select asp-for="product_category_id" class="form-control" asp-items="ViewBag.CategoryList">
+                <option value="">-- Select Category --</option>
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form>

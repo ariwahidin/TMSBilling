@@ -287,6 +287,7 @@ namespace TMSBilling.Controllers
                 else
                 {
                     order.order_status = 1;
+                    order.mceasy_is_upload = true;
                     order.jobid = newJobId;
                     order.update_user = HttpContext.Session.GetString("username") ?? "System";
                     order.update_date = DateTime.Now;
@@ -609,7 +610,8 @@ namespace TMSBilling.Controllers
             .Where(o => o.origin_id == originId
                 && o.dest_area == destArea
                 && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
-                && o.order_status == 1)
+                && o.mceasy_status == "CONFIRMED"
+                && o.mceasy_is_upload == false)
             .ToListAsync();
             return Ok(new {success = true, data = result}); // hasilnya JSON
         }

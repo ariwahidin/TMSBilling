@@ -24,63 +24,177 @@ namespace TMSBilling.Services
                 );
         }
 
+        //public async Task<(bool ok, JsonElement json)> SendRequestAsync(
+        //    HttpMethod method,
+        //    string url,
+        //    object payload = null)
+        //{
+        //    try
+        //    {
+        //        using var request = new HttpRequestMessage(method, url);
+
+        //        if (payload != null)
+        //        {
+        //            string jsonString = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        //            {
+        //                WriteIndented = true
+        //            });
+        //            request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+
+        //            // 🔍 Debug payload
+        //            Console.WriteLine("=== DEBUG PAYLOAD ===");
+        //            Console.WriteLine(jsonString);
+        //        }
+
+        //        // 🔍 Debug request
+        //        Console.WriteLine("=== DEBUG REQUEST ===");
+        //        Console.WriteLine($"{method} {_httpClient.BaseAddress}{url}");
+        //        Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
+        //        Console.WriteLine($"Content-Type: application/json");
+        //        Console.WriteLine("=====================");
+
+        //        using var response = await _httpClient.SendAsync(request);
+        //        string responseContent = await response.Content.ReadAsStringAsync();
+
+        //        // 🔍 Debug response
+        //        Console.WriteLine("=== DEBUG RESPONSE ===");
+        //        Console.WriteLine($"Status: {(int)response.StatusCode} {response.ReasonPhrase}");
+        //        Console.WriteLine(responseContent);
+        //        Console.WriteLine("=====================");
+
+        //        try
+        //        {
+        //            var jsonDoc = JsonDocument.Parse(responseContent);
+        //            return (response.IsSuccessStatusCode, jsonDoc.RootElement.Clone());
+        //        }
+        //        catch
+        //        {
+        //            return (response.IsSuccessStatusCode,
+        //                JsonDocument.Parse($"{{\"raw\":\"{responseContent}\"}}").RootElement.Clone());
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("=== DEBUG ERROR ===");
+        //        Console.WriteLine(ex.ToString());
+        //        Console.WriteLine("===================");
+
+        //        return (false,
+        //            JsonDocument.Parse($"{{\"error\":\"{ex.Message}\"}}").RootElement.Clone());
+        //    }
+        //}
+
+
+
         public async Task<(bool ok, JsonElement json)> SendRequestAsync(
-            HttpMethod method,
-            string url,
-            object payload = null)
+        HttpMethod method,
+        string url,
+        object payload = null)
         {
             try
             {
                 using var request = new HttpRequestMessage(method, url);
 
+                // Serialize payload kalau ada
                 if (payload != null)
                 {
-                    string jsonString = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    });
+                    string jsonString = JsonSerializer.Serialize(
+                        payload,
+                        new JsonSerializerOptions { WriteIndented = true }
+                    );
+
                     request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
-                    // 🔍 Debug payload
+                    // 🔍 Debug Payload
+                    Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine("=== DEBUG PAYLOAD ===");
+                    Console.ResetColor();
+
+                    Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine(jsonString);
+                    Console.ResetColor();
+
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("=====================");
+                    Console.ResetColor();
                 }
 
-                // 🔍 Debug request
+                // 🔍 Debug Request
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("=== DEBUG REQUEST ===");
+                Console.ResetColor();
+
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"{method} {_httpClient.BaseAddress}{url}");
                 Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
-                Console.WriteLine($"Content-Type: application/json");
-                Console.WriteLine("=====================");
+                Console.WriteLine("Content-Type: application/json");
+                Console.ResetColor();
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("=====================");
+                Console.ResetColor();
+
+                // Kirim request
                 using var response = await _httpClient.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
 
-                // 🔍 Debug response
+                // 🔍 Debug Response
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("=== DEBUG RESPONSE ===");
+                Console.ResetColor();
+
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"Status: {(int)response.StatusCode} {response.ReasonPhrase}");
-                Console.WriteLine(responseContent);
-                Console.WriteLine("=====================");
+                Console.ResetColor();
 
                 try
                 {
-                    var jsonDoc = JsonDocument.Parse(responseContent);
-                    return (response.IsSuccessStatusCode, jsonDoc.RootElement.Clone());
+                    using var doc = JsonDocument.Parse(responseContent);
+                    string prettyJson = JsonSerializer.Serialize(
+                        doc,
+                        new JsonSerializerOptions { WriteIndented = true }
+                    );
+
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine(prettyJson);
+                    Console.ResetColor();
+
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("=====================");
+                    Console.ResetColor();
+
+                    return (response.IsSuccessStatusCode, doc.RootElement.Clone());
                 }
                 catch
                 {
-                    return (response.IsSuccessStatusCode,
-                        JsonDocument.Parse($"{{\"raw\":\"{responseContent}\"}}").RootElement.Clone());
+                    // Kalau bukan JSON valid → fallback raw
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(responseContent);
+                    Console.ResetColor();
+
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("=====================");
+                    Console.ResetColor();
+
+                    return (
+                        response.IsSuccessStatusCode,
+                        JsonDocument.Parse($"{{\"raw\":\"{responseContent}\"}}").RootElement.Clone()
+                    );
                 }
             }
             catch (Exception ex)
             {
+                // 🔍 Debug Error
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("=== DEBUG ERROR ===");
                 Console.WriteLine(ex.ToString());
                 Console.WriteLine("===================");
+                Console.ResetColor();
 
-                return (false,
-                    JsonDocument.Parse($"{{\"error\":\"{ex.Message}\"}}").RootElement.Clone());
+                return (
+                    false,
+                    JsonDocument.Parse($"{{\"error\":\"{ex.Message}\"}}").RootElement.Clone()
+                );
             }
         }
 

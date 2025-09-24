@@ -52,6 +52,12 @@ namespace TMSBilling.Models
 
         [StringLength(50)]
         public string? POSTAL_CODE { get; set; }
+        public string? CORDINATES { get; set; }
+
+        public string? RADIUS { get; set; }
+
+        [StringLength(50)]
+        public string? PROVINCE { get; set; }
 
         [StringLength(50)]
         public string? CNEE_PIC { get; set; }

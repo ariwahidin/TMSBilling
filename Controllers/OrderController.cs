@@ -137,7 +137,71 @@ namespace TMSBilling.Controllers
                   return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
             }
 
-            if (customer.API_FLAG == 1) {
+            //if (customer.API_FLAG == 1) {
+            //    var payload = new
+            //    {
+            //        customer_id = customerGroup.MCEASY_CUST_ID,
+            //        billed_customer_id = customerGroup.MCEASY_CUST_ID,
+            //        origin_address_id = header.mceasy_origin_address_id,
+            //        destination_address_id = header.mceasy_destination_address_id,
+            //        expected_pickup_on = pickupDateTime,
+            //        expected_delivered_on = deliveryDateTime,
+            //        shipment_number = header.inv_no
+            //    };
+
+            //    if (header.id_seq == 0) {
+
+
+            //        var (ok, json) = await _apiService.SendRequestAsync(
+            //                HttpMethod.Post,
+            //                "order/api/web/v1/delivery-order",
+            //                payload
+            //        );
+
+
+            //        if (!ok)
+            //        {
+            //            return BadRequest(new
+            //            {
+            //                success = false,
+            //                message = "Gagal kirim ke API Store Order",
+            //                detail = json
+            //            });
+            //        }
+
+
+            //    } else {
+
+            //        var (ok, json) = await _apiService.SendRequestAsync(
+            //               HttpMethod.Patch,
+            //               $"order/api/web/v1/delivery-order/{header.mceasy_order_id}",
+            //               payload
+            //       );
+
+
+            //        if (!ok)
+            //        {
+            //            return BadRequest(new
+            //            {
+            //                success = false,
+            //                message = "Gagal kirim ke API Store Order",
+            //                detail = json
+            //            });
+            //        }
+
+            //    }
+
+
+
+
+            //    var order_id = json.GetProperty("data").GetProperty("id").GetString();
+            //    var do_number = json.GetProperty("data").GetProperty("number").GetString();
+            //    header.mceasy_order_id = order_id;
+            //    header.mceasy_do_number = do_number;
+            //}
+
+            if (customer.API_FLAG == 1)
+            {
                 var payload = new
                 {
                     customer_id = customerGroup.MCEASY_CUST_ID,
@@ -149,11 +213,36 @@ namespace TMSBilling.Controllers
                     shipment_number = header.inv_no
                 };
 
-                var (ok, json) = await _apiService.SendRequestAsync(
-                            HttpMethod.Post,
-                            "order/api/web/v1/delivery-order",
-                            payload
-                        );
+                bool ok;
+                JsonElement json = default;
+
+                if (header.id_seq == 0)
+                {
+                    (ok, json) = await _apiService.SendRequestAsync(
+                        HttpMethod.Post,
+                        "order/api/web/v1/delivery-order",
+                        payload
+                    );
+
+                    header.mceasy_order_id = json.GetProperty("data").GetProperty("id").GetString();
+                    header.mceasy_do_number = json.GetProperty("data").GetProperty("number").GetString();
+                }
+                else
+                { 
+                
+                    var orderHeader = await _context.Orders.FirstOrDefaultAsync(h => h.id_seq == header.id_seq);
+
+                    if (orderHeader == null) { 
+                        return NotFound(new {message = "Order not found", success = true});
+                    }
+
+                    (ok, json) = await _apiService.SendRequestAsync(
+                        HttpMethod.Patch,
+                        $"order/api/web/v1/delivery-order/{orderHeader.mceasy_order_id}",
+                        payload
+                    );
+                }
+
                 if (!ok)
                 {
                     return BadRequest(new
@@ -163,12 +252,8 @@ namespace TMSBilling.Controllers
                         detail = json
                     });
                 }
-
-                var order_id = json.GetProperty("data").GetProperty("id").GetString();
-                var do_number = json.GetProperty("data").GetProperty("number").GetString();
-                header.mceasy_order_id = order_id;
-                header.mceasy_do_number = do_number;
             }
+
 
 
             // === Proses Simpan ===
@@ -760,7 +845,7 @@ namespace TMSBilling.Controllers
                 };
                 var (ok, json) = await _apiService.SendRequestAsync(
                     HttpMethod.Patch,
-                    "delivery-order/" + model.order_id + "/load/" + orderLoad.mceasy_order_dtl_id,
+                    "order/api/web/v1/delivery-order/" + model.order_id + "/load/" + orderLoad.mceasy_order_dtl_id,
                     payload
                 );
                 if (!ok)

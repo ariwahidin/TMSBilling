@@ -18,7 +18,9 @@ public class ConsigneeController : Controller
 
     public IActionResult Index()
     {
-        var list = _context.Consignees.ToList();
+        var list = _context.Consignees
+            .OrderByDescending(o => o.ID)
+            .ToList();
         return View(list);
     }
 

@@ -1,4 +1,4 @@
-﻿@model TMSBilling.Models.McEasyApiModel.ProductStore
+﻿@model TMSBilling.Models.ProductStore
 
 <form id="productForm" method="post" asp-action="Form" asp-controller="Product">
     <input type="hidden" asp-for="Id" />
@@ -18,9 +18,11 @@
         <input type="text" asp-for="Description" class="form-control" />
     </div>
 
-    <div class="mb-3 d-none">
+    <div class="mb-3">
         <label class="form-label">Product Type</label>
-        <input type="text" asp-for="ProductTypeId" readonly class="form-control" value="d743adbc-241e-413b-82f9-428a2c971a8c" />
+        <select asp-for="ProductTypeId" class="form-control" asp-items="ViewBag.TypeList">
+            <option value="">-- Select Type --</option>
+        </select>
     </div>
 
     <div class="row">

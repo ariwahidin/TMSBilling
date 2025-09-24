@@ -1,0 +1,24 @@
+﻿@model TMSBilling.Models.ProductCategoryStore
+
+<form id="productCategoryForm" method="post" asp-action="FormCategory" asp-controller="Product">
+    <input type="hidden" asp-for="Id" />
+    <div class="row">
+        <div class="mb-3 col-md-12">
+            <label class="form-label">Name</label>
+            <input type="hidden" asp-for="Id" />
+            <input type="text" asp-for="Name" class="form-control" />
+        </div>
+
+        <div class="mb-3 col-md-6">
+            <label class="form-label">Min Temperature</label>
+            <input type="number" asp-for="MinTemperature" class="form-control" />
+        </div>
+
+        <div class="mb-3 col-md-6">
+            <label class="form-label">Max Temperature</label>
+            <input type="number" asp-for="MaxTemperature" class="form-control" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form>

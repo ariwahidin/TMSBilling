@@ -1,4 +1,6 @@
-﻿namespace TMSBilling.Models
+﻿using System.Text.Json.Serialization;
+
+namespace TMSBilling.Models
 {
     public class ProductResponse
     {
@@ -33,6 +35,37 @@
         public decimal? quantity { get; set; }
     }
 
+
+    public class ProductStore
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("product_type_id")]
+        public Guid ProductTypeId { get; set; }
+
+        [JsonPropertyName("sku")]
+        public string? Sku { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("uom")]
+        public string? Uom { get; set; }
+
+        [JsonPropertyName("weight")]
+        public decimal? Weight { get; set; }
+
+        [JsonPropertyName("volume")]
+        public decimal Volume { get; set; }
+
+        [JsonPropertyName("price")]
+        public decimal Price { get; set; }
+    }
+
     public class Product
     {
         public string? id { get; set; }
@@ -49,14 +82,39 @@
 
     public class ProductType
     {
-        public string? id { get; set; }
+        public Guid? id { get; set; }
         public string? name { get; set; }
         public ProductCategory? product_category { get; set; }
     }
 
+    public class ProductTypeStore
+    {
+        public Guid? id { get; set; }
+        public string? name { get; set; }
+        public string? product_category_id { get; set; }
+    }
+
+
+    // Product Category
     public class ProductCategory
     {
         public string? id { get; set; }
         public string? name { get; set; }
+
+        public int? min_temperature { get; set; }
+
+        public int? max_temperature { get; set; }
+    }
+
+    public class ProductCategoryStore
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+        [JsonPropertyName("min_temperature")]
+        public int? MinTemperature { get; set; }
+        [JsonPropertyName("max_temperature")]
+        public int? MaxTemperature { get; set; }
     }
 }

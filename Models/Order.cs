@@ -97,6 +97,9 @@ namespace TMSBilling.Models
 
         [StringLength(20)]
         public string? mceasy_status { get; set; }
+
+        public bool? mceasy_is_upload { get; set; } = false;
+
     }
 
     [Table("TRC_ORDER_DTL")]

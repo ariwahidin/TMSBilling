@@ -106,12 +106,6 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                @* <div class="card-header bg-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-map-marked-alt me-2 text-primary"></i>
-                        New Geofence [ @ViewBag.CustomerName ]
-                    </h4>
-                </div> *@
                 <div class="card-body">
                     <div class="row" style="font-size:12px">
                         <!-- Form Section -->
@@ -125,19 +119,21 @@
 
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">ID <span class="required">*</span></label>
-                                        <input type="text" class="form-control" id="fenceID" name="FenceID" required>
+                                        <input type="hidden" asp-for="ID" id="iD" />
+                                        <input type="text" class="form-control" asp-for="FenceID" id="fenceID" name="FenceID" required>
                                         <span asp-validation-for="FenceID" class="text-danger"></span>
                                     </div>
 
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Name <span class="required">*</span></label>
-                                        <input type="text" class="form-control" id="fenceName" name="FenceName" required>
+                                        <input type="text" class="form-control" asp-for="FenceName" id="fenceName" name="FenceName" required>
                                         <span asp-validation-for="FenceName" class="text-danger"></span>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label">Customer Group</label>
                                         <select id="cust_GROUP_CODE"
+                                            asp-for="CUST_GROUP_CODE"
                                             name="CUST_GROUP_CODE" 
                                             asp-items="ViewBag.ListCustomerGroupGeofence" 
                                             class="form-select select2" 
@@ -145,10 +141,6 @@
                                             <option value="">Select an Option</option>
                                         </select>
                                         <span asp-validation-for="CUST_GROUP_CODE" class="text-danger"></span>
-                                        @* @if (Model.MCEasyCustId != null)
-                                        {
-                                            <input type="hidden" name="MCEasyCustId" value="@Model.MCEasyCustId" />
-                                        } *@
                                     </div>
 
                                     <div class="mb-3">
@@ -180,7 +172,7 @@
 
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Address <span class="required">*</span></label>
-                                        <textarea class="form-control" id="address" name="Address" rows="3" placeholder="Enter full address..."></textarea>
+                                        <textarea class="form-control" asp-for="Address" id="address" name="Address" rows="3" placeholder="Enter full address..."></textarea>
                                         <div class="suggestions" id="addressSuggestions"></div>
                                         <span asp-validation-for="Address" class="text-danger"></span>
                                     </div>
@@ -189,14 +181,14 @@
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Province <span class="required">*</span></label>
-                                                <input type="text" class="form-control" id="province" name="Province">
+                                                <input type="text" asp-for="Province" class="form-control" id="province" name="Province">
                                                 <span asp-validation-for="Province" class="text-danger"></span>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">City <span class="required">*</span></label>
-                                                <input type="text" class="form-control" id="city" name="City" required>
+                                                <input type="text" asp-for="City" class="form-control" id="city" name="City" required>
                                                 <span asp-validation-for="City" class="text-danger"></span>
                                             </div>
                                         </div>
@@ -204,7 +196,7 @@
 
                                     <div class="mb-3">
                                         <label class="form-label">Postal Code</label>
-                                        <input type="text" class="form-control" id="postalCode" name="PostalCode">
+                                        <input type="text" asp-for="PostalCode" class="form-control" id="postalCode" name="PostalCode">
                                         <span asp-validation-for="PostalCode" class="text-danger"></span>
                                     </div>
 
@@ -212,13 +204,13 @@
 
                                     <div class="mb-3">
                                         <label class="form-label">Latitude & Longitude <span class="required">*</span></label>
-                                        <input type="text" class="form-control" id="coordinates" name="Coordinates" placeholder="(-6.302038599999999, 106.8989924)" readonly>
+                                        <input asp-for="Coordinates" type="text" class="form-control" id="coordinates" name="Coordinates" readonly>
                                         <span asp-validation-for="Coordinates" class="text-danger"></span>
                                     </div>
 
                                     <div class="mb-3 d-none">
                                         <label class="form-label">Radius (m)</label>
-                                        <input type="number" class="form-control" id="radius" name="Radius" value="100" min="10">
+                                        <input asp-for="Radius" type="number" class="form-control" id="radius" name="Radius" value="100" min="10">
                                         <span asp-validation-for="Radius" class="text-danger"></span>
                                     </div>
 
@@ -237,14 +229,14 @@
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Contact Name</label>
-                                                <input type="text" class="form-control" id="contactName" name="ContactName">
+                                                <input asp-for="ContactName" type="text" class="form-control" id="contactName" name="ContactName">
                                                 <span asp-validation-for="ContactName" class="text-danger"></span>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Phone Number</label>
-                                                <input type="tel" class="form-control" id="phoneNo" name="PhoneNo">
+                                                <input asp-for="PhoneNo" type="tel" class="form-control" id="phoneNo" name="PhoneNo">
                                                 <span asp-validation-for="PhoneNo" class="text-danger"></span>
                                             </div>
                                         </div>
@@ -253,7 +245,7 @@
                                 </div>
 
                                 <!-- Aktivitas -->
-                                <div class="mb-4">
+                                <div class="mb-4 d-none">
                                     <h5 class="text-black mb-3">Activity</h5>
 
                                     <div class="row">
@@ -639,50 +631,6 @@
             document.getElementById('polyData').value = '';
         }
 
-        // Drawing tools
-        document.getElementById('circleBtn').addEventListener('click', function() {
-            drawingMode = 'circle';
-            map.getContainer().style.cursor = 'crosshair';
-            this.classList.add('active');
-            document.getElementById('polygonBtn').classList.remove('active');
-        });
-
-        document.getElementById('polygonBtn').addEventListener('click', function() {
-            drawingMode = 'polygon';
-            map.getContainer().style.cursor = 'crosshair';
-            this.classList.add('active');
-            document.getElementById('circleBtn').classList.remove('active');
-
-            // Start polygon drawing
-            if (window.polygonPoints) {
-                window.polygonPoints = [];
-            } else {
-                window.polygonPoints = [];
-            }
-        });
-
-        document.getElementById('clearBtn').addEventListener('click', function() {
-            if (currentGeofence) {
-                map.removeLayer(currentGeofence);
-                currentGeofence = null;
-            }
-            if (window.currentMarker) {
-                map.removeLayer(window.currentMarker);
-                window.currentMarker = null;
-            }
-            if (window.polygonPoints) {
-                window.polygonPoints = [];
-            }
-
-            document.getElementById('type').value = '';
-            document.getElementById('circData').value = '';
-            document.getElementById('polyData').value = '';
-            document.getElementById('coordinates').value = '';
-
-            drawingMode = null;
-            map.getContainer().style.cursor = '';
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-        });
 
 
         map.on('click', async function(e) {
@@ -767,66 +715,7 @@
         });
 
 
-        // Map click handler for drawing
-        // map.on('click', function(e) {
-        //     // Update coordinates when clicking on map
-        //     updateCoordinatesField(e.latlng.lat, e.latlng.lng);
 
-        //     if (drawingMode === 'circle') {
-        //         const radius = parseInt(document.getElementById('radius').value) || 100;
-        //         createCircularGeofence(e.latlng.lat, e.latlng.lng, radius);
-        //         drawingMode = null;
-        //         map.getContainer().style.cursor = '';
-        //         document.getElementById('circleBtn').classList.remove('active');
-
-        //     } else if (drawingMode === 'polygon') {
-        //         if (!window.polygonPoints) {
-        //             window.polygonPoints = [];
-        //         }
-
-        //         window.polygonPoints.push([e.latlng.lat, e.latlng.lng]);
-
-        //         // Add point marker
-        //         L.circleMarker([e.latlng.lat, e.latlng.lng], {
-        //             radius: 5,
-        //             fillColor: '#ff7800',
-        //             color: '#000',
-        //             weight: 1,
-        //             opacity: 1,
-        //             fillOpacity: 0.8
-        //         }).addTo(map);
-
-        //         // If we have at least 3 points, we can create/update the polygon
-        //         if (window.polygonPoints.length >= 3) {
-        //             if (currentGeofence) {
-        //                 map.removeLayer(currentGeofence);
-        //             }
-
-        //             currentGeofence = L.polygon(window.polygonPoints, {
-        //                 color: '#0d6efd',
-        //                 fillColor: '#0d6efd',
-        //                 fillOpacity: 0.2
-        //             }).addTo(map);
-
-        //             document.getElementById('type').value = 'polygon';
-        //             document.getElementById('polyData').value = JSON.stringify(window.polygonPoints);
-        //             document.getElementById('circData').value = '';
-        //         }
-        //     } else if (!drawingMode) {
-        //         // Regular click - add/move marker
-        //         if (window.currentMarker) {
-        //             map.removeLayer(window.currentMarker);
-        //         }
-        //         window.currentMarker = L.marker([e.latlng.lat, e.latlng.lng])
-        //             .addTo(map)
-        //             .bindPopup(`<strong>Lokasi Terpilih</strong><br>Lat: ${e.latlng.lat}<br>Lng: ${e.latlng.lng}`)
-        //             .openPopup();
-
-        //         // Create default circular geofence
-        //         const radius = parseInt(document.getElementById('radius').value) || 100;
-        //         createCircularGeofence(e.latlng.lat, e.latlng.lng, radius);
-        //     }
-        // });
 
         // Map move handler to update coordinates based on center
         map.on('moveend', function() {
@@ -880,6 +769,8 @@
 
             // return;
 
+            showLoading();
+
             $.ajax({
                 url: '/Geofence/CreateGeofence',
                 type: 'POST',
@@ -888,7 +779,7 @@
                 success: function (response) {
                     console.log('Sukses:', response);
                     // alert(response.message);
-
+                    hideLoading();
                     Swal.fire({
                       position: "top-end",
                       icon: "success",
@@ -903,8 +794,7 @@
                 },
                 error: function (xhr) {
                     console.error('Error:', xhr.responseText);
-                    // alert('Gagal menyimpan data');
-                    // Swal.fire("Failed", "Failed saving data!", "error")
+                    hideLoading();
                 }
             });
         });
@@ -936,20 +826,92 @@
         ]);
 
         // Initialize coordinates with map center
-        updateCoordinatesField(-6.2088, 106.8456);
+        // updateCoordinatesField(-6.2088, 106.8456);
+        // createCircularGeofence(-6.2088, 106.8456, 100);
+
+
+        // General function to update location based on form input values
+        function updateLocationFromForm() {
+            const coordinatesInput = document.getElementById('coordinates');
+            const radiusInput = document.getElementById('radius');
+            const addressInput = document.getElementById('address');
+            const provinceInput = document.getElementById('province');
+            const cityInput = document.getElementById('city');
+            const postalCodeInput = document.getElementById('postalCode');
+
+            // Get coordinates from input field
+            if (coordinatesInput && coordinatesInput.value) {
+                const coordinatesValue = coordinatesInput.value.trim();
+
+                // Parse coordinates from format "(-6.2088, 106.8456)" or similar
+                const coordMatch = coordinatesValue.match(/\(?\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*\)?/);
+
+                if (coordMatch) {
+                    const lat = parseFloat(coordMatch[1]);
+                    const lon = parseFloat(coordMatch[2]);
+
+                    // Center map on coordinates
+                    map.setView([lat, lon], 16);
+
+                    // Remove existing marker if any
+                    if (window.currentMarker) {
+                        map.removeLayer(window.currentMarker);
+                    }
+
+                    // Create address object from form inputs
+                    const addressData = {
+                        display_name: addressInput ? addressInput.value : `Location at ${lat}, ${lon}`,
+                        lat: lat,
+                        lon: lon,
+                        province: provinceInput ? provinceInput.value : '',
+                        city: cityInput ? cityInput.value : '',
+                        postcode: postalCodeInput ? postalCodeInput.value : ''
+                    };
+
+                    // Add marker
+                    const shortName = getShortName(addressData.display_name);
+                    window.currentMarker = L.marker([lat, lon])
+                        .addTo(map)
+                        .bindPopup(`<strong>${shortName}</strong><br>${addressData.display_name}<br>Lat: ${lat}<br>Lng: ${lon}`)
+                        .openPopup();
+
+                    // Create default circular geofence
+                    const radius = parseInt(radiusInput ? radiusInput.value : 100) || 100;
+                    createCircularGeofence(lat, lon, radius);
+
+                    console.log('Location updated from form:', addressData);
+                    return true;
+                } else {
+                    console.warn('Invalid coordinates format:', coordinatesValue);
+                    return false;
+                }
+            } else {
+                console.warn('No coordinates found in form');
+                return false;
+            }
+        }
+
+        if(document.getElementById('iD').value.trim() > 0){
+            setTimeout(function(){
+                updateLocationFromForm()
+            },1000)
+        }
+
+        
+
     </script>
     <script>
-
         $(document).ready(function(){
-                    // aktifin select2 untuk semua <select>
-        $('.select2').select2({
-            placeholder: "Pilih data",
-            allowClear: true,
-            width: '100%' // biar full lebar
-        });
+        // aktifin select2 untuk semua <select>
+            $('.select2').select2({
+                placeholder: "Select an option ...",
+                allowClear: true,
+                width: '100%' // biar full lebar
+            });
         })
 
     </script>
+    
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
