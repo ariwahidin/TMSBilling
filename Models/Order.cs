@@ -129,7 +129,7 @@ namespace TMSBilling.Models
 
         public DateTime? pu_date { get; set; }
 
-        [StringLength(10)]
+        [StringLength(200)]
         public string? item_category { get; set; }
 
         [StringLength(10)]
