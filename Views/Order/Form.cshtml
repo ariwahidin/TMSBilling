@@ -717,10 +717,12 @@
                             }
                         })
                     } else {
+                        hideLoading();
                         Swal.fire("Failed", "Failed saving data!", "error")
                     }
                 },
                 error: (xhr) => {
+                    hideLoading();
                     console.error(xhr.responseText);
                 }
             });
@@ -1028,7 +1030,7 @@
             addressModal.show();
 
             // Show loading
-            showLoading(true);
+            showLoading2(true);
 
             // Reset search
             document.getElementById('addressSearch').value = '';
@@ -1040,7 +1042,7 @@
                 console.error('Error loading addresses:', error);
                 showNoResults(true);
             } finally {
-                showLoading(false);
+                showLoading2(false);
             }
         }
 
@@ -1240,7 +1242,7 @@
         }
 
         // Helper functions
-        function showLoading(show) {
+        function showLoading2(show) {
             if(show){
                 showNoResults(false);
             }

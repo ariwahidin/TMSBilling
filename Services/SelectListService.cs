@@ -172,4 +172,16 @@ public class SelectListService
             .ToList();
     }
 
+
+    public List<SelectListItem> GetStartingPoint()
+    {
+        return _context.Consignees
+            .Where(c => c.MCEASY_CUST_ID != null && c.IS_GARAGE == true)
+            .Select(c => new SelectListItem
+            {
+                Value = c.MCEASY_GEOFENCE_ID.ToString(),
+                Text = c.CNEE_NAME,
+            }).ToList();
+    }
+
 }

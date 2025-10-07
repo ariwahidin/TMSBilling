@@ -71,6 +71,8 @@ namespace TMSBilling.Models
         [StringLength(30)]
         public string? SUB_CODE { get; set; }
 
+        public Boolean? IS_GARAGE { get; set; } = false;
+
         [StringLength(50)]
         public string? ENTRY_USER { get; set; }
 

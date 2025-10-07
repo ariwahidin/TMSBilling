@@ -105,6 +105,7 @@ namespace TMSBilling.Controllers
                     AreaGroup = c.AREA,
                     Province = c.PROVINCE,
                     PostalCode = c.POSTAL_CODE,
+                    
 
 
                     // sisanya default / null (karena ga ada di table Consignee)
@@ -117,7 +118,7 @@ namespace TMSBilling.Controllers
                     BreakStart = null,
                     BreakEnd = null,
                     ServiceLocType = null,
-                    IsGarage = null,
+                    //IsGarage = null,
                     IsServiceLoc = null,
                     IsBillingAddr = null,
                     IsDepot = null,
@@ -168,7 +169,7 @@ namespace TMSBilling.Controllers
                     BreakStart = null,
                     BreakEnd = null,
                     ServiceLocType = null,
-                    IsGarage = null,
+                    //IsGarage = null,
                     IsServiceLoc = null,
                     IsBillingAddr = null,
                     IsDepot = null,
@@ -329,6 +330,7 @@ namespace TMSBilling.Controllers
                                 contactName = existingConsignee.CNEE_PIC,
                                 phoneNo = existingConsignee.CNEE_TEL,
                                 circData = $"<{existingConsignee.CORDINATES},{existingConsignee.RADIUS}>",
+                                isGarage = model.IsGarage,
                                 //polyData = existingConsignee.POLYDATA,
                                 //isDepot = existingConsignee.IS_DEPOT == 1,
                                 //isBillingAddr = existingConsignee.IS_BILLING_ADDR == 1
@@ -344,6 +346,7 @@ namespace TMSBilling.Controllers
                                 contactName = model.ContactName,
                                 phoneNo = model.PhoneNo,
                                 circData = $"<{model.Coordinates},{model.Radius}>",
+                                isGarage = model.IsGarage,
                                 //polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
                                 //isDepot = model.IsDepot == "true",
                                 //isBillingAddr = model.IsBillingAddr == "true"
@@ -423,6 +426,7 @@ namespace TMSBilling.Controllers
                     CORDINATES = model.Coordinates,
                     RADIUS = model.Radius,
                     PROVINCE = model.Province,
+                    IS_GARAGE = model.IsGarage,
                 };
 
                 if (customer.API_FLAG == 1)
@@ -451,7 +455,7 @@ namespace TMSBilling.Controllers
                             isBillingAddr = model.IsBillingAddr == "true",
                             customerName = customerGroup.SUB_CODE,
                             customerId = customerGroup.MCEASY_CUST_ID,
-                            isGarage = true,
+                            isGarage = model.IsGarage,
                         }
                     };
 
@@ -535,7 +539,7 @@ namespace TMSBilling.Controllers
         public string? BreakStart { get; set; }
         public string? BreakEnd { get; set; }
         public string? ServiceLocType { get; set; }
-        public string? IsGarage { get; set; }
+        public bool IsGarage { get; set; } = false;
         public string? IsServiceLoc { get; set; }
         public string? IsBillingAddr { get; set; }
         public string? IsDepot { get; set; }

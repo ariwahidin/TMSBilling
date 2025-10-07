@@ -36,14 +36,49 @@ namespace TMSBilling.Controllers
             _apiService = apiService;
         }
 
+
+
         public IActionResult Index()
         {
-            var orders = _context.Orders
-                .OrderByDescending(o => o.entry_date)
-                .Take(100)
+            //var orders = _context.Orders
+            //    .OrderByDescending(o => o.entry_date)
+            //    .Take(100)
+            //    .ToList();
+
+            //return View(orders); // kirim list ke view
+
+            var sql = @"
+                WITH od AS (
+                    SELECT 
+                        id_seq_order, 
+                        COUNT(item_name) AS total_item,
+                        SUM(item_qty) AS total_qty
+                    FROM TRC_ORDER_DTL
+                    GROUP BY id_seq_order
+                )
+                SELECT 
+                    a.id_seq AS IdSeq, 
+                    a.wh_code AS WhCode, 
+                    a.sub_custid AS SubCustId,
+                    a.cnee_code AS CneeCode,
+                    a.inv_no AS InvNo,
+                    CAST(a.delivery_date AS date) AS DeliveryDate,
+                    a.origin_id AS OriginId,
+                    a.dest_area AS DestArea,
+                    a.order_status AS OrderStatus,
+                    a.mceasy_order_id AS McEasyOrderId,
+                    COALESCE(od.total_item, 0) AS TotalItem,
+                    COALESCE(od.total_qty, 0) AS TotalQty
+                FROM TRC_ORDER a 
+                LEFT JOIN od ON a.id_seq = od.id_seq_order
+                ORDER BY a.id_seq DESC
+            ";
+
+            var data = _context.OrderSummaryView
+                .FromSqlRaw(sql)
                 .ToList();
 
-            return View(orders); // kirim list ke view
+            return View(data);
         }
 
         public IActionResult Import()
@@ -76,7 +111,6 @@ namespace TMSBilling.Controllers
         }
 
         
-
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] OrderViewModel model)
         {
@@ -316,12 +350,6 @@ namespace TMSBilling.Controllers
                 return StatusCode(500, new { success = false, message = "Terjadi kesalahan: " + msg });
             }
         }
-
-
-       
-
-
-
 
 
         [HttpPost]
@@ -649,8 +677,6 @@ namespace TMSBilling.Controllers
         }
 
 
-
-
         public async Task<IActionResult> FormLoad(int? id)
         {
             var (ok, json) = await _apiService.SendRequestAsync(
@@ -925,6 +951,23 @@ namespace TMSBilling.Controllers
         public int? height { get; set; }
 
         public string? category { get; set; }
+    }
+
+    public class OrderSummaryViewModel
+    {
+        public int IdSeq { get; set; }
+        public string? WhCode { get; set; }
+        public string? SubCustId { get; set; }
+        public string? CneeCode { get; set; }
+        public string? InvNo { get; set; }
+        public DateTime DeliveryDate { get; set; }
+        public string? OriginId { get; set; }
+        public string? DestArea { get; set; }
+        public byte? OrderStatus { get; set; }
+
+        public string? McEasyOrderId { get; set; }
+        public int? TotalItem { get; set; }
+        public int? TotalQty { get; set; }
     }
 
 }

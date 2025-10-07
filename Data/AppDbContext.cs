@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using TMSBilling.Controllers;
 using TMSBilling.Models;
 
 namespace TMSBilling.Data
@@ -41,8 +42,6 @@ namespace TMSBilling.Data
 
         public DbSet<AreaGroup> AreaGroups { get; set; }
 
-        //public DbSet<PriceBuyHeader> PriceBuyHeaders { get; set; }
-
         public DbSet<PriceBuy> PriceBuys { get; set; }
 
         public DbSet<PriceSell> PriceSells { get; set; }
@@ -59,6 +58,19 @@ namespace TMSBilling.Data
         public DbSet<JobPOD> JobPODs { get; set; }
 
         public DbSet<Config> Configs { get; set; }
+
+
+        public DbSet<OrderSummaryViewModel> OrderSummaryView { get; set; }
+        public DbSet<JobSummaryViewModel> JobSummaryView { get; set; }
+        //public DbSet<ItemStockViewModel> ItemStockView { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<OrderSummaryViewModel>().HasNoKey().ToView(null);
+            modelBuilder.Entity<JobSummaryViewModel>().HasNoKey().ToView(null);
+            //modelBuilder.Entity<ItemStockViewModel>().HasNoKey().ToView(null);
+        }
+
 
     }
 }

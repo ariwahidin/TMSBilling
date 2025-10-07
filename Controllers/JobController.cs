@@ -28,21 +28,49 @@ namespace TMSBilling.Controllers
 
         public IActionResult Index()
         {
-            var jobs = _context.Jobs
-                .ToList()
-                .GroupBy(j => j.jobid)
-                .OrderByDescending(g => g.Key)
-                .Select(g => new JobListViewModel
-                {
-                    JobId = g.Key,
-                    Origin = g.FirstOrDefault()?.origin_id,
-                    Destination = g.FirstOrDefault()?.dest_id,
-                    DeliveryDate = g.FirstOrDefault()?.dvdate,
-                    Vendor = g.FirstOrDefault()?.vendorid,
-                    TruckID = g.FirstOrDefault()?.truckid,
-                }).ToList();
+            //var jobs = _context.Jobs
+            //    .ToList()
+            //    .GroupBy(j => j.jobid)
+            //    .OrderByDescending(g => g.Key)
+            //    .Select(g => new JobListViewModel
+            //    {
+            //        JobId = g.Key,
+            //        Origin = g.FirstOrDefault()?.origin_id,
+            //        Destination = g.FirstOrDefault()?.dest_id,
+            //        DeliveryDate = g.FirstOrDefault()?.dvdate,
+            //        Vendor = g.FirstOrDefault()?.vendorid,
+            //        TruckID = g.FirstOrDefault()?.truckid,
+            //    }).ToList();
 
-            return View(jobs);
+            //return View(jobs);
+
+            var sql = @"
+                WITH tj AS (
+                    SELECT 
+                        jobid,
+                        COUNT(inv_no) AS total_do
+                    FROM TRC_JOB
+                    GROUP BY jobid
+                )
+                SELECT 
+                    a.id_seq AS IdSeq,
+                    a.jobid AS JobId,
+                    a.truck_no AS TruckNo,
+                    a.deliv_date AS DelivDate,
+                    a.origin AS Origin,
+                    a.dest AS Dest,
+                    a.vendor_plan AS VendorPlan,
+                    COALESCE(tj.total_do, 0) AS TotalDo
+                FROM TRC_JOB_H a
+                LEFT JOIN tj ON a.jobid = tj.jobid
+                ORDER BY a.id_seq DESC
+            ";
+
+            var data = _context.JobSummaryView
+                .FromSqlRaw(sql)
+                .ToList();
+
+            return View(data);
         }
 
 
@@ -66,6 +94,7 @@ namespace TMSBilling.Controllers
             ViewBag.ListMultiDrop = _selectList.GetYesNo();
             ViewBag.ListMultitrip = _selectList.GetYesNo();
             ViewBag.ListVendor = _selectList.GetVendors();
+            ViewBag.ListStartingPoint = _selectList.GetStartingPoint();
 
             if (!string.IsNullOrEmpty(jobid))
             {
@@ -441,8 +470,8 @@ namespace TMSBilling.Controllers
                 {
                     expected_departure_on = Header.dvdate.HasValue ? Header.dvdate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null,
                     shipment_reference = newJobId,
-                    start_address_id = 26995,
-                    end_address_id = 26995,
+                    start_address_id = Header.starting_point,
+                    end_address_id = Header.starting_point,
                 };
 
                 var (ok2, json2) = await _apiService.SendRequestAsync(
@@ -498,6 +527,8 @@ namespace TMSBilling.Controllers
                             ? Header.dvdate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             : null,
                             shipment_reference = jobid,
+                            start_address_id = Header.starting_point,
+                            end_address_id = Header.starting_point,
                         };
 
                         var (ok, json) = await _apiService.SendRequestAsync(
@@ -529,6 +560,7 @@ namespace TMSBilling.Controllers
                     jobHeader.truck_size = Header.truck_size;
                     jobHeader.truck_no = Header.truck_id;
                     jobHeader.multidrop = Header.multidrop;
+                    jobHeader.starting_point = Header.starting_point;
                     jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
                     jobHeader.update_date = DateTime.Now;
                     if (!string.IsNullOrEmpty(mceasy_job_id))
@@ -564,6 +596,7 @@ namespace TMSBilling.Controllers
                 jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 jobHeader.entry_date = DateTime.Now;
                 jobHeader.mceasy_job_id = mceasy_job_id;
+                jobHeader.starting_point = Header.starting_point;
                 _context.JobHeaders.Add(jobHeader);
             }
 
@@ -704,6 +737,17 @@ namespace TMSBilling.Controllers
 
     }
 
+    public class JobSummaryViewModel
+    {
+        public int IdSeq { get; set; }
+        public string? JobId { get; set; }
+        public string? TruckNo { get; set; }
+        public DateTime? DelivDate { get; set; }
+        public string? Origin { get; set; }
+        public string? Dest { get; set; }
+        public string? VendorPlan { get; set; }
+        public int TotalDo { get; set; }
+    }
     public class VendorViewModel
     {
         [JsonPropertyName("vendor_code")]

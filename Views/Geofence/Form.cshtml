@@ -222,7 +222,7 @@
                                 </div>
 
                                 <!-- Informasi Kontak -->
-                                <div class="mb-4">
+                                <div class="mb-1">
                                     <h5 class="text-black mb-3">Contact Information</h5>
 
                                     <div class="row">
@@ -242,6 +242,15 @@
                                         </div>
                                     </div>
               
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-2">
+                                            <input asp-for="IsGarage" name="IsGarage" class="form-check-input" type="checkbox" id="isGarage">
+                                            <label class="form-check-label ms-2 mt-1" for="isGarage">Is Garage</label>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Aktivitas -->
@@ -294,13 +303,13 @@
                                     </div>
 
                                     <!-- Checkboxes -->
-                                    <div class="row d-none">
+                                    <div class="row">
                                         <div class="col-md-6">
-                                            <div class="form-check mb-2">
+                                            @* <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox" id="isGarage" name="IsGarage" value="true">
                                                 <input name="IsGarage" type="hidden" value="false" />
                                                 <label class="form-check-label" for="isGarage">Is Garage</label>
-                                            </div>
+                                            </div> *@
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox" id="isServiceLoc" name="IsServiceLoc" value="true">
                                                 <input name="IsServiceLoc" type="hidden" value="false" />
@@ -764,6 +773,8 @@
             $(this).serializeArray().forEach(item => {
                 formData[item.name] = item.value;
             });
+
+            formData.IsGarage = $('#isGarage').is(':checked')
 
             console.log("Payload yang dikirim:", formData);
 

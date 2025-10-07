@@ -224,7 +224,7 @@ namespace TMSBilling.Models
 
         public bool? multidrop { get; set; } = false;
 
-
+        public int? starting_point { get; set; }
 
         public string? mceasy_job_id { get; set; }
 

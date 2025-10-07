@@ -1,4 +1,4 @@
-﻿@model IEnumerable<TMSBilling.Models.Order>
+﻿@model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Order List";
@@ -23,9 +23,11 @@
             <th>Cnee</th>
             <th>Invoice No</th>
             <th>Delivery Date</th>
-            <th>Origin Area</th>
-            <th>Destination Area</th>
-            <th>Sts</th>
+            <th>Origin </th>
+            <th>Destination </th>
+            <th>Status</th>
+            <th>Item</th>
+            <th>Qty</th>
             <th class="text-center">Action</th>
         </tr>
     </thead>
@@ -36,14 +38,16 @@
             {
                 <tr>
                     <td>@i</td>
-                    <td>@item.wh_code</td>
-                    <td>@item.sub_custid</td>
-                    <td>@item.cnee_code</td>
-                    <td>@item.inv_no</td>
-                    <td>@item.delivery_date?.ToString("yyyy-MM-dd")</td>
-                    <td>@item.origin_id</td>
-                    <td>@item.dest_area</td>
-                    <td>@item.order_status</td>
+                    <td>@item.WhCode</td>
+                    <td>@item.SubCustId</td>
+                    <td>@item.CneeCode</td>
+                    <td>@item.InvNo</td>
+                    <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
+                    <td>@item.OriginId</td>
+                    <td>@item.DestArea</td>
+                    <td>@(item.OrderStatus == 1 ? "confirmed" : "draft")</td>
+                    <td>@item.TotalItem</td>
+                    <td>@item.TotalQty</td>
                     <td class="text-center">
 
                         <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -51,22 +55,22 @@
                         </button>
                         <ul class="dropdown-menu">
                             <li>
-                                <a href="/Order/Form/@item.id_seq" class="dropdown-item">
+                                <a href="/Order/Form/@item.IdSeq" class="dropdown-item">
                                     <i class="bi bi-pencil-square"></i> Edit
                                 </a>
                             </li>
 
-                            @if (@item.mceasy_order_id != null && @item.order_status != 1)
+                            @if (@item.McEasyOrderId != null && @item.OrderStatus != 1)
                             {
                                 <li>
-                                    <a href="#" class="dropdown-item" onclick="confirmOrder(`@item.mceasy_order_id`)">
+                                    <a href="#" class="dropdown-item" onclick="confirmOrder(`@item.McEasyOrderId`)">
                                         <i class="bi bi-check-square"></i> Confirm
                                     </a>
                                 </li>
                             }
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a href="#" class="dropdown-item" onclick="confirmDelete(@item.id_seq)">
+                                <a href="#" class="dropdown-item" onclick="confirmDelete(@item.IdSeq)">
                                     <i class="bi bi-trash"></i> Delete
                                 </a>
                             </li>
@@ -100,22 +104,71 @@
             }
         }
 
+        // function confirmOrder(id) {
+        //     if (confirm('Are you sure you want to confirm this order?')) {
+        //         const url = `/Order/Confirm/${id}`;
+        //         fetch(url, {
+        //             method: 'POST'
+        //         })
+        //         .then(res => res.json())
+        //         .then(data => {
+        //             if (data.success) {
+        //                 location.reload();
+        //             } else {
+        //                 alert(data.message || 'Confirm failed.');
+        //             }
+        //         });
+        //     }
+        // }
+
         function confirmOrder(id) {
-            if (confirm('Are you sure you want to confirm this order?')) {
-                const url = `/Order/Confirm/${id}`;
-                fetch(url, {
-                    method: 'POST'
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert(data.message || 'Confirm failed.');
-                    }
-                });
-            }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Do you want to confirm this order?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, confirm it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoading();
+                    const url = `/Order/Confirm/${id}`;
+                    fetch(url, { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                hideLoading();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Confirmed!',
+                                    text: 'The order has been confirmed.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                hideLoading();
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Failed',
+                                    text: data.message || 'Confirm failed.'
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            hideLoading();
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Something went wrong while confirming.'
+                            });
+                        });
+                }
+            });
         }
+
 
         $(document).ready(() => {
             $('#tableOrder').DataTable({

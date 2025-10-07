@@ -333,6 +333,14 @@
                                     </select>
                                 </div>
                             </div>
+                             <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Start/Finish Point:</label>
+                                <div class="col-sm-8">
+                                <select asp-for="Header.starting_point" class="form-select form-select-sm select2" id="starting_point" asp-items="ViewBag.ListStartingPoint" required>
+                                    <option value="">Select an Option</option>
+                                </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -859,7 +867,8 @@
                     serv_type : $('#servtype_ori').val(),
                     charge_uom: $('#charge_uom').val(),
                     multidrop: $('#multidrop').val() === "true",
-                    cust_group : $('#cust_ori').val()
+                    cust_group : $('#cust_ori').val(),
+                    starting_point : $('#starting_point').val()
                 };
 
                 const details = [];
@@ -1067,7 +1076,7 @@
             vendorModal.show();
 
             // Show loading
-            showLoading(true);
+            showLoading2(true);
 
             // Reset search
             document.getElementById('vendorSearch').value = '';
@@ -1078,7 +1087,7 @@
                 console.error('Error loading vendor:', error);
                 showNoResults(true);
             } finally {
-                showLoading(false);
+                showLoading2(false);
             }
         }
         let allVendor = [];
@@ -1241,7 +1250,7 @@
         }
 
         // Helper functions
-        function showLoading(show) {
+        function showLoading2(show) {
             if(show){
                 showNoResults(false);
             }

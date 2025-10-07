@@ -1,5 +1,5 @@
 ﻿@* @model IEnumerable<TMSBilling.Models.Job> *@
-@model IEnumerable<TMSBilling.Models.ViewModels.JobViewModel.JobListViewModel>
+@model IEnumerable<TMSBilling.Controllers.JobSummaryViewModel>
 
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
@@ -25,6 +25,7 @@
             <th>Origin</th>
             <th>Destination</th>
             <th>Vendor ID</th>
+            <th>Total DO</th>
             <th class="text-center">Action</th>
         </tr>
     </thead>
@@ -36,11 +37,12 @@
                 <tr>
                     <td>@i</td>
                     <td>@item.JobId</td>
-                    <td>@item.TruckID</td>
-                    <td>@item.DeliveryDate?.ToString("yyyy-MM-dd")</td>
+                    <td>@item.TruckNo</td>
+                    <td>@item.DelivDate?.ToString("yyyy-MM-dd")</td>
                     <td>@item.Origin</td>
-                    <td>@item.Destination</td>
-                    <td>@item.Vendor</td>
+                    <td>@item.Dest</td>
+                    <td>@item.VendorPlan</td>
+                    <td>@item.TotalDo</td>
                     <td class="text-center">
                         <a href="/Job/Form/@item.JobId" class="text-primary me-2">
                             <i class="bi bi-pencil-square"></i>
