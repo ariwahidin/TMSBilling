@@ -89,7 +89,8 @@ namespace TMSBilling.Controllers
                 {
                     FenceID = c.CNEE_CODE,
                     FenceName = c.CNEE_NAME,
-                    Category = c.SUB_CODE,
+                    Category = c.CATEGORY,
+                    Customer = c.SUB_CODE,
                     Address = c.ADDRESS,
                     City = c.CITY,
                     AddressDetail = $"{c.CNEE_ADDR2} {c.CNEE_ADDR3} {c.CNEE_ADDR4}",
@@ -102,10 +103,13 @@ namespace TMSBilling.Controllers
                     CompanyId = c.SUB_CODE,
                     CUST_GROUP_CODE = c.SUB_CODE,
                     AreaGroup = c.AREA,
+                    Province = c.PROVINCE,
+                    PostalCode = c.POSTAL_CODE,
+
 
                     // sisanya default / null (karena ga ada di table Consignee)
-                    Province = null,
-                    PostalCode = null,
+
+                    //PostalCode = null,
                     Coordinates = null,
                     Radius = null,
                     ServiceStart = null,
@@ -259,136 +263,7 @@ namespace TMSBilling.Controllers
             return View("Form", model);
         }
 
-        //    [HttpPost]
-        //    public async Task<IActionResult> CreateGeofence([FromBody] GeofenceViewModel model)
-        //    {
-        //        if (!ModelState.IsValid)
-        //        {
-        //            return BadRequest(new { message = "All fields must be filled in" });
-        //        }
 
-        //        var customerGroup = await _context.CustomerGroups
-        //            .Where(c => c.SUB_CODE == model.CUST_GROUP_CODE)
-        //            .FirstOrDefaultAsync();
-
-        //        if (customerGroup == null)
-        //        {
-        //            return NotFound(new { message = "Customer group not found" });
-        //        }
-
-        //        var customer = await _context.Customers.Where(c => c.CUST_CODE == customerGroup.CUST_CODE).FirstOrDefaultAsync();
-
-        //        if (customer == null)
-        //        {
-        //            return NotFound(new { message = "Customer not found" });
-        //        }
-
-        //        var groupCustomer = customerGroup.SUB_CODE;
-        //        var user = HttpContext.Session.GetString("username") ?? "System";
-        //        var date = DateTime.Now;
-
-
-        //        if (model.ID > 0)
-        //        {
-
-        //        }
-        //        else {
-        //            var newConsignee = new Models.Consignee
-        //            {
-        //                CNEE_CODE = model.FenceName,
-        //                CNEE_NAME = model.FenceName,
-        //                MCEASY_CUST_ID = model.MCEasyCustId,
-        //                CNEE_ADDR1 = model.City,
-        //                CNEE_ADDR2 = model.City,
-        //                ACTIVE_FLAG = 1,
-        //                SUB_CODE = groupCustomer,
-        //                CNEE_PIC = model.ContactName,
-        //                CNEE_TEL = model.PhoneNo,
-        //                ENTRY_DATE = date,
-        //                ENTRY_USER = user,
-        //                CITY = model.City,
-        //                CATEGORY = model.Category,
-        //                POSTAL_CODE = model.PostalCode,
-        //                ADDRESS = model.Address,
-        //                AREA = model.AreaGroup,
-        //                CORDINATES = model.Coordinates,
-        //                RADIUS = model.Radius,
-        //                PROVINCE = model.Province,
-        //            };
-
-        //            if (customer.API_FLAG == 1)
-        //            {
-
-        //                var graphqlVariables = new
-        //                {
-        //                    input = new
-        //                    {
-        //                        circData = $"<{model.Coordinates},{model.Radius}>",
-        //                        polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
-        //                        fenceName = model.FenceName,
-        //                        type = model.Type,
-        //                        address = model.Address,
-        //                        addressDetail = model.AddressDetail,
-        //                        province = model.Province,
-        //                        city = model.City,
-        //                        postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
-        //                        category = model.Category,
-        //                        contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
-        //                        phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
-        //                        serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
-        //                        serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
-        //                        breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
-        //                        breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
-        //                        isDepot = model.IsDepot == "true",
-        //                        isBillingAddr = model.IsBillingAddr == "true",
-        //                        customerName = customerGroup.SUB_CODE,
-        //                        customerId = customerGroup.MCEASY_CUST_ID
-        //                    }
-        //                };
-        //                var (ok, result) = await _apiService.ExecuteGraphQLAsync(
-        //                    @"mutation CreateGeofence($input: CreateGeofenceInput!) {
-        //                createGeofence(input: $input) {
-        //                    isSuccessful
-        //                    message
-        //                    geofence {
-        //                        geofenceId
-        //                        fenceName
-        //                        city
-        //                    }
-        //                }
-        //            }",
-        //                   graphqlVariables,
-        //                    "CreateGeofence"
-        //                );
-        //                if (!ok)
-        //                {
-        //                    return BadRequest(new
-        //                    {
-        //                        success = false,
-        //                        message = "GraphQL request failed",
-        //                        detail = result.ToString()
-        //                    });
-        //                }
-        //                var data = result.GetProperty("data")
-        //                     .GetProperty("createGeofence")
-        //                     .GetProperty("geofence");
-
-        //                var geofenceId = data.TryGetProperty("geofenceId", out var idProp) ? idProp.GetInt32() : 0;
-        //                newConsignee.MCEASY_GEOFENCE_ID = geofenceId;
-        //                newConsignee.MCEASY_CUST_ID = customerGroup.MCEASY_CUST_ID;
-
-        //            }
-        //            _context.Consignees.Add(newConsignee);
-        //        }
-
-        //        await _context.SaveChangesAsync();
-
-        //        return Ok(new
-        //        {
-        //            success = true,
-        //            message = "Consignee Created Successfully",
-        //        });
-        //    }
 
 
         [HttpPost]
@@ -437,33 +312,6 @@ namespace TMSBilling.Controllers
                 // Kalau pakai API external juga update
                 if (customer.API_FLAG == 1 && existingConsignee.MCEASY_GEOFENCE_ID > 0)
                 {
-                    //var graphqlVariables = new
-                    //{
-                    //    input = new
-                    //    {
-                    //        geofenceId = existingConsignee.MCEASY_GEOFENCE_ID,
-                    //        circData = $"<{model.Coordinates},{model.Radius}>",
-                    //        polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
-                    //        fenceName = model.FenceName,
-                    //        type = model.Type,
-                    //        address = model.Address,
-                    //        addressDetail = model.AddressDetail,
-                    //        province = model.Province,
-                    //        city = model.City,
-                    //        postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
-                    //        category = model.Category,
-                    //        contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
-                    //        phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
-                    //        serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
-                    //        serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
-                    //        breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
-                    //        breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
-                    //        isDepot = model.IsDepot == "true",
-                    //        isBillingAddr = model.IsBillingAddr == "true",
-                    //        customerName = customerGroup.SUB_CODE,
-                    //        customerId = customerGroup.MCEASY_CUST_ID
-                    //    }
-                    //};
 
                     var graphqlVariables = new
                     {
@@ -602,7 +450,8 @@ namespace TMSBilling.Controllers
                             isDepot = model.IsDepot == "true",
                             isBillingAddr = model.IsBillingAddr == "true",
                             customerName = customerGroup.SUB_CODE,
-                            customerId = customerGroup.MCEASY_CUST_ID
+                            customerId = customerGroup.MCEASY_CUST_ID,
+                            isGarage = true,
                         }
                     };
 
@@ -665,6 +514,9 @@ namespace TMSBilling.Controllers
         public string? FenceID { get; set; }
         [Required]
         public string? FenceName { get; set; }
+
+        public string? Customer {  get; set; }
+
         [Required]
         public string? Category { get; set; }
         public string? Address { get; set; }
@@ -737,31 +589,31 @@ namespace TMSBilling.Controllers
     {
         public int geofenceId { get; set; }
         public int companyId { get; set; }
-        public string customerId { get; set; }
-        public string fenceName { get; set; }
-        public string type { get; set; }
-        public string polyData { get; set; }
-        public string circData { get; set; }
-        public string address { get; set; }
-        public string addressDetail { get; set; }
-        public string province { get; set; }
-        public string city { get; set; }
-        public string postalCode { get; set; }
-        public string category { get; set; }
-        public string contactName { get; set; }
-        public string phoneNo { get; set; }
+        public string? customerId { get; set; }
+        public string? fenceName { get; set; }
+        public string? type { get; set; }
+        public string? polyData { get; set; }
+        public string? circData { get; set; }
+        public string? address { get; set; }
+        public string? addressDetail { get; set; }
+        public string? province { get; set; }
+        public string? city { get; set; }
+        public string? postalCode { get; set; }
+        public string? category { get; set; }
+        public string? contactName { get; set; }
+        public string? phoneNo { get; set; }
         public bool isGarage { get; set; }
         public bool isServiceLoc { get; set; }
         public bool isBillingAddr { get; set; }
         public bool isDepot { get; set; }
         public bool isAlert { get; set; }
-        public string serviceStart { get; set; }
-        public string serviceEnd { get; set; }
-        public string breakStart { get; set; }
-        public string breakEnd { get; set; }
-        public string serviceLocType { get; set; }
-        public string customerName { get; set; }
-        public bool hasRelation { get; set; }
+        public string? serviceStart { get; set; }
+        public string? serviceEnd { get; set; }
+        public string? breakStart { get; set; }
+        public string? breakEnd { get; set; }
+        public string? serviceLocType { get; set; }
+        public string? customerName { get; set; }
+        public bool? hasRelation { get; set; }
     }
 
 }

@@ -92,13 +92,13 @@ namespace TMSBilling.Controllers
             var errors = new List<string>();
 
             if (!_context.Warehouses.Any(w => w.wh_code == header.wh_code))
-                errors.Add($"Warehouse '{header.wh_code}' tidak ditemukan");
+                errors.Add($"Warehouse '{header.wh_code}' not found");
 
             if (!_context.Consignees.Any(c => c.CNEE_CODE == header.cnee_code))
-                errors.Add($"Consignee '{header.cnee_code}' tidak ditemukan");
+                errors.Add($"Consignee '{header.cnee_code}' not found");
 
             if (!_context.Origins.Any(l => l.origin_code == header.origin_id))
-                errors.Add($"Origin '{header.origin_id}' tidak ditemukan");
+                errors.Add($"Origin '{header.origin_id}' not found");
 
 
             if (header.id_seq == 0)
@@ -110,7 +110,7 @@ namespace TMSBilling.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Validasi gagal",
+                    message = "Failed validation",
                     errors
                 });
             }
@@ -287,6 +287,7 @@ namespace TMSBilling.Controllers
                     existingHeader.cnee_code = header.cnee_code;
                     existingHeader.inv_no = header.inv_no;
                     existingHeader.delivery_date = header.delivery_date;
+                    existingHeader.pickup_date = header.pickup_date;
                     existingHeader.origin_id = header.origin_id;
                     existingHeader.dest_area = header.dest_area;
                     existingHeader.truck_size = header.truck_size;

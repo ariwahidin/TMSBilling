@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
@@ -52,6 +53,7 @@ namespace TMSBilling.Controllers
 
             // ViewBag dropdown
             ViewBag.ListCustomer = _selectList.getCustomers();
+            ViewBag.ListCustomerGroup = _selectList.getCustomerGroup();
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
             ViewBag.ListOrigin = _selectList.GetOrigins();
@@ -67,16 +69,38 @@ namespace TMSBilling.Controllers
 
             if (!string.IsNullOrEmpty(jobid))
             {
-                var jobRows = _context.Jobs
-                    .Where(o => o.jobid == jobid)
-                    .OrderBy(o => o.drop_seq)
-                    .ToList();
+                //var jobRows = _context.Jobs
+                //    .Where(o => o.jobid == jobid)
+                //    .OrderBy(o => o.drop_seq)
+                //    .ToList();
 
-                if (jobRows.Any())
-                {
-                    vm.Header = jobRows.First();   // Ambil salah satu sbg header
+                //if (jobRows.Any())
+                //{
+                    //vm.Header = jobRows.First();   // Ambil salah satu sbg header
                     //vm.Details = jobRows;          // Semua jadi detail
+                //}
+
+                var jobHeader = _context.JobHeaders.FirstOrDefault(or => or.jobid == jobid);
+                if (jobHeader == null) {
+                    return View(vm);
                 }
+
+                vm.Header = jobHeader;
+
+                //vm.Header.jobid = jobHeader.jobid;
+                //vm.Header. = jobHeader.cust_group;
+                //vm.Header.dvdate = jobHeader.deliv_date;
+                //vm.Header.origin_id = jobHeader.origin;
+                //vm.Header.dest_id = jobHeader.dest;
+                //vm.Header.servtype_ori = jobHeader.serv_type;
+                //vm.Header.truck_size = jobHeader.truck_size;
+                //vm.Header.moda_req = jobHeader.serv_moda;
+                //vm.Header.charge_uom = jobHeader.charge_uom;
+                //vm.Header.vendorid = jobHeader.vendor_plan;
+                //vm.Header.vendorid_act = jobHeader.vendor_act;
+                //vm.Header.truckid = jobHeader.truck_no;
+                //vm.Header.drivername = jobHeader.driver_name;
+                //vm.Header.multidrop = jobHeader.multidrop;
             }
 
             return View(vm);
@@ -155,7 +179,7 @@ namespace TMSBilling.Controllers
 
             if (model == null || model.FormJobHeader == null || model.FormJobDetails == null)
             {
-                return BadRequest(new { success = false, message = "Data tidak lengkap!" });
+                return BadRequest(new { success = false, message = "Incomplete data!" });
             }
 
 
@@ -417,6 +441,8 @@ namespace TMSBilling.Controllers
                 {
                     expected_departure_on = Header.dvdate.HasValue ? Header.dvdate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null,
                     shipment_reference = newJobId,
+                    start_address_id = 26995,
+                    end_address_id = 26995,
                 };
 
                 var (ok2, json2) = await _apiService.SendRequestAsync(
@@ -489,6 +515,20 @@ namespace TMSBilling.Controllers
                             });
                         }
                     }
+                    jobHeader.cust_group = Header.cust_group;
+                    jobHeader.vendor_plan = Header.vendor_id;
+                    jobHeader.vendor_act = Header.vendor_act;
+                    jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                    jobHeader.deliv_date = Header.dvdate;
+                    jobHeader.charge_uom = Header.charge_uom;
+                    jobHeader.dest = Header.dest_area;
+                    jobHeader.origin = Header.origin_id;
+                    jobHeader.driver_name = Header.driver_name;
+                    jobHeader.serv_moda = Header.serv_moda;
+                    jobHeader.serv_type = Header.serv_type;
+                    jobHeader.truck_size = Header.truck_size;
+                    jobHeader.truck_no = Header.truck_id;
+                    jobHeader.multidrop = Header.multidrop;
                     jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
                     jobHeader.update_date = DateTime.Now;
                     if (!string.IsNullOrEmpty(mceasy_job_id))
@@ -507,6 +547,20 @@ namespace TMSBilling.Controllers
 
                 var jobHeader = new JobHeader();
                 jobHeader.jobid = newJobId;
+                jobHeader.cust_group = Header.cust_group;
+                jobHeader.vendor_plan = Header.vendor_id;
+                jobHeader.vendor_act = Header.vendor_act;
+                jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                jobHeader.deliv_date = Header.dvdate;
+                jobHeader.charge_uom = Header.charge_uom;
+                jobHeader.dest = Header.dest_area;
+                jobHeader.origin = Header.origin_id;
+                jobHeader.driver_name = Header.driver_name;
+                jobHeader.serv_moda = Header.serv_moda;
+                jobHeader.serv_type = Header.serv_type;
+                jobHeader.truck_size = Header.truck_size;
+                jobHeader.truck_no = Header.truck_id;
+                jobHeader.multidrop = Header.multidrop;
                 jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 jobHeader.entry_date = DateTime.Now;
                 jobHeader.mceasy_job_id = mceasy_job_id;
@@ -617,6 +671,45 @@ namespace TMSBilling.Controllers
         }
 
 
+        public async Task<IActionResult> GetVendor(string? originId, string? destArea, DateTime? deliveryDate)
+        {
 
+            //var nextDay = deliveryDate.AddDays(1);
+            //Console.WriteLine($"deliveryDate: {deliveryDate:yyyy-MM-dd HH:mm:ss}");
+            //Console.WriteLine($"nextDay: {nextDay:yyyy-MM-dd HH:mm:ss}");
+
+            //var result = await _context.Orders
+            //    .Where(o => o.origin_id == originId
+            //     && o.dest_area == destArea
+            //     && o.delivery_date >= deliveryDate
+            //     && o.delivery_date < nextDay
+            //     && o.order_status == 1)
+
+            var result = await _context.Vendors
+            //.Where(o => o.origin_id == originId
+            //    && o.dest_area == destArea
+            //    && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
+            //    && o.mceasy_status == "CONFIRMED"
+            //    && o.mceasy_is_upload == false)
+            .Select(v => new VendorViewModel
+            {
+                VendorCode = v.SUP_CODE,
+                VendorName = v.SUP_NAME
+            })
+            .ToListAsync();
+            return Ok(new { success = true, data = result }); // hasilnya JSON
+        }
+
+
+
+    }
+
+    public class VendorViewModel
+    {
+        [JsonPropertyName("vendor_code")]
+        public string? VendorCode { get; set; } = string.Empty;
+
+        [JsonPropertyName("vendor_name")]
+        public string? VendorName { get; set; } = string.Empty;
     }
 }

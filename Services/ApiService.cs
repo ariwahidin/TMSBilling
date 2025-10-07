@@ -89,7 +89,7 @@ namespace TMSBilling.Services
         public async Task<(bool ok, JsonElement json)> SendRequestAsync(
         HttpMethod method,
         string url,
-        object payload = null)
+        object? payload = null)
         {
             try
             {
@@ -201,8 +201,8 @@ namespace TMSBilling.Services
 
         public async Task<(bool ok, JsonElement json)> ExecuteGraphQLAsync(
         string query,
-        object variables = null,
-        string operationName = null)
+        object? variables = null,
+        string? operationName = null)
         {
             try
             {

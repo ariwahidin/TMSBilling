@@ -52,7 +52,7 @@ public class ProductController : Controller
         return View(products);
     }
 
-    public async Task<IActionResult>  Form(Guid? id)
+    public async Task<IActionResult> Form(Guid? id)
     {
         var model = new ProductStore();
         bool ok;
@@ -164,7 +164,7 @@ public class ProductController : Controller
         .GetProperty("paginated_result")
         .Deserialize<List<ProductCategory>>() ?? new List<ProductCategory>();
 
-        return View("Category",categorys);
+        return View("Category", categorys);
     }
 
     public async Task<IActionResult> FormCategory(Guid? id)
@@ -175,7 +175,7 @@ public class ProductController : Controller
 
         if (id != null)
         {
-   
+
             (ok, json) = await _apiService.SendRequestAsync(
                 HttpMethod.Get,
                 $"order/api/web/v1/product-category/{id}",
@@ -440,6 +440,38 @@ public class ProductController : Controller
         }
 
         return Json(new { success = true, data = json });
+    }
+
+
+    // PRODUCT UOM
+    [ActionName("Uom")]
+    public async Task<IActionResult> Uom(string search = "", int page = 1, int limit = 10)
+    {
+        bool ok;
+        JsonElement json = default;
+
+        (ok, json) = await _apiService.SendRequestAsync(
+            HttpMethod.Get,
+            $"order/api/web/v1/product-type?limit={limit}&page={page}&search={search}",
+            new { }
+        );
+
+        if (!ok)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Gagal kirim ke API get product type",
+                detail = json
+            });
+        }
+
+        var types = json
+        .GetProperty("data")
+        .GetProperty("paginated_result")
+        .Deserialize<List<ProductType>>() ?? new List<ProductType>();
+
+        return View("Type", types);
     }
 
 }

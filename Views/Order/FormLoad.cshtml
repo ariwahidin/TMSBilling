@@ -126,22 +126,20 @@
                             <input type="text" class="form-control" id="productName" name="name" readonly>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Category</label>
-                            <input type="text" class="form-control" id="productCategory" name="category" readonly>
+                       
+
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Category</label>
+                                <input type="text" class="form-control" id="productCategory" name="category" readonly>
+                            </div>  
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">UoM *</label>
+                                <input type="text" class="form-control" id="packageUnit" name="uom" readonly>
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Package Unit *</label>
-                            <select name="uom" class="form-control" id="packageUnit" required>
-                                <option value="">Select Package Unit</option>
-                                <option value="PCS">PCS</option>
-                                <option value="BOX">BOX</option>
-                                <option value="PACK">PACK</option>
-                                <option value="KG">KG</option>
-                                <option value="PAIR">PAIR</option>
-                            </select>
-                        </div>
+                        
 
                         <div class="row">
                             <div class="col-md-4">
@@ -199,8 +197,8 @@
 @section Scripts {
 <script>
 
-    const masterProducts = @Html.Raw(Json.Serialize(ViewBag.MasterProducts));
-
+    const masterProducts = @Html.Raw(Json.Serialize(ViewBag.MasterProducts))
+    console.log(masterProducts)
     // Data items yang sudah ditambahkan
     // let tableItems = [];
 
@@ -302,9 +300,10 @@
         document.getElementById('productName').value = product.name;
         document.getElementById('productCategory').value = product.product_type.product_category.name;
         document.getElementById('weight').value = product.weight;
+        document.getElementById('packageUnit').value = product.uom;
 
         // Reset form fields
-        document.getElementById('packageUnit').value = '';
+        // document.getElementById('packageUnit').value = '';
         document.getElementById('length').value = '';
         document.getElementById('width').value = '';
         document.getElementById('height').value = '';

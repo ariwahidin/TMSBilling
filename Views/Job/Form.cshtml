@@ -120,6 +120,58 @@
             border-radius: 6px;
             max-height: 400px;
         }
+
+        .position-relative-custom {
+            position: relative;
+        }
+
+        .input-group-append-custom {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+
+        .form-control-with-button {
+            padding-right: 45px !important;
+        }
+
+    .address-search {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .vendor-item {
+        cursor: pointer;
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        transition: all 0.3s;
+    }
+
+        .vendor-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .vendor-item.disabled {
+            opacity: 0.6;
+            cursor: not-allowed !important;
+            background-color: #f8f9fa;
+        }
+
+            .vendor-item.disabled:hover {
+                background-color: #f8f9fa !important;
+                border-color: #dee2e6 !important;
+            }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 
     <div class="container-fluid py-1">
@@ -135,26 +187,33 @@
         <div class="form-container">
             <form id="orderForm">
                 <!-- Header Section -->
-                <div class="header-section">
+                <div class="header-section" style="font-size:12px;">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Job ID:</label>
                                 <div class="col-sm-8">
-                                    <input type="text" asp-for="Header.jobid" id="jobid" name="jobid" class="form-control form-control-sm" readonly />
+                                    <input style="font-size:12px" type="text" asp-for="Header.jobid" id="jobid" name="jobid" class="form-control form-control-sm" readonly placeholder="Auto Generate" />
                                 </div>
                             </div>
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Delivery Date:</label>
                                 <div class="col-sm-8">
-                                    @* <input type="date" asp-for="Header.dvdate" id="dv_date" name="dv_date" class="form-control form-control-sm" /> *@
-                                <input type="datetime-local" asp-for="Header.dvdate" id="dv_date" name="dv_date" class="form-control" />
+                                <input style="font-size:12px;" type="datetime-local" asp-for="Header.deliv_date" id="dv_date" name="dv_date" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Customer Group : </label>
+                                <div class="col-sm-8">
+                                <select id="cust_ori" asp-for="Header.cust_group" asp-items="ViewBag.ListCustomerGroup" class="form-select select2" required>
+                                        <option value="">Select an Option</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Origin : </label>
                                 <div class="col-sm-8">
-                                    <select id="origin_id" asp-for="Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
+                                    <select id="origin_id" asp-for="Header.origin" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
                                         <option value="">Select an Option</option>
                                     </select>
                                 </div>
@@ -162,25 +221,33 @@
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Destination : </label>
                                 <div class="col-sm-8">
-                                    <select id="dest_id" asp-for="Header.dest_id" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                                    <select id="dest_id" asp-for="Header.dest" asp-items="ViewBag.ListDestination" class="form-select select2" required>
                                         <option value="">Select an Option</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="mb-2 row">
-                            <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
+                        <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Serv. Type : </label>
                             <div class="col-sm-8">
-                                <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
+                                <select id="servtype_ori" asp-for="Header.serv_type" asp-items="ViewBag.ListServiceType" class="form-select select2" required>
                                     <option value="">Select an Option</option>
                                 </select>
                             </div>
+                        </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
+                                <div class="col-sm-8">
+                                    <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
+                                        <option value="">Select an Option</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="mb-2 row">
                             <label class="col-sm-4 col-form-label text-end">Serv Moda : </label>
                             <div class="col-sm-8">
-                                <select id="serv_moda" asp-for="Header.moda_req" asp-items="ViewBag.ListModa" class="form-select select2" required>
+                                <select id="serv_moda" asp-for="Header.serv_moda" asp-items="ViewBag.ListModa" class="form-select select2" required>
                                     <option value="">Select an Option</option>
                                 </select>
                             </div>
@@ -196,10 +263,25 @@
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Plan Vendor:</label>
                                 <div class="col-sm-8">
-                                <select asp-for="Header.vendorid" id="vendorid" asp-items="ViewBag.ListVendor" class="form-select form-select-sm">
-                                        <option value="V001" selected>PT Vendor Satu</option>
-                                        <option value="V002">PT Vendor Dua</option>
-                                    </select>
+                                    <div class="position-relative-custom">
+                                        <input type="text"
+                                                style="font-size:12px"
+                                                asp-for="Header.vendor_plan"
+                                                id="planVendor"
+                                                name="vendorid"
+                                               class="form-control form-control-with-button"
+                                               placeholder="Select plan vendor..."
+                                               readonly />
+                                        @* <input type="hidden" id="origin_address_id" name="origin_address_id" /> *@
+                                        <div class="input-group-append-custom">
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                    onclick="openVendorModal('planVendor')"
+                                                    title="Search plan vendor">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -207,24 +289,36 @@
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Act Vendor:</label>
                                 <div class="col-sm-8">
-                                    <select id="vendorid_act" class="form-select form-select-sm">
-                                        <option value="V001" selected>PT Vendor Satu</option>
-                                    </select>
+                                    <div class="position-relative-custom">
+                                        <input type="text"
+                                               style="font-size:12px"
+                                               asp-for="Header.vendor_act"
+                                               id="actualVendor"
+                                               name="vendorid_act"
+                                               class="form-control form-control-with-button"
+                                               placeholder="Select actual vendor..."
+                                               readonly />
+                                        <div class="input-group-append-custom">
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                    onclick="openVendorModal('actualVendor')"
+                                                    title="Search actual vendor">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Truck ID:</label>
                                 <div class="col-sm-8">
-                                    <select id="truckid" class="form-select form-select-sm">
-                                    <option value="B 1234 AB" selected>B 1234 AB</option>
-                                    <option value="B 1345 SD">B 1345 SD</option>
-                                    </select>
+                                    <input style="font-size:12px" id="truckid" asp-for="Header.truck_no" class="form-control" type="text" />
                                 </div>
                             </div>
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Driver Name:</label>
                                 <div class="col-sm-8">
-                                    <select id="drivername" class="form-select form-select-sm">
+                                    <select id="drivername" asp-for="Header.driver_name" class="form-select form-select-sm">
                                         <option value="Budi Santoso" selected>Budi Santoso</option>
                                         <option value="Ahmad Yani">Ahmad Yani</option>
                                     </select>
@@ -233,9 +327,9 @@
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Multi Drop:</label>
                                 <div class="col-sm-8">
-                                    <select id="multidrop" class="form-select form-select-sm">
-                                        <option value="No" selected>No</option>
-                                        <option value="Yes">Yes</option>
+                                    <select id="multidrop" asp-for="Header.multidrop" class="form-select form-select-sm">
+                                        <option value="false" selected>No</option>
+                                        <option value="true">Yes</option>
                                     </select>
                                 </div>
                             </div>
@@ -358,12 +452,64 @@
         </div>
     </div>
 
+    <!-- Address Selection Modal -->
+    <div class="modal fade" id="vendorModal" tabindex="-1" aria-labelledby="vendorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="vendorModalLabel">
+                        <i class="fas fa-map-marker-alt"></i> Select <span id="modalTypeText">Plan</span> Vendor
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Search Input -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text"
+                                   autocomplete="off"
+                                   class="form-control"
+                                   id="vendorSearch"
+                                   placeholder="Search by name..."
+                                   onkeyup="searchVendor()">
+                        </div>
+                    </div>
+
+                    <!-- Loading Spinner -->
+                    <div class="loading-spinner" id="loadingSpinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading vendor...</p>
+                    </div>
+
+                    <!-- Vendor List -->
+                    <div class="vendor-search" id="vendorList">
+                        <!-- vendor items akan dimuat via JavaScript -->
+                    </div>
+
+                    <!-- No Results -->
+                    <div class="text-center text-muted" id="noResults" style="display: none;">
+                        <i class="fas fa-search fa-2x mb-2"></i>
+                        <p>Vendor not found</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @section Scripts{
 
     <script>
-
         // showLoading();
-
         $('#origin_id, #dest_id, #truck_size, #serv_moda ,#charge_uom').on('change', checkAndFetchVendor);
         function checkAndFetchVendor() {
             const originId = $('#origin_id').val();
@@ -385,27 +531,29 @@
                     },
                     success: function (data) {
                         if (data.success && data.vendors.length > 0) {
-                            const $vendorSelect = $('#vendorid');
-                            $vendorSelect.empty(); // kosongkan dulu
-                            data.vendors.forEach(v => {
-                                $vendorSelect.append(`<option value="${v.supCode}">${v.supName}</option>`);
-                            });
-                            $vendorSelect.prop('disabled', false);
+                            // const $vendorSelect = $('#planVendor');
+                            // $vendorSelect.empty(); kosongkan dulu
+                            // data.vendors.forEach(v => {
+                            //     $vendorSelect.append(`<option value="${v.supCode}">${v.supName}</option>`);
+                            // });
+                            // $vendorSelect.prop('disabled', false);
                             // ✅ PILIH opsi pertama
                             const selectedCode = data.vendors[0].supCode;
-                            $vendorSelect.val(selectedCode);
+                            // $vendorSelect.val(selectedCode);
 
                             // ✅ TRIGGER AMBIL DRIVER BERDASARKAN supCode
-                            loadDriversByVendor(selectedCode);
+                            // loadDriversByVendor(selectedCode);
+
+                            $('#planVendor').val(selectedCode);
 
                         } else {
-                            $('#vendorid').val('');
+                            $('#planVendor').val('');
                             // alert(data.message || 'Vendor not found');
                         }
                     },
                     error: function () {
                         // alert('Failed to fetch vendor');
-                        $('#vendorid').val('');
+                        $('#planVendor').val('');
                     }
                 });
             }
@@ -443,7 +591,7 @@
             });
 
             // Load available orders based on header information
-                    function loadAvailableOrders() {
+            function loadAvailableOrders() {
             const origin = $('#origin_id option:selected').text();
             const destination = $('#dest_id option:selected').text();
             const deliveryDate = $('#dv_date').val();
@@ -500,8 +648,6 @@
 
             $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${deliveryDate}`);
         }
-
-
 
             // function loadAvailableOrders() {
             //     const origin = $('#origin_id option:selected').text();
@@ -703,15 +849,17 @@
                     origin_id: $('#origin_id').val(),
                     dest_area: $('#dest_id').val(),
                     dvdate : $('#dv_date').val(),
-                    vendor_id: $('#vendorid').val(),
-                    vendor_act_id: $('#vendorid_act').val(),
+                    vendor_id: $('#planVendor').val(),
+                    vendor_act: $('#actualVendor').val(),
                     truck_id: $('#truckid').val(),
                     driver_name: $('#drivername').val(),
                     delivery_date: $('#dv_date').val(),
                     truck_size: $('#truck_size').val(),
                     serv_moda: $('#serv_moda').val(),
+                    serv_type : $('#servtype_ori').val(),
                     charge_uom: $('#charge_uom').val(),
-                    multidrop: $('#multidrop').val()
+                    multidrop: $('#multidrop').val() === "true",
+                    cust_group : $('#cust_ori').val()
                 };
 
                 const details = [];
@@ -891,6 +1039,219 @@
                 });
             }
         });
+    </script>
+
+    <script>
+        let currentVendorType = '';
+        // Function untuk membuka modal alamat
+        async function openVendorModal(type = '') {
+            currentVendorType = type;
+            // const customerId = document.getElementById('sub_custid').value;
+            // let category = null;
+
+            // if (type == 'origin'){
+            //     category = 'Origin'
+            // }
+
+            // if (customerId == null || customerId === '') {
+            //     showToast('Please select a customer first.', type = 'error')
+            //     return;
+            // }
+
+            // Update modal title
+            // const modalTypeText = type === 'origin' ? 'Origin' : 'Destination';
+            // document.getElementById('modalTypeText').textContent = modalTypeText;
+
+            // Show modal
+            const vendorModal = new bootstrap.Modal(document.getElementById('vendorModal'));
+            vendorModal.show();
+
+            // Show loading
+            showLoading(true);
+
+            // Reset search
+            document.getElementById('vendorSearch').value = '';
+
+            try {
+                await loadVendor();
+            } catch (error) {
+                console.error('Error loading vendor:', error);
+                showNoResults(true);
+            } finally {
+                showLoading(false);
+            }
+        }
+        let allVendor = [];
+        let filteredVendor = [];
+        // Simulasi API call untuk load addresses
+        async function loadVendor() {
+            // Simulasi delay network
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // if (category == null) {
+            //     category = 'All';
+            // }
+
+            let url = `/Job/GetVendor?id=${1}&category=${1}`;
+
+
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch vendor');
+            }
+            const data = await response.json();
+            const vendors = data?.data || [];
+
+            // console.log(vendors);
+
+            // return;
+            // Untuk demo, gunakan dummy data
+            // allAddresses = addresses.filter(addr => addr.customerId === customerId);
+            allVendor = vendors;
+            filteredVendor = [...allVendor];
+
+            renderVendor();
+        }
+
+        // Function untuk render vendor ke DOM
+        function renderVendor() {
+            const vendorList = document.getElementById('vendorList');
+            vendorList.innerHTML = '';
+
+            if (filteredVendor.length === 0) {
+                showNoResults(true);
+                return;
+            }
+
+            // Get current selected address untuk comparison
+            let selectedVendor = '';
+
+            console.log("CURRENT VENDOR TYPE : ", currentVendorType);
+
+            if (currentVendorType === 'planVendor') {
+                selectedVendor = document.getElementById('planVendor').value;
+            } else {
+                selectedVendor = document.getElementById('actualVendor').value;
+            }
+
+            console.log("FILTERED VENDOR ", filteredVendor)
+            console.log("SELECTED VENDOR ", selectedVendor)
+
+            filteredVendor.forEach((vendor, index) => {
+                const vendorItem = createVendorItem(vendor, index, selectedVendor);
+                console.log('vendor Item : ', vendorItem)
+                vendorList.appendChild(vendorItem);
+            });
+
+            // showNoResults(false);
+        }
+
+        // Function untuk membuat elemen vendor item
+        function createVendorItem(vendor, index, selectedVendor = '') {
+            const div = document.createElement('div');
+            // Check jika address ini sudah dipilih di field lain
+            const isDisabled = selectedVendor && selectedVendor === vendor.vendor_code;
+
+            div.className = `vendor-item ${isDisabled ? 'disabled' : ''}`;
+
+            if (!isDisabled) {
+                div.onclick = () => selectVendor(vendor);
+            }
+            const vendorBadge = vendor.vendor_code ? '<span class="badge bg-info ms-1 font-sm"> '+ vendor.vendor_code +' </span>' : '';
+            const disabledBadge = isDisabled ? '<span class="badge bg-danger ms-1">Already Selected</span>' : '';
+
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-2">
+                            <i class="fas fa-building me-1"></i>
+                            ${vendor.vendor_code}
+                            ${disabledBadge}
+                        </h6>
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            ${vendor.vendor_name}
+
+                        </p>
+                        <div class="row d-none">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-map me-1"></i>
+                                    ${vendor.vendor_code}, ${vendor.vendor_code}
+                                    ${vendor.vendor_code ? ' - ' + vendor.vendor_name : ''}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                ${vendor.vendor_code ? `
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        ${vendor.vendor_code}
+                                        ${vendor.vendor_code ? ' - ' + vendor.vendor_name : ''}
+                                    </small>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${vendor.vendor_code && vendor.vendor_name ? `
+                            <small class="text-info d-none">
+                                <i class="fas fa-clock me-1"></i>
+                                Service Time: ${vendor.vendor_code} - ${vendor.vendor_name}
+                            </small>
+                        ` : ''}
+                    </div>
+                    <div class="text-end d-none">
+                        <small class="text-muted d-none">ID: ${vendor.vendor_code}</small>
+                    </div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        // Function untuk select vendor
+        function selectVendor(vendor) {
+            // Fill form fields berdasarkan type
+            if (currentVendorType === 'planVendor') {
+                document.getElementById('planVendor').value = vendor.vendor_code;
+            } else if (currentVendorType === 'actualVendor') {
+                document.getElementById('actualVendor').value = vendor.vendor_code;
+            }
+
+            // Close modal
+            const vendorModal = bootstrap.Modal.getInstance(document.getElementById('vendorModal'));
+            vendorModal.hide();
+
+            // Optional: Show success feedback
+            // const typeText = currentAddressType === 'origin' ? 'Origin' : 'Destination';
+            // showSuccessToast(`${typeText} address selected: ${address.fenceName}`);
+        }
+
+        // Function untuk search vendor
+        function searchVendor() {
+            const searchTerm = document.getElementById('vendorSearch').value.toLowerCase();
+            if (searchTerm === '') {
+                filteredVendor = [...allVendor];
+            } else {
+                filteredVendor = allVendor.filter(vendor =>
+                    vendor.vendor_code?.toLowerCase().includes(searchTerm) ||
+                    vendor.vendor_name?.toLowerCase().includes(searchTerm)
+                );
+            }
+            renderVendor();
+        }
+
+        // Helper functions
+        function showLoading(show) {
+            if(show){
+                showNoResults(false);
+            }
+            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+            document.getElementById('vendorList').style.display = show ? 'none' : 'block';
+        }
+
+        function showNoResults(show) {
+            document.getElementById('noResults').style.display = show ? 'block' : 'none';
+        }
     </script>
 
 }

@@ -318,7 +318,7 @@
                         </div>
                     </div>
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Customer : </label>
+                        <label class="col-sm-4 col-form-label text-end">Customer: </label>
                         <div class="col-sm-8">
                             <select id="sub_custid" asp-for="Header.sub_custid" asp-items="ViewBag.ListCustomer" class="form-select select2" required>
                                 <option value="">Select an Option</option>
@@ -326,7 +326,7 @@
                         </div>
                     </div>
                     <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Consignee : </label>
+                        <label class="col-sm-4 col-form-label text-end">Consignee ID : </label>
                         <div class="col-sm-8">
                             <select id="cnee_code" asp-for="Header.cnee_code" asp-items="ViewBag.ListConsignee" class="form-select select2" required>
                                 <option value="">Select an Option</option>
@@ -528,7 +528,7 @@
                                        autocomplete="off"
                                        class="form-control"
                                        id="addressSearch"
-                                       placeholder="Cari berdasarkan nama, alamat, atau kota..."
+                                       placeholder="Search by name, address, or city..."
                                        onkeyup="searchAddresses()">
                             </div>
                         </div>
@@ -549,7 +549,7 @@
                         <!-- No Results -->
                         <div class="text-center text-muted" id="noResults" style="display: none;">
                             <i class="fas fa-search fa-2x mb-2"></i>
-                            <p>Tidak ada alamat yang ditemukan</p>
+                            <p>Address not found</p>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1008,7 +1008,6 @@
         async function openAddressModal(type = 'origin') {
             currentAddressType = type;
             const customerId = document.getElementById('sub_custid').value;
-            // const customerId = "d78f7b8d-88fd-4335-b8ef-e198a8f4e113";
             let category = null;
 
             if (type == 'origin'){
@@ -1016,7 +1015,6 @@
             }
 
             if (customerId == null || customerId === '') {
-                // alert('Please select a sub customer first.');
                 showToast('Please select a customer first.', type = 'error')
                 return;
             }
@@ -1116,8 +1114,9 @@
             }
 
             const categoryBadge = getCategoryBadge(address.category);
-            const serviceBadge = address.isServiceLoc ? '<span class="badge bg-success ms-1">Service Location</span>' : '';
-            const depotBadge = address.isDepot ? '<span class="badge bg-warning ms-1">Depot</span>' : '';
+            const customerBadge = address.category ? '<span class="badge bg-info ms-1 font-sm"> '+ address.category +' </span>' : '';
+            const serviceBadge = address.customer ? '<span class="badge bg-success ms-1 font-sm"> '+ address.customer +' </span>' : '';
+            const depotBadge = address.areaGroup ? '<span class="badge bg-primary ms-1">'+ address.areaGroup +'</span>' : '';
             const disabledBadge = isDisabled ? '<span class="badge bg-danger ms-1">Already Selected</span>' : '';
 
             div.innerHTML = `
@@ -1126,7 +1125,7 @@
                         <h6 class="mb-2">
                             <i class="fas fa-building me-1"></i>
                             ${address.fenceName}
-                            ${categoryBadge}
+                            ${customerBadge}
                             ${serviceBadge}
                             ${depotBadge}
                             ${disabledBadge}
@@ -1134,7 +1133,7 @@
                         <p class="mb-1 text-muted">
                             <i class="fas fa-map-marker-alt me-1"></i>
                             ${address.address}
-                            ${address.addressDetail ? '<br><small class="ms-3">' + address.addressDetail + '</small>' : ''}
+                            
                         </p>
                         <div class="row">
                             <div class="col-md-6">
@@ -1162,7 +1161,7 @@
                         ` : ''}
                     </div>
                     <div class="text-end">
-                        <small class="text-muted">ID: ${address.geofenceId}</small>
+                        <small class="text-muted d-none">ID: ${address.geofenceId}</small>
                     </div>
                 </div>
             `;

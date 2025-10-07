@@ -2,13 +2,13 @@
 {
     public class JobViewModel
     {
-        public Job Header { get; set; }
+        public JobHeader Header { get; set; }
         public HeaderFormJob FormJobHeader { get; set; }
         public List<Order> FormJobDetails { get; set; }
 
         public JobViewModel()
         {
-            Header = new Job();
+            Header = new JobHeader();
             FormJobHeader = new HeaderFormJob();
             FormJobDetails = new List<Order>();
         }
@@ -18,7 +18,10 @@
         {
 
             public string job_id { get; set; } = string.Empty;
+
+            public string cust_group { get; set; } = string.Empty;
             public string vendor_id { get; set; } = string.Empty;
+            public string vendor_act { get; set; } = string.Empty;
             public DateTime? dvdate { get; set; }
             public string truck_id { get; set; } = string.Empty;
 
@@ -32,7 +35,11 @@
 
             public string serv_moda { get; set; } = string.Empty;
 
+            public string? serv_type { get; set; } = string.Empty;
+
             public string charge_uom { get; set; } = string.Empty;
+
+            public bool? multidrop { get; set; } = false;
 
         }
 

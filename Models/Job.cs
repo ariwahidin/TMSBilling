@@ -184,6 +184,48 @@ namespace TMSBilling.Models
         [StringLength(30)]
         public string? jobid { get; set; }
 
+        public string? cust_group { get; set; }
+
+        public DateTime? deliv_date { get; set; }
+
+        [StringLength(50)]
+        public string? origin { get; set; }
+        [StringLength(50)]
+        public string? dest { get; set; }
+
+        [StringLength(30)]
+        public string? vendor_plan { get; set; }
+
+        public bool? is_vendor { get; set; } = false;
+
+        [StringLength(30)]
+        public string? vendor_act { get; set; }
+
+        [StringLength(11)]
+        public string? truck_no { get; set; }
+
+        [StringLength(30)]
+        public string? driver_name { get; set; }
+
+        [StringLength(30)]
+        public string? driver_phone { get; set; }
+
+        [StringLength(10)]
+        public string? serv_moda { get; set; }
+
+        [StringLength(10)]
+        public string? serv_type { get; set; }
+
+        [StringLength(50)]
+        public string? truck_size { get; set; }
+
+        [StringLength(50)]
+        public string? charge_uom { get; set; }
+
+        public bool? multidrop { get; set; } = false;
+
+
+
         public string? mceasy_job_id { get; set; }
 
         [StringLength(50)]
