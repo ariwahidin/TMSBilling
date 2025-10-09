@@ -10,18 +10,20 @@ namespace TMSBilling.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        //[Required]
-        //[StringLength(20)]
+        public required string key { get; set; }
+
+
+        public required string value { get; set; }
 
         [Required]
-        [MaxLength(2048)]
-        public required string hostname { get; set; }
+        //[MaxLength(2048)]
+        //public required string hostname { get; set; }
 
-        [StringLength(50)]
-        public int port { get; set; }
+        //[StringLength(50)]
+        //public int port { get; set; }
 
-        [StringLength(50)]
-        public int protocol { get; set; }
+        //[StringLength(50)]
+        //public int protocol { get; set; }
 
         [StringLength(50)]
         public string? entryuser { get; set; }
