@@ -1,7 +1,93 @@
-﻿using System.Text.Json.Serialization;
+﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace TMSBilling.Models
 {
+
+    [Table("TRC_PRODUCT")]
+    public class ProductTable
+    {
+        [Key]
+        [Column("ID")]
+        public int Id { get; set; }
+
+        [Column("PRODUCT_ID")]
+        [MaxLength(100)]
+        public string? ProductID { get; set; }
+
+        [Column("PRODUCT_TYPE_ID")]
+        [MaxLength(100)]
+        public string? ProductTypeID { get; set; }
+
+        [Column("PRODUCT_TYPE_NAME")]
+        [MaxLength(100)]
+        public string? ProductTypeName { get; set; }
+
+        [Column("PRODUCT_CATEGORY_ID")]
+        [MaxLength(100)]
+        public string? ProductCategoryID { get; set; }
+
+        [Column("PRODUCT_CATEGORY_NAME")]
+        [MaxLength(100)]
+        public string? ProductCategoryName { get; set; }
+
+        [Column("NAME")]
+        [MaxLength(100)]
+        public string? Name { get; set; }
+
+        [Column("SKU")]
+        [MaxLength(50)]
+        public string? Sku { get; set; }
+
+        [Column("DESCRIPTION")]
+        [MaxLength(255)]
+        public string? Description { get; set; }
+
+        [Column("UOM")]
+        [MaxLength(20)]
+        public string? Uom { get; set; }
+
+
+        [Column("WIDTH")]
+        public decimal? Width { get; set; }
+
+        [Column("LENGTH")]
+        public decimal? Length { get; set; }
+
+        [Column("HEIGHT")]
+        public decimal? Height { get; set; }
+
+        [Column("CBM")]
+        public decimal? Cbm { get; set; }
+
+        [Column("WEIGHT")]
+        public decimal? Weight { get; set; }
+
+        [Column("VOLUME")]
+        public decimal? Volume { get; set; }
+
+        [Column("PRICE")]
+        [DataType(DataType.Currency)]
+        public decimal? Price { get; set; }
+
+        [Column("CREATED_AT")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [Column("CREATED_BY")]
+        [MaxLength(50)]
+        public string? CreatedBy { get; set; }
+
+        [Column("UPDATED_AT")]
+        public DateTime? UpdatedAt { get; set; }
+
+        [Column("UPDATED_BY")]
+        [MaxLength(50)]
+        public string? UpdatedBy { get; set; }
+    }
+
     public class ProductResponse
     {
         public Metadata? metadata { get; set; }

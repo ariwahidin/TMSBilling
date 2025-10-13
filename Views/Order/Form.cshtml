@@ -325,14 +325,14 @@
                             </select>
                         </div>
                     </div>
-                    <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Consignee ID : </label>
+                    @* <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Consignee : </label>
                         <div class="col-sm-8">
                             <select id="cnee_code" asp-for="Header.cnee_code" asp-items="ViewBag.ListConsignee" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
                         </div>
-                    </div>
+                    </div> *@
 
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Invoice No : </label>
@@ -357,7 +357,7 @@
                                     <button type="button"
                                             class="btn btn-outline-secondary btn-sm"
                                             onclick="openAddressModal('origin')"
-                                            title="Pilih Alamat">
+                                            title="Search origin">
                                         <i class="fas fa-bars"></i>
                                     </button>
                                 </div>
@@ -369,13 +369,16 @@
                     <div class="row mb-3">
                         <label class="col-sm-4 col-form-label text-end">Origin Area :</label>
                         <div class="col-sm-8">
-                            <input type="text"
+                            <select id="city" asp-for="@Model.Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                            @* <input type="text"
                                    id="city"
                                    name="city"
                                    class="form-control"
                                    placeholder=""
                                    value="@Model.Header.origin_id"
-                                   readonly />
+                                   readonly /> *@
                         </div>
                     </div>
 
@@ -406,13 +409,16 @@
                     <div class="row mb-3">
                         <label class="col-sm-4 col-form-label text-end">Destination Area :</label>
                         <div class="col-sm-8">
-                            <input type="text"
+                            <select id="destination_city" asp-for="@Model.Header.dest_area" asp-items="ViewBag.ListDestination" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                            @* <input type="text"
                                    id="destination_city"
                                    name="destination_city"
                                    value="@Model.Header.dest_area"
                                    class="form-control"
                                    placeholder=""
-                                   readonly />
+                                   readonly /> *@
                         </div>
                     </div>
                     <div class="mb-2 row">

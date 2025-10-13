@@ -272,7 +272,6 @@
                                                class="form-control form-control-with-button"
                                                placeholder="Select plan vendor..."
                                                readonly />
-                                        @* <input type="hidden" id="origin_address_id" name="origin_address_id" /> *@
                                         <div class="input-group-append-custom">
                                             <button type="button"
                                                     class="btn btn-outline-secondary btn-sm"
@@ -397,9 +396,6 @@
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-save"></i> Save
                     </button>
-                    @* <button type="button" class="btn btn-info btn-sm" id="btnSaveNew">
-                        <i class="fas fa-save"></i> Save And New
-                    </button> *@
                 </div>
             </form>
         </div>
@@ -539,28 +535,13 @@
                     },
                     success: function (data) {
                         if (data.success && data.vendors.length > 0) {
-                            // const $vendorSelect = $('#planVendor');
-                            // $vendorSelect.empty(); kosongkan dulu
-                            // data.vendors.forEach(v => {
-                            //     $vendorSelect.append(`<option value="${v.supCode}">${v.supName}</option>`);
-                            // });
-                            // $vendorSelect.prop('disabled', false);
-                            // ✅ PILIH opsi pertama
                             const selectedCode = data.vendors[0].supCode;
-                            // $vendorSelect.val(selectedCode);
-
-                            // ✅ TRIGGER AMBIL DRIVER BERDASARKAN supCode
-                            // loadDriversByVendor(selectedCode);
-
                             $('#planVendor').val(selectedCode);
-
                         } else {
                             $('#planVendor').val('');
-                            // alert(data.message || 'Vendor not found');
                         }
                     },
                     error: function () {
-                        // alert('Failed to fetch vendor');
                         $('#planVendor').val('');
                     }
                 });
@@ -576,24 +557,13 @@
                 width: '100%'
             });
 
-            // Dummy data for available orders
-            // const dummyOrders = [
-            //     { id: 'INV001', whCode: 'WH01', invoiceNo: 'INV/2025/001', customer: 'CUST001', customerName: 'PT Customer A', consignee: 'CNEE001', consigneeName: 'PT Consignee A', destination: 'SBY', destName: 'Surabaya', packages: 50, weight: 250.5, volume: 12.5, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV002', whCode: 'WH01', invoiceNo: 'INV/2025/002', customer: 'CUST002', customerName: 'PT Customer B', consignee: 'CNEE002', consigneeName: 'PT Consignee B', destination: 'SBY', destName: 'Surabaya', packages: 75, weight: 380.2, volume: 18.3, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV003', whCode: 'WH02', invoiceNo: 'INV/2025/003', customer: 'CUST003', customerName: 'PT Customer C', consignee: 'CNEE003', consigneeName: 'PT Consignee C', destination: 'SBY', destName: 'Surabaya', packages: 30, weight: 150.8, volume: 8.7, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV004', whCode: 'WH01', invoiceNo: 'INV/2025/004', customer: 'CUST004', customerName: 'PT Customer D', consignee: 'CNEE004', consigneeName: 'PT Consignee D', destination: 'SBY', destName: 'Surabaya', packages: 90, weight: 420.3, volume: 22.1, truckSize: 'FUSO', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV005', whCode: 'WH02', invoiceNo: 'INV/2025/005', customer: 'CUST005', customerName: 'PT Customer E', consignee: 'CNEE005', consigneeName: 'PT Consignee E', destination: 'SBY', destName: 'Surabaya', packages: 60, weight: 290.7, volume: 15.4, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV006', whCode: 'WH01', invoiceNo: 'INV/2025/006', customer: 'CUST006', customerName: 'PT Customer F', consignee: 'CNEE006', consigneeName: 'PT Consignee F', destination: 'SBY', destName: 'Surabaya', packages: 45, weight: 220.9, volume: 11.2, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV007', whCode: 'WH03', invoiceNo: 'INV/2025/007', customer: 'CUST007', customerName: 'PT Customer G', consignee: 'CNEE007', consigneeName: 'PT Consignee G', destination: 'SBY', destName: 'Surabaya', packages: 85, weight: 390.5, volume: 19.8, truckSize: 'FUSO', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            //     { id: 'INV008', whCode: 'WH02', invoiceNo: 'INV/2025/008', customer: 'CUST008', customerName: 'PT Customer H', consignee: 'CNEE008', consigneeName: 'PT Consignee H', destination: 'SBY', destName: 'Surabaya', packages: 35, weight: 180.3, volume: 9.5, truckSize: 'CDD', service: 'DELIVERY', deliveryDate: '2025-01-15', status: 'READY' },
-            // ];
-
             let realOrders = [];
 
             let selectedOrders = [];
 
             // Add Order Button Click
             $('#btnAddOrder').click(function() {
+                console.log("selectedOrders : ", selectedOrders);
                 loadAvailableOrders();
                 $('#orderModal').modal('show');
             });
@@ -656,62 +626,6 @@
 
             $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${deliveryDate}`);
         }
-
-            // function loadAvailableOrders() {
-            //     const origin = $('#origin_id option:selected').text();
-            //     const destination = $('#dest_id option:selected').text();
-            //     const deliveryDate = $('#dv_date').val();
-
-            //     $.ajax({
-            //         url: '/Job/GetOrders',
-            //         type: 'GET',
-
-            //         data: {
-            //             originId: origin,
-            //             destArea: destination,
-            //             deliveryDate: deliveryDate
-            //         },
-            //         success: function (data) {
-            //             console.log("Orders:", data);
-            //             contoh kalau mau looping
-            //             data.forEach(function(order) {
-            //                 console.log(order.orderNo, order.deliveryDate);
-            //             });
-            //         },
-            //         error: function (xhr) {
-            //             console.error("Error:", xhr.responseText);
-            //         }
-            //     });
-
-            //     $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${deliveryDate}`);
-
-            //     const tbody = $('#availableOrdersBody');
-            //     tbody.empty();
-
-            //     dummyOrders.forEach((order, index) => {
-            //         const isSelected = selectedOrders.some(s => s.id === order.id);
-            //         const row = `
-            //             <tr>
-            //                 <td><input type="checkbox" class="order-checkbox" data-order-id="${order.id}" ${isSelected ? 'checked' : ''}></td>
-            //                 <td>${order.whCode}</td>
-            //                 <td>${order.invoiceNo}</td>
-            //                 <td title="${order.customerName}">${order.customer}</td>
-            //                 <td title="${order.consigneeName}">${order.consignee}</td>
-            //                 <td>${order.destName}</td>
-            //                 <td class="text-end">${order.packages}</td>
-            //                 <td class="text-end">${order.weight}</td>
-            //                 <td class="text-end">${order.volume}</td>
-            //                 <td>${order.truckSize}</td>
-            //                 <td>${order.service}</td>
-            //                 <td>${order.deliveryDate}</td>
-            //                 <td><span class="badge bg-success">${order.status}</span></td>
-            //             </tr>
-            //         `;
-            //         tbody.append(row);
-            //     });
-
-            //     updateModalSelectedCount();
-            // }
 
             // Check All functionality
             $('#checkAll').change(function() {
@@ -945,41 +859,6 @@
                     }
                 });
 
-
-                // Show success message
-                // alert(`Job saved successfully!\n\nHeader Details:\n- Job ID: ${header.job_id}\n- Origin: ${header.origin_id} → Destination: ${header.dest_id}\n- Delivery Date: ${header.delivery_date}\n- Vendor: ${header.vendor_id}\n- Driver: ${header.driver_name}\n\nOrder Details: ${details.length} orders selected\n\nCheck console for complete data structure.`);
-
-                // if (saveAndNew) {
-                //     console.log('Save and New triggered - would redirect to new form');
-                //     Reset form for new entry
-                //     resetForm();
-                // }
-
-                /*
-                // Actual AJAX implementation would be:
-                $.ajax({
-                    url: '/Job/Save',
-                    type: 'POST',
-                    data: JSON.stringify(dataToPost),
-                    contentType: 'application/json',
-                    success: function(response) {
-                        if (response.success) {
-                            alert('Job saved successfully!');
-                            if (saveAndNew) {
-                                window.location.href = '/Job/Form';
-                            } else {
-                                window.location.href = '/Job/Index';
-                            }
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Save error:', error);
-                        alert('Failed to save job. Please try again.');
-                    }
-                });
-                */
             }
 
             // Reset form
@@ -1024,14 +903,6 @@
                         if (res.success && res.data.length > 0) {
                             console.log("Detail Data:", res.data);
                             res.data.forEach(function(item) {
-                                // console.log("Fetching detail for order ID:", item.id_seq);
-                                // const orderData = realOrders.find(o => o.id_seq === item.id_seq);
-                                // if (orderData) {
-                                //     selectedOrders.push(orderData);
-                                //     console.log("Matched Order Data:", orderData);
-                                // } else {
-                                //     console.warn("Order ID not found in available orders:", item.id_seq);
-                                // }
 
                                 selectedOrders.push(item)
                             });
@@ -1055,21 +926,6 @@
         // Function untuk membuka modal alamat
         async function openVendorModal(type = '') {
             currentVendorType = type;
-            // const customerId = document.getElementById('sub_custid').value;
-            // let category = null;
-
-            // if (type == 'origin'){
-            //     category = 'Origin'
-            // }
-
-            // if (customerId == null || customerId === '') {
-            //     showToast('Please select a customer first.', type = 'error')
-            //     return;
-            // }
-
-            // Update modal title
-            // const modalTypeText = type === 'origin' ? 'Origin' : 'Destination';
-            // document.getElementById('modalTypeText').textContent = modalTypeText;
 
             // Show modal
             const vendorModal = new bootstrap.Modal(document.getElementById('vendorModal'));

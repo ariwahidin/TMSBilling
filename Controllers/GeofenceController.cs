@@ -23,25 +23,18 @@ namespace TMSBilling.Controllers
     {
         private readonly ILogger<GeofenceController> _logger;
         private readonly AppDbContext _context;
-        //private readonly HttpClient _httpClient;
-        //private readonly ApiSettings _apiSettings;
         private readonly SelectListService _selectList;
         private readonly ApiService _apiService;
 
         public GeofenceController(ILogger<GeofenceController> logger,
-            //HttpClient httpClient, 
-            //IOptions<ApiSettings> apiSettings, 
             ApiService apiService,
             AppDbContext context,
             SelectListService selectList)
         {
             _logger = logger;
-            //_httpClient = httpClient;
-            //_apiSettings = apiSettings.Value;
             _apiService = apiService;
             _context = context;
             _selectList = selectList;
-            // _geofenceService = geofenceService;
         }
 
 
@@ -81,35 +74,32 @@ namespace TMSBilling.Controllers
             if (customer.API_FLAG == 1)
             {
 
-                var consignees = await _context.Consignees
-                .Where(c => c.MCEASY_GEOFENCE_ID != null)
+                var consignees = await _context.Geofences
+                .Where(c => c.CustomerName == id)
                 .ToListAsync();
 
                 var geofenceList = consignees.Select(c => new GeofenceViewModel
                 {
-                    FenceID = c.CNEE_CODE,
-                    FenceName = c.CNEE_NAME,
-                    Category = c.CATEGORY,
-                    Customer = c.SUB_CODE,
-                    Address = c.ADDRESS,
-                    City = c.CITY,
-                    AddressDetail = $"{c.CNEE_ADDR2} {c.CNEE_ADDR3} {c.CNEE_ADDR4}",
-                    PhoneNo = c.CNEE_TEL,
-                    ContactName = c.CNEE_PIC,
-                    CustomerName = c.CNEE_NAME,
-                    MCEasyCustId = c.MCEASY_CUST_ID,
-                    GeofenceId = c.MCEASY_GEOFENCE_ID?.ToString(),
-                    CreatedOn = c.ENTRY_DATE?.ToString("yyyy-MM-dd HH:mm:ss"),
-                    CompanyId = c.SUB_CODE,
-                    CUST_GROUP_CODE = c.SUB_CODE,
-                    AreaGroup = c.AREA,
-                    Province = c.PROVINCE,
-                    PostalCode = c.POSTAL_CODE,
+                    FenceID = c.FenceName,
+                    FenceName = c.FenceName,
+                    Category = c.Category,
+                    Customer = c.CustomerName,
+                    Address = c.Address,
+                    City = c.City,
+                    AddressDetail = c.Address,
+                    PhoneNo = c.PhoneNo,
+                    ContactName = c.ContactName,
+                    CustomerName = c.CustomerName,
+                    MCEasyCustId = c.CustomerId,
+                    GeofenceId = c.GeofenceId?.ToString(),
+                    CompanyId = c.CompanyId?.ToString(),
+                    CUST_GROUP_CODE = c.CustomerName,
+                    Province = c.Province,
+                    PostalCode = c.PostalCode,
                     
 
 
                     // sisanya default / null (karena ga ada di table Consignee)
-
                     //PostalCode = null,
                     Coordinates = null,
                     Radius = null,
@@ -226,8 +216,6 @@ namespace TMSBilling.Controllers
             return View("Form", model);
         }
 
-
-
         public IActionResult Form(String? category, int? id) {
             ViewBag.Category = category;
             ViewBag.ListCategory = _selectList.GeofenceCategory();
@@ -263,8 +251,6 @@ namespace TMSBilling.Controllers
 
             return View("Form", model);
         }
-
-
 
 
         [HttpPost]
@@ -382,9 +368,7 @@ namespace TMSBilling.Controllers
                     }
 
                     // Update fields
-                    //existingConsignee.CNEE_CODE = model.FenceID;
                     existingConsignee.CNEE_NAME = model.FenceName;
-                    //existingConsignee.MCEASY_CUST_ID = model.MCEasyCustId;
                     existingConsignee.CNEE_ADDR1 = model.City;
                     existingConsignee.CNEE_ADDR2 = model.City;
                     existingConsignee.SUB_CODE = groupCustomer;
@@ -505,11 +489,7 @@ namespace TMSBilling.Controllers
                 message = model.ID > 0 ? "Consignee Updated Successfully" : "Consignee Created Successfully"
             });
         }
-
-
     }
-
-
 
     public class GeofenceViewModel
     {

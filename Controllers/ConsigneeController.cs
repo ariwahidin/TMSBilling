@@ -1,26 +1,171 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using TMSBilling.Controllers;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
+using TMSBilling.Services;
 
 
 [SessionAuthorize]
 public class ConsigneeController : Controller
 {
     private readonly AppDbContext _context;
+    private readonly ApiService _apiService;
 
-    public ConsigneeController(AppDbContext context)
+
+    public ConsigneeController(ApiService apiService, AppDbContext context)
     {
+        _apiService = apiService;
         _context = context;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         var list = _context.Consignees
             .OrderByDescending(o => o.ID)
             .ToList();
+
+
+        var graphqlVariables = new
+        {
+            filter = new {
+                ownership = "Customer"
+            }
+        };
+
+
+        var (ok, result) = await _apiService.ExecuteGraphQLAsync(
+            @"query Geofences($filter: GetGeofencesFilter) {
+                  geofences(filter: $filter) {
+                    geofences {
+                      data {
+                        geofenceId
+                        companyId
+                        customerId
+                        fenceName
+                        type
+                        polyData
+                        circData
+                        address
+                        addressDetail
+                        province
+                        city
+                        postalCode
+                        category
+                        contactName
+                        phoneNo
+                        isGarage
+                        isServiceLoc
+                        isBillingAddr
+                        isDepot
+                        isAlert
+                        serviceStart
+                        serviceEnd
+                        breakStart
+                        breakEnd
+                        serviceLocType
+                        customerName
+                        createdOn
+                        hasRelation
+                        contacts {
+                          contactId
+                          name
+                          phoneNo
+                          sendWhatsapp
+                        }
+                      }
+                      pagination {
+                        total
+                        page
+                        show
+                        startCursor
+                        endCursor
+                        actualTotal
+                      }
+                    }
+                  }
+                }",
+            graphqlVariables,
+            "Geofences"
+        );
+
+        if (!ok)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "GraphQL get geofences request failed",
+                detail = result.ToString()
+            });
+        }
+
+        var data = result.GetProperty("data")
+                         .GetProperty("geofences")
+                         .GetProperty("geofences")
+                         .GetProperty("data")
+                         .Deserialize<List<Geofence>>() ?? new List<Geofence>();
+        foreach (var p in data)
+        {
+            var existGeofence = _context.Geofences.FirstOrDefault(o => o.GeofenceId == p.geofenceId);
+            if (existGeofence == null) {
+
+                var ng = new GeofenceTable();
+
+                if (p.circData != null) { 
+                    var match = Regex.Match(p.circData, @"<\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\)\s*,\s*(\d+)\s*>");
+
+                    if (match.Success)
+                    {
+                        ng.Lat = $"{match.Groups[1].Value}";
+                        ng.Long = $"{match.Groups[2].Value}";
+                        ng.Cordinates = $"({ng.Lat},{ng.Long})";
+                        ng.Radius = $"{match.Groups[3].Value}";
+                    }
+                }
+                
+                ng.GeofenceId = p.geofenceId;
+                ng.CompanyId = p.companyId;
+                ng.CustomerId = p.customerId;
+                ng.FenceName = p.fenceName;
+                ng.Type = p.type;
+                ng.PolyData = p.polyData;
+                ng.CircData = p.circData;
+                ng.Address = p.address;
+                ng.AddressDetail = p.addressDetail;
+                ng.Province = p.province;
+                ng.City = p.city;
+                ng.PostalCode = p.postalCode;
+                ng.Category = p.category;
+                ng.ContactName = p.contactName;
+                ng.PhoneNo = p.phoneNo;
+                ng.IsGarage = p.isGarage;
+                ng.IsServiceLoc = p.isServiceLoc;
+                ng.IsBillingAddr = p.isBillingAddr;
+                ng.IsDepot = p.isDepot;
+                ng.IsAlert = p.isAlert;
+                ng.ServiceStart = p.serviceStart;
+                ng.ServiceEnd = p.serviceEnd;
+                ng.BreakStart = p.breakStart;
+                ng.BreakEnd = p.breakEnd;
+                ng.ServiceLocType = p.serviceLocType;
+                ng.CustomerName = p.customerName;
+                ng.HasRelation = p.hasRelation;
+                ng.CreatedAt = DateTime.Now;
+                ng.UpdatedAt = DateTime.Now;
+                
+
+                _context.Geofences.Add(ng);
+                _context.SaveChanges();
+            }
+
+            
+
+        }
+
         return View(list);
     }
 

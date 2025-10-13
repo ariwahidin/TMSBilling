@@ -17,7 +17,7 @@
 
     <div id="previewArea" style="display:none">
 
-        <div class="text-end mt-3">
+        <div class="text-end mt-2">
             <button class="btn btn-warning btn-sm" id="submitFinal"> <i class="bi bi-send me-1"></i> Submit</button>
         </div>
 
@@ -35,7 +35,7 @@
         $("#uploadForm").on("submit", function (e) {
             e.preventDefault();
             const formData = new FormData(this);
-
+            showLoading();
             $.ajax({
                 url: '/Order/Preview',
                 type: 'POST',
@@ -43,6 +43,7 @@
                 processData: false,
                 contentType: false,
                 success: res => {
+                    hideLoading();
                     parsedData = res;
                     $("#previewArea").show();
                     $("#previewJson").text(JSON.stringify(res, null, 2));
@@ -60,6 +61,7 @@
                     }
                 },
                 error: err => {
+                    hideLoading();
                     Swal.fire("Error", "Gagal membaca file", "error");
                 }
             });
@@ -80,23 +82,39 @@
                 return;
             }
 
+            showLoading();
             $.ajax({
                 url: '/Order/SaveExcel',
                 type: 'POST',
                 data: JSON.stringify(parsedData.data),
                 contentType: 'application/json',
                 success: function (res){
-                    Swal.fire({
-                      position: "top-end",
-                      icon: "success",
-                      title: "Your work has been saved",
-                      showConfirmButton: false,
-                      timer: 1500
-                    }).then(function(){
-                        window.location.href = '/Order/Index'
-                    })
+
+                    if(res.success){
+                        hideLoading();
+                        Swal.fire({
+                          position: "center",
+                          icon: "success",
+                          title: res.message,
+                          showConfirmButton: false,
+                          timer: 1500
+                        }).then(function(){
+                            window.location.href = '/Order/Index'
+                        })
+                    }else{
+                         $("#previewJson").text(JSON.stringify(res, null, 2));
+                    }
+                    
                 },
-                error: err => Swal.fire("Gagal", "Submit gagal", "error")
+                error: function (xhr) {
+                    hideLoading();
+                    try {
+                        const err = JSON.parse(xhr.responseText);
+                        $("#previewJson").text(JSON.stringify(err, null, 2));
+                    } catch {
+                        $("#previewJson").text(xhr.responseText);
+                    }
+                }
             });
         });
 

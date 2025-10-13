@@ -184,4 +184,12 @@ public class SelectListService
             }).ToList();
     }
 
+
+    public List<SelectListItem> GetConsigneeByCustomer(string customer)
+    {
+        return _context.Consignees
+            .Select(c => new SelectListItem { Value = c.CNEE_CODE, Text = c.CNEE_CODE })
+            .ToList();
+    }
+
 }

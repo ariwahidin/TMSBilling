@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010092242_UpdateTableGeofence")]
+    partial class UpdateTableGeofence
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -670,10 +673,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("CONTACT_NAME");
 
-                    b.Property<string>("Cordinates")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CORDINATES");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("CREATED_AT");
@@ -721,14 +720,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("IS_SERVICE_LOC");
 
-                    b.Property<string>("Lat")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("LAT");
-
-                    b.Property<string>("Long")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("LONG");
-
                     b.Property<string>("PhoneNo")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
@@ -747,10 +738,6 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("PROVINCE");
-
-                    b.Property<string>("Radius")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("RADIUS");
 
                     b.Property<string>("ServiceEnd")
                         .HasMaxLength(50)

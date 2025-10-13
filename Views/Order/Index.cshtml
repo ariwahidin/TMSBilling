@@ -1,10 +1,8 @@
-﻿@model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
+﻿@* @model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Order List";
 }
-
-@* <h2>Order List</h2> *@
 <div class="mb-3">
     <a href="/Order/Form" class="btn btn-primary btn-sm">
         <i class="bi bi-plus"></i> Create New Order
@@ -104,23 +102,6 @@
             }
         }
 
-        // function confirmOrder(id) {
-        //     if (confirm('Are you sure you want to confirm this order?')) {
-        //         const url = `/Order/Confirm/${id}`;
-        //         fetch(url, {
-        //             method: 'POST'
-        //         })
-        //         .then(res => res.json())
-        //         .then(data => {
-        //             if (data.success) {
-        //                 location.reload();
-        //             } else {
-        //                 alert(data.message || 'Confirm failed.');
-        //             }
-        //         });
-        //     }
-        // }
-
         function confirmOrder(id) {
             Swal.fire({
                 title: 'Are you sure?',
@@ -178,6 +159,324 @@
             });
 
             
+        });
+    </script>
+}
+ *@
+
+@model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Order List";
+}
+<div class="mb-3">
+    <a href="/Order/Form" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus"></i> Create New Order
+    </a>
+    <a href="/Order/Import" class="btn btn-success btn-sm">
+        <i class="bi bi-upload me-2"></i> Import New Order
+    </a>
+    <button id="btnBulkConfirm" class="btn btn-warning btn-sm" style="display:none;">
+        <i class="bi bi-check-circle"></i> Confirm Selected (<span id="selectedCount">0</span>)
+    </button>
+</div>
+
+<table class="table table-bordered table-hover table-striped" id="tableOrder">
+    <thead class="table-light">
+        <tr>
+            <th>
+                <input type="checkbox" id="checkAll" title="Select All">
+            </th>
+            <th>#</th>
+            <th>WH Code</th>
+            <th>Customer</th>
+            <th>Cnee</th>
+            <th>Invoice No</th>
+            <th>Delivery Date</th>
+            <th>Origin </th>
+            <th>Destination </th>
+            <th>Status</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th class="text-center">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            var i = 1;
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @if (@item.McEasyOrderId != null && @item.OrderStatus != 1)
+                        {
+                            <input type="checkbox" class="order-checkbox" data-order-id="@item.McEasyOrderId">
+                        }
+                    </td>
+                    <td>@i</td>
+                    <td>@item.WhCode</td>
+                    <td>@item.SubCustId</td>
+                    <td>@item.CneeCode</td>
+                    <td>@item.InvNo</td>
+                    <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
+                    <td>@item.OriginId</td>
+                    <td>@item.DestArea</td>
+                    <td>@(item.OrderStatus == 1 ? "confirmed" : "draft")</td>
+                    <td>@item.TotalItem</td>
+                    <td>@item.TotalQty</td>
+                    <td class="text-center">
+
+                        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="/Order/Form/@item.IdSeq" class="dropdown-item">
+                                    <i class="bi bi-pencil-square"></i> Edit
+                                </a>
+                            </li>
+
+                            @if (@item.McEasyOrderId != null && @item.OrderStatus != 1)
+                            {
+                                <li>
+                                    <a href="#" class="dropdown-item" onclick="confirmOrder(`@item.McEasyOrderId`)">
+                                        <i class="bi bi-check-square"></i> Confirm
+                                    </a>
+                                </li>
+                            }
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="#" class="dropdown-item" onclick="confirmDelete(@item.IdSeq)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </li>
+                        </ul>
+
+
+
+                    </td>
+                </tr>
+                i++;
+            }
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        // Array untuk menyimpan selected order IDs (persistent across pages)
+        let selectedOrders = new Set();
+        let dataTable;
+
+        function confirmDelete(id) {
+            if (confirm('Are you sure you want to delete this order?')) {
+                fetch(`/Order/Delete/${id}`, {
+                    method: 'POST'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Delete failed.');
+                    }
+                });
+            }
+        }
+
+        function confirmOrder(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Do you want to confirm this order?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, confirm it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoading();
+                    const url = `/Order/Confirm/${id}`;
+                    fetch(url, { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                hideLoading();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Confirmed!',
+                                    text: 'The order has been confirmed.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                hideLoading();
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Failed',
+                                    text: data.message || 'Confirm failed.'
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            hideLoading();
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Something went wrong while confirming.'
+                            });
+                        });
+                }
+            });
+        }
+
+        function updateSelectedCount() {
+            const count = selectedOrders.size;
+            $('#selectedCount').text(count);
+            $('#btnBulkConfirm').toggle(count > 0);
+        }
+
+        function syncCheckboxes() {
+            // Sync checkboxes dengan selectedOrders setelah paging/draw
+            $('.order-checkbox').each(function() {
+                const orderId = $(this).data('order-id');
+                $(this).prop('checked', selectedOrders.has(orderId));
+            });
+
+            // Update "check all" status
+            updateCheckAllStatus();
+        }
+
+        function updateCheckAllStatus() {
+            const visibleCheckboxes = $('.order-checkbox:visible');
+            const checkedVisible = visibleCheckboxes.filter(':checked').length;
+
+            if (visibleCheckboxes.length === 0) {
+                $('#checkAll').prop('checked', false).prop('indeterminate', false);
+            } else if (checkedVisible === 0) {
+                $('#checkAll').prop('checked', false).prop('indeterminate', false);
+            } else if (checkedVisible === visibleCheckboxes.length) {
+                $('#checkAll').prop('checked', true).prop('indeterminate', false);
+            } else {
+                $('#checkAll').prop('checked', false).prop('indeterminate', true);
+            }
+        }
+
+        function bulkConfirmOrders() {
+            if (selectedOrders.size === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Selection',
+                    text: 'Please select at least one order to confirm.'
+                });
+                return;
+            }
+
+            const orderIds = Array.from(selectedOrders);
+
+            Swal.fire({
+                title: 'Confirm Multiple Orders?',
+                text: `You are about to confirm ${orderIds.length} order(s). Continue?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, confirm all!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoading();
+
+                    // Bulk confirm API call
+                    fetch('/Order/BulkConfirm', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ orderIds: orderIds })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            selectedOrders.clear();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: data.message || `${orderIds.length} order(s) confirmed successfully.`,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Failed',
+                                text: data.message || 'Bulk confirm failed.'
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        hideLoading();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Something went wrong during bulk confirmation.'
+                        });
+                    });
+                }
+            });
+        }
+
+        $(document).ready(() => {
+            dataTable = $('#tableOrder').DataTable({
+                language: {
+                    emptyTable: "No orders available"
+                },
+                ordering: false, // matiin semua fitur sorting
+                drawCallback: function() {
+                    // Sync checkboxes setiap kali table di-draw (paging, filter, dll)
+                    syncCheckboxes();
+                }
+            });
+
+            // Check All handler
+            $('#checkAll').on('change', function() {
+                const isChecked = $(this).prop('checked');
+                $('.order-checkbox:visible').each(function() {
+                    const orderId = $(this).data('order-id');
+                    $(this).prop('checked', isChecked);
+
+                    if (isChecked) {
+                        selectedOrders.add(orderId);
+                    } else {
+                        selectedOrders.delete(orderId);
+                    }
+                });
+                updateSelectedCount();
+            });
+
+            // Individual checkbox handler
+            $(document).on('change', '.order-checkbox', function() {
+                const orderId = $(this).data('order-id');
+
+                if ($(this).prop('checked')) {
+                    selectedOrders.add(orderId);
+                } else {
+                    selectedOrders.delete(orderId);
+                }
+
+                updateSelectedCount();
+                updateCheckAllStatus();
+            });
+
+            // Bulk confirm button handler
+            $('#btnBulkConfirm').on('click', bulkConfirmOrders);
+
+            // Initial sync
+            syncCheckboxes();
         });
     </script>
 }

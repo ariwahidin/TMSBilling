@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using TMSBilling.Data;
 using TMSBilling.Models;
 using TMSBilling.Models.McEasyApiModel;
 using TMSBilling.Services;
@@ -14,24 +15,25 @@ public class ProductController : Controller
     private readonly HttpClient _httpClient;
     private readonly ApiSettings _apiSettings;
     private readonly ApiService _apiService;
+    private readonly AppDbContext _context;
 
-    public ProductController(HttpClient httpClient, IOptions<ApiSettings> apiSettings, ApiService apiService)
+    public ProductController(AppDbContext context, HttpClient httpClient, IOptions<ApiSettings> apiSettings, ApiService apiService)
     {
+        _context = context;
         _httpClient = httpClient;
         _apiSettings = apiSettings.Value;
         _apiService = apiService;
     }
 
     [ActionName("Index")]
-    public async Task<IActionResult> Index(string search = "", int page = 1, int limit = 10)
+    public async Task<IActionResult> Index(string search = "", int page = 1, int limit = 1000)
     {
         bool ok;
         JsonElement json = default;
 
         (ok, json) = await _apiService.SendRequestAsync(
             HttpMethod.Get,
-            $"order/api/web/v1/product?limit={limit}&page={page}&search={search}",
-            new { }
+            $"order/api/web/v1/product?limit={limit}&page={page}"
         );
 
         if (!ok)
@@ -48,6 +50,34 @@ public class ProductController : Controller
         .GetProperty("data")
         .GetProperty("paginated_result")
         .Deserialize<List<Product>>() ?? new List<Product>();
+
+        //Console.WriteLine("Product", products);
+
+        foreach (var p in products)
+        {
+            var existProduct = _context.Products.FirstOrDefault(o => o.ProductID == p.id);
+
+            if (existProduct == null) {
+                var newProduct = new ProductTable();
+                newProduct.ProductID = p.id;
+                newProduct.ProductTypeID = p.product_type?.id.ToString();
+                newProduct.ProductTypeName = p.product_type?.name;
+                newProduct.ProductCategoryID = p.product_type?.product_category?.id?.ToString();
+                newProduct.ProductCategoryName = p.product_type?.product_category?.name?.ToString();
+                newProduct.Name = p.name?.ToString();
+                newProduct.Sku = p.sku?.ToString();
+                newProduct.Description = p.description?.ToString();
+                newProduct.Uom = p.uom?.ToString();
+                newProduct.Weight = p.weight;
+                newProduct.Volume = p.volume;
+                newProduct.Price = p.price;
+                newProduct.CreatedAt = DateTime.Now;
+
+                _context.Products.Add(newProduct);
+                _context.SaveChanges();
+            }
+        }
+
 
         return View(products);
     }

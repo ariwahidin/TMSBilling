@@ -59,6 +59,10 @@ namespace TMSBilling.Data
 
         public DbSet<Config> Configs { get; set; }
 
+        public DbSet<ProductTable> Products { get; set; }
+
+        public DbSet<GeofenceTable> Geofences { get; set; }
+
 
         public DbSet<OrderSummaryViewModel> OrderSummaryView { get; set; }
         public DbSet<JobSummaryViewModel> JobSummaryView { get; set; }

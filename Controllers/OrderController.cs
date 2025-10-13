@@ -1,10 +1,13 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Office.CoverPageProps;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -14,6 +17,7 @@ using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
 using TMSBilling.Services;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TMSBilling.Controllers
 {
@@ -120,16 +124,13 @@ namespace TMSBilling.Controllers
             }
 
             var header = model.Header;
-            //var details = model.Details;
-
-            // ==== Validasi ke master ====
             var errors = new List<string>();
 
             if (!_context.Warehouses.Any(w => w.wh_code == header.wh_code))
                 errors.Add($"Warehouse '{header.wh_code}' not found");
 
-            if (!_context.Consignees.Any(c => c.CNEE_CODE == header.cnee_code))
-                errors.Add($"Consignee '{header.cnee_code}' not found");
+            //if (!_context.Consignees.Any(c => c.CNEE_CODE == header.cnee_code))
+            //    errors.Add($"Consignee '{header.cnee_code}' not found");
 
             if (!_context.Origins.Any(l => l.origin_code == header.origin_id))
                 errors.Add($"Origin '{header.origin_id}' not found");
@@ -158,12 +159,8 @@ namespace TMSBilling.Controllers
                     message = $"Customer Group '{header.sub_custid}' tidak memiliki MCEASY_CUST_ID yang valid."
                 });
             }
-
-            //var deliveryDateTime = header.delivery_date?.ToString("yyyy-MM-ddTHH:mm:sszzz");
             var deliveryDateTime = header.delivery_date.HasValue ? header.delivery_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
             var pickupDateTime = header.pickup_date.HasValue ? header.pickup_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
-
-
             var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
 
             if (customer == null)
@@ -171,73 +168,11 @@ namespace TMSBilling.Controllers
                   return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
             }
 
-            //if (customer.API_FLAG == 1) {
-            //    var payload = new
-            //    {
-            //        customer_id = customerGroup.MCEASY_CUST_ID,
-            //        billed_customer_id = customerGroup.MCEASY_CUST_ID,
-            //        origin_address_id = header.mceasy_origin_address_id,
-            //        destination_address_id = header.mceasy_destination_address_id,
-            //        expected_pickup_on = pickupDateTime,
-            //        expected_delivered_on = deliveryDateTime,
-            //        shipment_number = header.inv_no
-            //    };
-
-            //    if (header.id_seq == 0) {
-
-
-            //        var (ok, json) = await _apiService.SendRequestAsync(
-            //                HttpMethod.Post,
-            //                "order/api/web/v1/delivery-order",
-            //                payload
-            //        );
-
-
-            //        if (!ok)
-            //        {
-            //            return BadRequest(new
-            //            {
-            //                success = false,
-            //                message = "Gagal kirim ke API Store Order",
-            //                detail = json
-            //            });
-            //        }
-
-
-            //    } else {
-
-            //        var (ok, json) = await _apiService.SendRequestAsync(
-            //               HttpMethod.Patch,
-            //               $"order/api/web/v1/delivery-order/{header.mceasy_order_id}",
-            //               payload
-            //       );
-
-
-            //        if (!ok)
-            //        {
-            //            return BadRequest(new
-            //            {
-            //                success = false,
-            //                message = "Gagal kirim ke API Store Order",
-            //                detail = json
-            //            });
-            //        }
-
-            //    }
-
-
-
-
-            //    var order_id = json.GetProperty("data").GetProperty("id").GetString();
-            //    var do_number = json.GetProperty("data").GetProperty("number").GetString();
-            //    header.mceasy_order_id = order_id;
-            //    header.mceasy_do_number = do_number;
-            //}
-
             if (customer.API_FLAG == 1)
             {
                 var payload = new
                 {
+
                     customer_id = customerGroup.MCEASY_CUST_ID,
                     billed_customer_id = customerGroup.MCEASY_CUST_ID,
                     origin_address_id = header.mceasy_origin_address_id,
@@ -300,6 +235,7 @@ namespace TMSBilling.Controllers
                 {
 
                     // INSERT
+                    header.cnee_code = header.mceasy_dest_name;
                     header.mceasy_origin_address_id = header.mceasy_origin_address_id;
                     header.mceasy_destination_address_id = header.mceasy_destination_address_id;
                     header.mceasy_origin_name = header.mceasy_origin_name;
@@ -318,7 +254,7 @@ namespace TMSBilling.Controllers
 
                     existingHeader.wh_code = header.wh_code;
                     existingHeader.sub_custid = header.sub_custid;
-                    existingHeader.cnee_code = header.cnee_code;
+                    existingHeader.cnee_code = header.mceasy_dest_name;
                     existingHeader.inv_no = header.inv_no;
                     existingHeader.delivery_date = header.delivery_date;
                     existingHeader.pickup_date = header.pickup_date;
@@ -352,77 +288,6 @@ namespace TMSBilling.Controllers
         }
 
 
-        [HttpPost]
-        public async Task<IActionResult> Confirm(Guid? id)
-        {
-            if (id == null)
-                return BadRequest("ID tidak valid");
-            var order = _context.Orders.FirstOrDefault(o => o.mceasy_order_id == id.ToString());
-
-            if (order == null)
-                return NotFound("Data tidak ditemukan");
-            if (order.order_status != 0)
-                return BadRequest("Order sudah dikonfirmasi atau diproses lebih lanjut.");
-
-            // set header Authorization dulu
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
-
-            var payload = new
-            {
-                status = "CONFIRMED"
-            };
-
-            var options = new JsonSerializerOptions
-            {
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-
-            var jsonPayload = JsonSerializer.Serialize(payload, options);
-            var jsonContent = new StringContent(
-                jsonPayload,
-                Encoding.UTF8,
-                "application/json"
-            );
-
-            Console.WriteLine("=== JSON PAYLOAD ===");
-            Console.WriteLine(jsonPayload);
-            Console.WriteLine("=== HEADERS ===");
-            Console.WriteLine($"Authorization: {_httpClient.DefaultRequestHeaders.Authorization}");
-            Console.WriteLine($"Content-Type: application/json");
-            Console.WriteLine("=====================");
-
-            var response = await _httpClient.PostAsync(
-                $"{_apiSettings.BaseUrl}/order/api/web/v1/delivery-order/{id}/transition",
-                jsonContent
-            );
-
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorJson = JObject.Parse(responseText);
-                // Ambil 1 pesan error pertama
-                var firstError = errorJson["errors_v2"]?["issues"]?
-                                    .FirstOrDefault()?["message"]?.ToString();
-
-
-                return BadRequest(new
-                {
-                    success = false,
-                    message = firstError ?? "Gagal kirim API",
-                    detail = responseText
-                });
-            }
-            order.mceasy_status = payload.status;
-            order.order_status = 1; // misal 1 = confirmed
-            order.update_date = DateTime.Now;
-            order.update_user = HttpContext.Session.GetString("username") ?? "System";
-            _context.Orders.Update(order);
-            _context.SaveChanges();
-            return Ok(new { success = true, message = "Order berhasil dikonfirmasi." });
-        }
-
         [HttpGet]
         public IActionResult DownloadSample()
         {
@@ -430,78 +295,98 @@ namespace TMSBilling.Controllers
 
             // HEADER
             var headerSheet = workbook.Worksheets.Add("Header");
-            headerSheet.Cell("A1").Value = "wh_code";
-            headerSheet.Cell("B1").Value = "sub_custid";
-            headerSheet.Cell("C1").Value = "cnee_code";
-            headerSheet.Cell("D1").Value = "inv_no";
-            headerSheet.Cell("E1").Value = "delivery_date";
-            headerSheet.Cell("F1").Value = "origin_id";
-            headerSheet.Cell("G1").Value = "dest_area";
-            headerSheet.Cell("H1").Value = "tot_pkgs";
-            headerSheet.Cell("I1").Value = "uom";
-            headerSheet.Cell("J1").Value = "pallet_consume";
-            headerSheet.Cell("K1").Value = "pallet_delivery";
-            headerSheet.Cell("L1").Value = "si_no";
-            headerSheet.Cell("M1").Value = "do_rcv_date";
-            headerSheet.Cell("N1").Value = "do_rcv_time";
-            headerSheet.Cell("O1").Value = "moda_req";
-            headerSheet.Cell("P1").Value = "serv_req";
-            headerSheet.Cell("Q1").Value = "truck_size";
-            headerSheet.Cell("R1").Value = "remark";
+            headerSheet.Cell("A1").Value = "ID*";
+            headerSheet.Cell("B1").Value = "Nama Pelanggan*";
+            headerSheet.Cell("C1").Value = "Karyawan Pemasaran";
+            headerSheet.Cell("D1").Value = "Target Diambil";
+            headerSheet.Cell("E1").Value = "Target Dikirim";
+            headerSheet.Cell("F1").Value = "No. AJU";
+            headerSheet.Cell("G1").Value = "No. Shipment*";
+            headerSheet.Cell("H1").Value = "No. Referensi";
+            headerSheet.Cell("I1").Value = "Catatan Lainya";
+            headerSheet.Cell("J1").Value = "Alamat Asal";
+            headerSheet.Cell("K1").Value = "Alamat Tujuan";
+            headerSheet.Cell("L1").Value = "Truck Size";
+            headerSheet.Cell("M1").Value = "Service Type";
+            headerSheet.Cell("N1").Value = "Moda";
+            headerSheet.Cell("O1").Value = "UOM";
+            headerSheet.Cell("P1").Value = "Whs Code";
+            headerSheet.Cell("Q1").Value = "Rcv DO Date";
+            headerSheet.Cell("R1").Value = "Rcv DO Time";
+            headerSheet.Cell("S1").Value = "Origin Area";
+            headerSheet.Cell("T1").Value = "Destination Area";
 
-            headerSheet.Cell("A2").Value = "NWW1-NRML";
-            headerSheet.Cell("B2").Value = "SUT001";
-            headerSheet.Cell("C2").Value = "CONS11";
-            headerSheet.Cell("D2").Value = "INV001";
-            headerSheet.Cell("E2").Value = DateTime.Today;
-            headerSheet.Cell("F2").Value = "Cikarang";
-            headerSheet.Cell("G2").Value = "Bandung";
-            headerSheet.Cell("H2").Value = 10;
-            headerSheet.Cell("I2").Value = "KG";
-            headerSheet.Cell("J2").Value = "2";
-            headerSheet.Cell("K2").Value = "5";
-            headerSheet.Cell("L2").Value = "SI001";
-            headerSheet.Cell("M2").Value = DateTime.Today;
-            headerSheet.Cell("N2").Value = DateTime.Now.ToString("HH:mm");
-            headerSheet.Cell("O2").Value = "LAND";
-            headerSheet.Cell("P2").Value = "FTL";
-            headerSheet.Cell("Q2").Value = "1T";
-            headerSheet.Cell("R2").Value = "";
+            // Format header (bold + background biru muda)
+            var headerRange = headerSheet.Range("A1:T1");
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightBlue;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            headerSheet.Columns().AdjustToContents();
+
+            // SAMPLE DATA
+            headerSheet.Cell("A2").Value = "IBM00011";
+            headerSheet.Cell("B2").Value = "RBID-API";
+            headerSheet.Cell("C2").Value = "-";
+            headerSheet.Cell("D2").Value = DateTime.Now.AddDays(1);
+            headerSheet.Cell("E2").Value = DateTime.Now.AddDays(1);
+            headerSheet.Cell("F2").Value = "-";
+            headerSheet.Cell("G2").Value = "IBM00011";
+            headerSheet.Cell("H2").Value = "-";
+            headerSheet.Cell("I2").Value = "-";
+            headerSheet.Cell("J2").Value = "RBID Nagrak";
+            headerSheet.Cell("K2").Value = "RBID Makasar";
+            headerSheet.Cell("L2").Value = "NON-SIZE";
+            headerSheet.Cell("M2").Value = "LTL";
+            headerSheet.Cell("N2").Value = "LAND";
+            headerSheet.Cell("O2").Value = "CBM";
+            headerSheet.Cell("P2").Value = "NWW1-NRML";
+            headerSheet.Cell("Q2").Value = DateTime.Now;
+            headerSheet.Cell("R2").Value = DateTime.Now.ToString("HH:mm:ss");
+            headerSheet.Cell("S2").Value = "JAKARTA";
+            headerSheet.Cell("T2").Value = "MAKASSAR";
 
             // DETAIL
             var detailSheet = workbook.Worksheets.Add("Details");
-            detailSheet.Cell("A1").Value = "inv_no";
-            detailSheet.Cell("B1").Value = "item_name";
-            detailSheet.Cell("C1").Value = "item_category";
-            detailSheet.Cell("D1").Value = "item_length";
-            detailSheet.Cell("E1").Value = "item_width";
-            detailSheet.Cell("F1").Value = "item_height";
-            detailSheet.Cell("G1").Value = "item_weight";
-            detailSheet.Cell("H1").Value = "pkg_unit";
-            detailSheet.Cell("I1").Value = "pack_unit";
-            detailSheet.Cell("J1").Value = "pallet_qty";
-            detailSheet.Cell("K1").Value = "koli_qty";
-            detailSheet.Cell("L1").Value = "full_addres";
+            detailSheet.Cell("A1").Value = "ID*";
+            detailSheet.Cell("B1").Value = "Nama Produk*";
+            detailSheet.Cell("C1").Value = "Kuantitas*";
+            detailSheet.Cell("D1").Value = "Satuan Kuantitas*";
+            detailSheet.Cell("E1").Value = "Catatan";
+            detailSheet.Cell("F1").Value = "Panjang";
+            detailSheet.Cell("G1").Value = "Lebar";
+            detailSheet.Cell("H1").Value = "Tinggi";
+            detailSheet.Cell("I1").Value = "Berat";
 
+            // Format header details
+            var detailHeader = detailSheet.Range("A1:I1");
+            detailHeader.Style.Font.Bold = true;
+            detailHeader.Style.Fill.BackgroundColor = XLColor.LightGreen;
+            detailHeader.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            detailHeader.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            detailHeader.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
-            detailSheet.Cell("A2").Value = "INV001";
-            detailSheet.Cell("B2").Value = "ITM001";
-            detailSheet.Cell("C2").Value = "BOOK";
-            detailSheet.Cell("D2").Value = 4;
-            detailSheet.Cell("E2").Value = 5;
-            detailSheet.Cell("F2").Value = 6;
-            detailSheet.Cell("G2").Value = 7;
-            detailSheet.Cell("H2").Value = "PCS";
-            detailSheet.Cell("I2").Value = "BOX";
-            detailSheet.Cell("J2").Value = 2;
-            detailSheet.Cell("K2").Value = 1;
-            detailSheet.Cell("L2").Value = "CAKUNG CILINCING, JAKARTA UTARA";
+            detailSheet.Columns().AdjustToContents();
+
+            // SAMPLE DETAIL DATA
+            detailSheet.Cell("A2").Value = "IBM00011";
+            detailSheet.Cell("B2").Value = "Box 1";
+            detailSheet.Cell("C2").Value = 7;
+            detailSheet.Cell("D2").Value = "PCS";
+            detailSheet.Cell("E2").Value = "-";
+            detailSheet.Cell("F2").Value = 13;
+            detailSheet.Cell("G2").Value = 4;
+            detailSheet.Cell("H2").Value = 17;
+            detailSheet.Cell("I2").Value = 0.5;
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             var content = stream.ToArray();
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "sample_import_order.xlsx");
         }
+
 
 
         [HttpPost]
@@ -523,9 +408,8 @@ namespace TMSBilling.Controllers
             int row = 2;
             while (!headerSheet.Cell(row, 1).IsEmpty())
             {
-                string invoice_no = headerSheet.Cell(row, 4).GetString();
+                string invoice_no = headerSheet.Cell(row, 7).GetString();
 
-                // === Kombinasi 7 kolom unik ===
                 string uniqueKey = string.Join("|", Enumerable.Range(1, 7).Select(c => headerSheet.Cell(row, c).GetString()));
                 if (!uniqueKeys.Add(uniqueKey))
                 {
@@ -536,44 +420,60 @@ namespace TMSBilling.Controllers
 
                 try
                 {
-                    string whCode = headerSheet.Cell(row, 1).GetString();
+                    string whCode = headerSheet.Cell(row, 16).GetString();
                     string subCustId = headerSheet.Cell(row, 2).GetString();
-                    string cneeCode = headerSheet.Cell(row, 3).GetString();
-                    string originId = headerSheet.Cell(row, 6).GetString();
+                    string cneeCode = headerSheet.Cell(row, 11).GetString();
+                    string originId = headerSheet.Cell(row, 19).GetString();
+                    string originName = headerSheet.Cell(row, 10).GetString();
+                    string destName = headerSheet.Cell(row, 11).GetString();
 
                     // === Validasi ke master table (ganti sesuai tabel kamu)
                     if (!_context.Warehouses.Any(w => w.wh_code == whCode))
                         errors.Add(new { row, section = "header", field = "wh_code", message = $"Warehouse '{whCode}' tidak ditemukan" });
 
-                    if (!_context.Customers.Any(s => s.CUST_CODE == subCustId))
-                        errors.Add(new { row, section = "header", field = "sub_custid", message = $"SubCustomer '{subCustId}' tidak ditemukan" });
+                    if (!_context.Geofences.Any(s => s.CustomerName == subCustId))
+                        errors.Add(new { row, section = "header", field = "sub_custid", message = $"Customer '{subCustId}' tidak ditemukan" });
 
-                    if (!_context.Consignees.Any(c => c.CNEE_CODE == cneeCode))
+                    if (!_context.Geofences.Any(c => c.FenceName == cneeCode))
                         errors.Add(new { row, section = "header", field = "cnee_code", message = $"Consignee '{cneeCode}' tidak ditemukan" });
 
                     if (!_context.Origins.Any(l => l.origin_code == originId))
                         errors.Add(new { row, section = "header", field = "origin_id", message = $"Origin '{originId}' tidak ditemukan" });
 
+                    var origin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName);
+
+                    if (origin == null) {
+                        errors.Add(new { row, section = "header", field = "Alamat asal : ", message = $"'{originName}' tidak ditemukan" });
+                    }
+
+                    var destination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName);
+
+                    if (destination == null)
+                    {
+                        errors.Add(new { row, section = "header", field = "Alamat tujuan : ", message = $"'{destName}' tidak ditemukan" });
+                    }
+
                     header = new Order
                     {
+                        inv_no = invoice_no,
                         wh_code = whCode,
                         sub_custid = subCustId,
                         cnee_code = cneeCode,
-                        inv_no = invoice_no,
                         delivery_date = DateTime.TryParse(headerSheet.Cell(row, 5).GetString(), out var dateVal) ? dateVal : (DateTime?)null,
-                        origin_id = originId,
-                        dest_area = headerSheet.Cell(row, 7).GetString(),
-                        tot_pkgs = decimal.TryParse(headerSheet.Cell(row, 8).GetValue<string>(), out var tot) ? tot : null,
-                        uom = headerSheet.Cell(row, 9).GetString(),
-                        pallet_consume = long.TryParse(headerSheet.Cell(row, 10).GetValue<string>(), out var pc) ? (int?)pc : null,
-                        pallet_delivery = long.TryParse(headerSheet.Cell(row, 11).GetValue<string>(), out var pd) ? (int?)pd : null,
-                        si_no = headerSheet.Cell(row, 12).GetString(),
-                        do_rcv_date = DateTime.TryParse(headerSheet.Cell(row, 13).GetString(), out var drd) ? drd : (DateTime?)null,
-                        do_rcv_time = headerSheet.Cell(row, 14).GetString(),
-                        moda_req = headerSheet.Cell(row, 15).GetString(),
-                        serv_req = headerSheet.Cell(row, 16).GetString(),
-                        truck_size = headerSheet.Cell(row, 17).GetString(),
-                        remark = headerSheet.Cell(row, 18).GetString()
+                        pickup_date = DateTime.TryParse(headerSheet.Cell(row, 4).GetString(), out var dateVa) ? dateVa : (DateTime?)null,
+                        origin_id = headerSheet.Cell(row, 19).GetString(),
+                        dest_area = headerSheet.Cell(row, 20).GetString(),
+                        uom = headerSheet.Cell(row, 15).GetString(),
+                        do_rcv_date = DateTime.TryParse(headerSheet.Cell(row, 17).GetString(), out var drd) ? drd : (DateTime?)null,
+                        do_rcv_time = headerSheet.Cell(row, 18).GetString(),
+                        moda_req = headerSheet.Cell(row, 14).GetString(),
+                        serv_req = headerSheet.Cell(row, 13).GetString(),
+                        truck_size = headerSheet.Cell(row, 12).GetString(),
+                        remark = headerSheet.Cell(row, 9).GetString(),
+                        mceasy_origin_address_id = origin?.GeofenceId,
+                        mceasy_destination_address_id = destination?.GeofenceId,
+                        mceasy_origin_name = headerSheet.Cell(row,10).GetString(),
+                        mceasy_dest_name = headerSheet.Cell(row, 11).GetString(),
                     };
                 }
                 catch (Exception ex)
@@ -592,25 +492,30 @@ namespace TMSBilling.Controllers
                         try
                         {
                             string itemName = detailSheet.Cell(drow, 2).GetString();
-                            //if (!_context.ChargeUoms.Any(i => i.charge_name == ))
-                            //{
-                            //    errors.Add(new { row = drow, section = "detail", field = "item_name", message = $"Item '{itemName}' tidak ditemukan di master" });
-                            //}
+                            var product = _context.Products.FirstOrDefault(i => i.Name == itemName);
+
+                            if (product == null)
+                            {
+                                errors.Add(new { row = drow, section = "detail", field = "item_name", message = $"Item '{itemName}' tidak ditemukan di master" });
+                            }
 
                             details.Add(new OrderDetail
                             {
                                 inv_no = invNoDetail,
                                 item_name = itemName,
-                                item_category = detailSheet.Cell(drow, 3).GetString(),
-                                item_length = long.TryParse(detailSheet.Cell(drow, 4).GetValue<string>(), out var l) ? (int?)l : null,
-                                item_width = long.TryParse(detailSheet.Cell(drow, 5).GetValue<string>(), out var w) ? (int?)w : null,
-                                item_height = long.TryParse(detailSheet.Cell(drow, 6).GetValue<string>(), out var h) ? (int?)h : null,
-                                item_wgt = long.TryParse(detailSheet.Cell(drow, 7).GetValue<string>(), out var wg) ? (int?)wg : null,
-                                pkg_unit = detailSheet.Cell(drow, 8).GetString(),
-                                pack_unit = detailSheet.Cell(drow, 9).GetString(),
-                                pallet_qty = long.TryParse(detailSheet.Cell(drow, 10).GetValue<string>(), out var pq) ? (int?)pq : null,
-                                koli_qty = long.TryParse(detailSheet.Cell(drow, 11).GetValue<string>(), out var kq) ? (int?)kq : null,
-                                full_addres = detailSheet.Cell(drow, 12).GetString()
+                                item_category = product?.ProductCategoryName,
+                                mceasy_product_id = product?.ProductID,
+                                item_length = long.TryParse(detailSheet.Cell(drow, 6).GetValue<string>(), out var l) ? (int?)l : null,
+                                item_width = long.TryParse(detailSheet.Cell(drow, 7).GetValue<string>(), out var w) ? (int?)w : null,
+                                item_height = long.TryParse(detailSheet.Cell(drow, 8).GetValue<string>(), out var h) ? (int?)h : null,
+                                item_wgt = decimal.TryParse(detailSheet.Cell(drow, 9).GetValue<string>(),
+                                                            System.Globalization.NumberStyles.Any,
+                                                            System.Globalization.CultureInfo.InvariantCulture,
+                                                            out var wg)
+                                            ? (decimal?)wg
+                                            : null,
+                                item_qty = long.TryParse(detailSheet.Cell(drow, 3).GetValue<string>(), out var iq) ? (int?)iq : null,
+                                pkg_unit = detailSheet.Cell(drow, 4).GetString(),
                             });
                         }
                         catch (Exception ex)
@@ -641,7 +546,7 @@ namespace TMSBilling.Controllers
 
 
         [HttpPost]
-        public IActionResult SaveExcel([FromBody] List<OrderViewModel> data)
+        public async Task<IActionResult> SaveExcel([FromBody] List<OrderViewModel> data)
         {
             if (data == null || data.Count == 0)
                 return BadRequest(new { success = false, message = "Data tidak ditemukan." });
@@ -654,26 +559,228 @@ namespace TMSBilling.Controllers
                 if (header == null || details == null)
                     continue;
 
-                // Simpan Header
-                header.order_status = 0;
-                header.entry_user = HttpContext.Session.GetString("username") ?? "System";
-                header.entry_date = DateTime.Now;
-                _context.Orders.Add(header);
-                _context.SaveChanges(); // Supaya header.id_seq terisi otomatis
 
-                // Set id_seq_order pada detail dan simpan
-                foreach (var detail in details)
+                var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == header.sub_custid);
+                if (customerGroup == null || string.IsNullOrEmpty(customerGroup.MCEASY_CUST_ID))
                 {
-                    detail.id_seq_order = header.id_seq;
-                    detail.entry_user = header.entry_user;
-                    detail.entry_date = DateTime.Now;
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Customer Group '{header.sub_custid}' tidak memiliki MCEASY_CUST_ID yang valid."
+                    });
+                }
+                var deliveryDateTime = header.delivery_date.HasValue ? header.delivery_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
+                var pickupDateTime = header.delivery_date.HasValue ? header?.pickup_date?.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
+                var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+                if (customer == null)
+                {
+                    return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
                 }
 
-                _context.OrderDetails.AddRange(details);
-                _context.SaveChanges();
+                
+
+                if (customer.API_FLAG == 1)
+                {
+
+                    if (header == null) {
+                        return NotFound(new { success = false, message = $"Header tidak ditemukan." });
+                    }
+
+                    var origin = _context.Geofences.FirstOrDefault(o => o.FenceName == header.mceasy_origin_name);
+                    if (origin == null)
+                    {
+                        return NotFound(new { success = false, message = $"Origin '{header.mceasy_origin_name}' tidak ditemukan." });
+                    }
+
+                    var dest = _context.Geofences.FirstOrDefault(d => d.FenceName == header.mceasy_dest_name);
+                    if (dest == null)
+                    {
+                        return NotFound(new { success = false, message = $"Destination '{header.mceasy_dest_name}' tidak ditemukan." });
+                    }
+
+                    var payload = new
+                    {
+                        customer_id = customerGroup.MCEASY_CUST_ID,
+                        billed_customer_id = customerGroup.MCEASY_CUST_ID,
+                        origin_address_id = origin.GeofenceId,
+                        destination_address_id = dest.GeofenceId,
+                        expected_pickup_on = pickupDateTime,
+                        expected_delivered_on = deliveryDateTime,
+                        shipment_number = header.inv_no
+                    };
+
+                    bool ok;
+                    JsonElement json = default;
+
+                    (ok, json) = await _apiService.SendRequestAsync(
+                        HttpMethod.Post,
+                        "order/api/web/v1/delivery-order",
+                        payload
+                    );
+
+                    if (!ok)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "Failed Add Order to API",
+                            detail = json
+                        });
+                    }
+
+                    // Simpan Header
+                    header.mceasy_order_id = json.GetProperty("data").GetProperty("id").GetString();
+                    header.mceasy_do_number = json.GetProperty("data").GetProperty("number").GetString();
+                    header.order_status = 0;
+                    header.entry_user = HttpContext.Session.GetString("username") ?? "System";
+                    header.entry_date = DateTime.Now;
+                    _context.Orders.Add(header);
+                    _context.SaveChanges();
+
+
+                    
+
+
+
+                    // Set id_seq_order pada detail dan simpan
+                    foreach (var detail in details)
+                    {
+
+                        bool okDetail;
+                        JsonElement jsonDetail = default;
+
+                        if (detail == null) {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Failed validasi detail",
+                            });
+                        }
+
+                        string itemName = detail.item_name ?? "" ;
+                        var product = _context.Products.FirstOrDefault(i => i.Name == itemName);
+
+                        if (product == null)
+                        {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Item name not valid",
+                            });
+                        }
+
+                        var payloadDetail = new
+                        {
+                            product_id = product.ProductID,
+                            quantity = detail.item_qty,
+                            uom = product.Sku,
+                            note = "",
+                        };
+
+                        (okDetail, jsonDetail) = await _apiService.SendRequestAsync(
+                            HttpMethod.Post,
+                            "order/api/web/v1/delivery-order/" + header.mceasy_order_id + "/load",
+                            payloadDetail
+                        );
+                        if (!okDetail)
+                        {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Failed Add Order to API",
+                                detail = json
+                            });
+                        }
+
+                        detail.mceasy_order_id = header.mceasy_order_id;
+                        detail.mceasy_order_dtl_id = jsonDetail.GetProperty("data").GetProperty("id").GetString();
+                        detail.mceasy_product_id = product.ProductID;
+                        detail.id_seq_order = header.id_seq;
+                        detail.wh_code = header.wh_code;
+                        detail.sub_custid = header.sub_custid;
+                        detail.cnee_code = header.cnee_code;
+                        detail.delivery_date = header.delivery_date;
+                        detail.item_qty = detail.item_qty;
+                        detail.entry_user = header.entry_user;
+                        detail.entry_date = DateTime.Now;
+                    }
+                    _context.OrderDetails.AddRange(details);
+                    _context.SaveChanges();
+
+
+                }
+                else {
+
+                    if (header == null)
+                    {
+                        return NotFound(new { success = false, message = $"Header tidak ditemukan." });
+                    }
+
+                    // Simpan Header
+                    header.order_status = 0;
+                    header.entry_user = HttpContext.Session.GetString("username") ?? "System";
+                    header.entry_date = DateTime.Now;
+                    _context.Orders.Add(header);
+                    _context.SaveChanges();
+
+
+                    foreach (var detail in details)
+                    {
+                        detail.id_seq_order = header.id_seq;
+                        detail.wh_code = header.wh_code;
+                        detail.sub_custid = header.sub_custid;
+                        detail.cnee_code = header.cnee_code;
+                        detail.delivery_date = header.delivery_date;
+                        detail.item_qty = detail.item_qty;
+                        detail.entry_user = header.entry_user;
+                        detail.entry_date = DateTime.Now;
+                    }
+                    _context.OrderDetails.AddRange(details);
+                    _context.SaveChanges();
+
+
+                }
             }
 
-            return Ok(new { success = true, message = "Data berhasil disimpan." });
+
+
+            //foreach (var item in data)
+            //{
+            //    var header = item.Header;
+            //    var details = item.Details;
+
+            //    if (header == null || details == null)
+            //        continue;
+
+            //    // Simpan Header
+            //    header.order_status = 0;
+            //    header.entry_user = HttpContext.Session.GetString("username") ?? "System";
+            //    header.entry_date = DateTime.Now;
+            //    _context.Orders.Add(header);
+            //    _context.SaveChanges(); // Supaya header.id_seq terisi otomatis
+
+            //    // Set id_seq_order pada detail dan simpan
+            //    foreach (var detail in details)
+            //    {
+            //        detail.id_seq_order = header.id_seq;
+            //        detail.wh_code = header.wh_code;
+            //        detail.sub_custid = header.sub_custid;
+            //        detail.cnee_code = header.cnee_code;
+            //        detail.delivery_date = header.delivery_date;
+            //        detail.item_qty = detail.item_qty;
+            //        detail.entry_user = header.entry_user;
+            //        detail.entry_date = DateTime.Now;
+            //    }
+
+            //    _context.OrderDetails.AddRange(details);
+            //    _context.SaveChanges();
+            //}
+
+
+
+
+            return Ok(new { success = true, message = "Data submited successfully." });
         }
 
 
@@ -729,9 +836,6 @@ namespace TMSBilling.Controllers
         [HttpPost]
         public async Task<IActionResult> SaveProduct([FromBody] ProductViewModel model)
         {
-
-            Console.WriteLine("=== DEBUG REQUEST PAYLOAD ===");
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(model));
 
             if (!ModelState.IsValid)
             {
@@ -926,6 +1030,126 @@ namespace TMSBilling.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { success = true, message = "Order load berhasil dihapus." });
         }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> Confirm(Guid? id)
+        {
+            if (id == null)
+                return BadRequest("ID not valid");
+            var order = _context.Orders.FirstOrDefault(o => o.mceasy_order_id == id.ToString());
+
+            if (order == null)
+                return NotFound("Order not found");
+            if (order.order_status != 0)
+                return BadRequest("Order already confirm.");
+
+            var payload = new
+            {
+                status = "CONFIRMED"
+            };
+
+            var (ok, json) = await _apiService.SendRequestAsync(
+                HttpMethod.Post,
+                $"/order/api/web/v1/delivery-order/{id}/transition",
+                payload
+            );
+            if (!ok)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed confirm order",
+                    detail = json
+                });
+            }
+
+            order.mceasy_status = payload.status;
+            order.order_status = 1;
+            order.update_date = DateTime.Now;
+            order.update_user = HttpContext.Session.GetString("username") ?? "System";
+            _context.Orders.Update(order);
+            _context.SaveChanges();
+            return Ok(new { success = true, message = "Order confirm successfully." });
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> BulkConfirm([FromBody] BulkConfirmRequest request)
+        {
+            try
+            {
+                if (request.OrderIds == null)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        message = $"Failed bulk confirm, order not valid"
+                    });
+                }
+                else {
+                    foreach (var orderId in request.OrderIds)
+                    {
+                        // Logic confirm per order
+                        // Sesuaikan dengan logic Confirm yang sudah ada
+
+                        if (orderId == null)
+                            return BadRequest("ID not valid");
+                        var order = _context.Orders.FirstOrDefault(o => o.mceasy_order_id == orderId.ToString());
+
+                        if (order == null)
+                            return NotFound("Order not found");
+                        if (order.order_status != 0)
+                            return BadRequest("Order already confirm.");
+
+                        var payload = new
+                        {
+                            status = "CONFIRMED"
+                        };
+
+                        var (ok, json) = await _apiService.SendRequestAsync(
+                            HttpMethod.Post,
+                            $"/order/api/web/v1/delivery-order/{orderId}/transition",
+                            payload
+                        );
+                        if (!ok)
+                        {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Failed confirm order",
+                                detail = json
+                            });
+                        }
+
+                        order.mceasy_status = payload.status;
+                        order.order_status = 1;
+                        order.update_date = DateTime.Now;
+                        order.update_user = HttpContext.Session.GetString("username") ?? "System";
+                        _context.Orders.Update(order);
+                        _context.SaveChanges();
+
+                    }
+                }
+                return Json(new
+                {
+                    success = true,
+                    message = $"{request.OrderIds.Count} order(s) confirmed successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+
+    }
+
+    public class BulkConfirmRequest
+    {
+        public List<string>? OrderIds { get; set; }
     }
 
     public class ProductViewModel

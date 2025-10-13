@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010070313_CreateProductTable")]
+    partial class CreateProductTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -616,169 +619,6 @@ namespace TMSBilling.Migrations
                     b.HasKey("ID");
 
                     b.ToTable("TRC_DRIVER");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.GeofenceTable", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("ID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("ADDRESS");
-
-                    b.Property<string>("AddressDetail")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("ADDRESS_DETAIL");
-
-                    b.Property<string>("BreakEnd")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("BREAK_END");
-
-                    b.Property<string>("BreakStart")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("BREAK_START");
-
-                    b.Property<string>("Category")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("CATEGORY");
-
-                    b.Property<string>("CircData")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CIRC_DATA");
-
-                    b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("CITY");
-
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("int")
-                        .HasColumnName("COMPANY_ID");
-
-                    b.Property<string>("ContactName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("CONTACT_NAME");
-
-                    b.Property<string>("Cordinates")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CORDINATES");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("CREATED_AT");
-
-                    b.Property<string>("CustomerId")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("CUSTOMER_ID");
-
-                    b.Property<string>("CustomerName")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("CUSTOMER_NAME");
-
-                    b.Property<string>("FenceName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("FENCE_NAME");
-
-                    b.Property<int?>("GeofenceId")
-                        .HasColumnType("int")
-                        .HasColumnName("GEOFENCE_ID");
-
-                    b.Property<bool?>("HasRelation")
-                        .HasColumnType("bit")
-                        .HasColumnName("HAS_RELATION");
-
-                    b.Property<bool>("IsAlert")
-                        .HasColumnType("bit")
-                        .HasColumnName("IS_ALERT");
-
-                    b.Property<bool>("IsBillingAddr")
-                        .HasColumnType("bit")
-                        .HasColumnName("IS_BILLING_ADDR");
-
-                    b.Property<bool>("IsDepot")
-                        .HasColumnType("bit")
-                        .HasColumnName("IS_DEPOT");
-
-                    b.Property<bool>("IsGarage")
-                        .HasColumnType("bit")
-                        .HasColumnName("IS_GARAGE");
-
-                    b.Property<bool>("IsServiceLoc")
-                        .HasColumnType("bit")
-                        .HasColumnName("IS_SERVICE_LOC");
-
-                    b.Property<string>("Lat")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("LAT");
-
-                    b.Property<string>("Long")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("LONG");
-
-                    b.Property<string>("PhoneNo")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("PHONE_NO");
-
-                    b.Property<string>("PolyData")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("POLY_DATA");
-
-                    b.Property<string>("PostalCode")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("POSTAL_CODE");
-
-                    b.Property<string>("Province")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("PROVINCE");
-
-                    b.Property<string>("Radius")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("RADIUS");
-
-                    b.Property<string>("ServiceEnd")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("SERVICE_END");
-
-                    b.Property<string>("ServiceLocType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("SERVICE_LOC_TYPE");
-
-                    b.Property<string>("ServiceStart")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("SERVICE_START");
-
-                    b.Property<string>("Type")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("TYPE");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("UPDATED_AT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TRC_GEOFENCE");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.Job", b =>

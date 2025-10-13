@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010081139_CreateTableGeofence")]
+    partial class CreateTableGeofence
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -638,13 +641,13 @@ namespace TMSBilling.Migrations
                         .HasColumnName("ADDRESS_DETAIL");
 
                     b.Property<string>("BreakEnd")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
                         .HasColumnName("BREAK_END");
 
                     b.Property<string>("BreakStart")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
                         .HasColumnName("BREAK_START");
 
                     b.Property<string>("Category")
@@ -669,10 +672,6 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("CONTACT_NAME");
-
-                    b.Property<string>("Cordinates")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CORDINATES");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -721,14 +720,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("IS_SERVICE_LOC");
 
-                    b.Property<string>("Lat")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("LAT");
-
-                    b.Property<string>("Long")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("LONG");
-
                     b.Property<string>("PhoneNo")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
@@ -748,13 +739,9 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("PROVINCE");
 
-                    b.Property<string>("Radius")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("RADIUS");
-
                     b.Property<string>("ServiceEnd")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
                         .HasColumnName("SERVICE_END");
 
                     b.Property<string>("ServiceLocType")
@@ -763,8 +750,8 @@ namespace TMSBilling.Migrations
                         .HasColumnName("SERVICE_LOC_TYPE");
 
                     b.Property<string>("ServiceStart")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
                         .HasColumnName("SERVICE_START");
 
                     b.Property<string>("Type")
