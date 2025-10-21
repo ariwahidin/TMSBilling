@@ -52,6 +52,17 @@ public class CustomerGroupController : Controller
     {
         if (!ModelState.IsValid) return BadRequest();
 
+        var customer = _context.Customers.FirstOrDefault(v => v.CUST_CODE == model.CUST_CODE);
+
+        if (customer == null)
+        {
+            return BadRequest(new
+            {
+                message = "Customer not found"
+            });
+        }
+        model.MAIN_CUST = customer.MAIN_CUST;
+
         if (model.ID == 0)
         {
             bool exists = _context.CustomerGroups.Any(v => v.SUB_CODE == model.SUB_CODE);
@@ -63,7 +74,6 @@ public class CustomerGroupController : Controller
                 });
             }
 
-            var customer = _context.Customers.FirstOrDefault(v => v.CUST_CODE == model.CUST_CODE);
             if (customer?.API_FLAG == 1) {
                 var payload = new
                 {
@@ -106,6 +116,7 @@ public class CustomerGroupController : Controller
             var data = _context.CustomerGroups.Find(model.ID);
             if (data == null) return NotFound();
 
+            data.MAIN_CUST = model.MAIN_CUST;
             data.SUB_CODE = model.SUB_CODE;
             data.CUST_CODE = model.CUST_CODE;
             data.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";

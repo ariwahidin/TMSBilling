@@ -12,16 +12,18 @@
             <button type="submit" class="btn btn-primary btn-sm">Check Data</button>
         </div>
     </form>
-
     <hr />
-
     <div id="previewArea" style="display:none">
-
         <div class="text-end mt-2">
             <button class="btn btn-warning btn-sm" id="submitFinal"> <i class="bi bi-send me-1"></i> Submit</button>
         </div>
 
-        <div class="mt-3">
+        <div class="mt-0">
+            <h6>Error Log</h6>
+            <pre id="previewError" style="background:#f8f9fa;padding:10px; border:1px solid #ccc;"></pre>
+        </div>
+
+        <div class="mt-0 d-none">
             <h6>Raw JSON:</h6>
             <pre id="previewJson" style="background:#f8f9fa;padding:10px; border:1px solid #ccc;"></pre>
         </div>
@@ -46,7 +48,8 @@
                     hideLoading();
                     parsedData = res;
                     $("#previewArea").show();
-                    $("#previewJson").text(JSON.stringify(res, null, 2));
+                    $("#previewError").text(null);
+                   
                     if (res.isValid === false) {
                         let html = "<ul>";
                         res.errors.forEach(e => {
@@ -55,8 +58,29 @@
                         html += "</ul>";
                         Swal.fire({
                             icon: 'error',
-                            title: 'Data Invalid!',
-                            html: html
+                            title: 'Invalid Data!',
+                            text : 'Please corect your data'
+                            // html: html
+                        });
+
+                        $("#previewError").html(html);
+                    }else{
+                        // $("#previewError").text(null);
+                        Swal.fire({
+                        icon: "question",
+                        title: "Data valid",
+                        text : "Do you want to save?",
+                                  showDenyButton: false,
+                                  showCancelButton: true,
+                                  confirmButtonText: "Save",
+                                  denyButtonText: `Don't save`
+                        }).then((result) => {
+                                  /* Read more about isConfirmed, isDenied below */
+                           if (result.isConfirmed) {
+                              saveData();
+                           } else if (result.isDenied) {
+                              Swal.fire("Changes are not saved", "", "info");
+                           }
                         });
                     }
                 },
@@ -68,12 +92,12 @@
         });
 
         $("#submitFinal").on("click", function () {
+             saveData();
+        });
 
-            // console.log(parsedData)
-            // return;
-
+        function saveData (){
             if(!parsedData.isValid){
-                Swal.fire("Error", "Invalid Data!", "error");
+                Swal.fire("Invalid Data!", "Please correct your data", "error");
                 return;
             }
 
@@ -95,7 +119,8 @@
                         Swal.fire({
                           position: "center",
                           icon: "success",
-                          title: res.message,
+                          title : "Success!",
+                          text: res.message,
                           showConfirmButton: false,
                           timer: 1500
                         }).then(function(){
@@ -104,7 +129,7 @@
                     }else{
                          $("#previewJson").text(JSON.stringify(res, null, 2));
                     }
-                    
+
                 },
                 error: function (xhr) {
                     hideLoading();
@@ -116,7 +141,7 @@
                     }
                 }
             });
-        });
+        }
 
         function renderHeader(data) {
             const headers = data.map(x => x.header);

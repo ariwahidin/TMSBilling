@@ -325,14 +325,6 @@
                             </select>
                         </div>
                     </div>
-                    @* <div class="mb-2 row">
-                        <label class="col-sm-4 col-form-label text-end">Consignee : </label>
-                        <div class="col-sm-8">
-                            <select id="cnee_code" asp-for="Header.cnee_code" asp-items="ViewBag.ListConsignee" class="form-select select2" required>
-                                <option value="">Select an Option</option>
-                            </select>
-                        </div>
-                    </div> *@
 
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Invoice No : </label>
@@ -372,13 +364,6 @@
                             <select id="city" asp-for="@Model.Header.origin_id" asp-items="ViewBag.ListOrigin" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
-                            @* <input type="text"
-                                   id="city"
-                                   name="city"
-                                   class="form-control"
-                                   placeholder=""
-                                   value="@Model.Header.origin_id"
-                                   readonly /> *@
                         </div>
                     </div>
 
@@ -412,13 +397,6 @@
                             <select id="destination_city" asp-for="@Model.Header.dest_area" asp-items="ViewBag.ListDestination" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
-                            @* <input type="text"
-                                   id="destination_city"
-                                   name="destination_city"
-                                   value="@Model.Header.dest_area"
-                                   class="form-control"
-                                   placeholder=""
-                                   readonly /> *@
                         </div>
                     </div>
                     <div class="mb-2 row">
@@ -430,7 +408,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">UoM : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="uom" name="uom" class="form-control" value="@Model.Header.uom" /> *@
                             <select id="uom" asp-for="Header.uom" asp-items="ViewBag.ListUoM" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -473,7 +450,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Moda Req : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="moda_req" name="moda_req" class="form-control" value="@Model.Header.moda_req" /> *@
                             <select id="moda_req" asp-for="Header.moda_req" asp-items="ViewBag.ListModa" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -490,7 +466,6 @@
                     <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Truck Size : </label>
                         <div class="col-sm-8">
-                            @* <input type="text" id="truck_size" name="truck_size" class="form-control" value="@Model.Header.truck_size" /> *@
                             <select id="truck_size" asp-for="Header.truck_size" asp-items="ViewBag.ListTruckSize" class="form-select select2" required>
                                 <option value="">Select an Option</option>
                             </select>
@@ -600,13 +575,6 @@
             <button type="submit" class="btn btn-primary btn-sm" data-action="save">
                 <i class="fas fa-save"></i> Save
             </button>
-
-            @* @if (Model.Header.id_seq == 0)
-            {
-                <button type="submit" class="btn btn-info btn-sm" data-action="save_new">
-                    <i class="fas fa-save"></i> Save And New
-                </button>
-            } *@
         </div>
     </form>
 </div>
@@ -617,8 +585,6 @@
         const header = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Header))
         details = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Details))
 
-        // $(document).ready(function () {
-        // });
 
          $('.select2').select2({
             placeholder: "Select an Option",
@@ -676,9 +642,12 @@
                 },
                 details: []
             };
-            console.log(formData);
 
-     
+
+
+            console.log("Data yang akan di kirim : ", formData);
+            // return;
+
             $('#detailTableBody tr').each(function () {
                 const row = $(this);
                 formData.details.push({
@@ -695,7 +664,6 @@
                 });
             });
 
-
             $.ajax({
                 url: '/Order/Save',
                 type: 'POST',
@@ -705,14 +673,15 @@
                     if (res.success) {
                         hideLoading();
                         Swal.fire({
-                            position: "top-end",
+                            position: "center",
                             icon: "success",
-                            title: res.message,
+                            title: "Success!",
+                            text : res.message,
                             showConfirmButton: false,
                             timer: 1500
                         }).then(function(){
                             if(save_mode == 'save'){
-                                window.location.href = '/Order/FormLoad/'+res.data.id_seq;
+                                window.location.href = '/Order/Form/'+res.data.id_seq;
                             }else{
                                     $('#inv_no').val('');
                                     $('#si_no').val('');
@@ -804,212 +773,10 @@
 
 
     <script>
-        // Simulasi data dummy (biasanya dari server)
-        const dummyAddresses = [
-            {
-                "geofenceId": 26723,
-                "companyId": 2174,
-                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
-                "fenceName": "CV. AMANAH MULTI JAYA",
-                "type": "C",
-                "polyData": null,
-                "circData": "<(-6.287859,106.882971),100>",
-                "address": "Jl. Pinang Ranti No. 54 Kelurahan Pinang, Jakarta Timur",
-                "addressDetail": "",
-                "province": "Daerah Khusus Ibukota Jakarta",
-                "city": "Jakarta Timur",
-                "postalCode": null,
-                "category": "Customer",
-                "contactName": "Budi Santoso",
-                "phoneNo": "021-8765432",
-                "isGarage": false,
-                "isServiceLoc": false,
-                "isBillingAddr": false,
-                "isDepot": false,
-                "isAlert": true,
-                "serviceStart": null,
-                "serviceEnd": null,
-                "breakStart": null,
-                "breakEnd": null,
-                "serviceLocType": null,
-                "customerName": "BOSCH_BT_NAGRAK_TEST",
-                "hasRelation": false
-            },
-            {
-                "geofenceId": 26724,
-                "companyId": 2174,
-                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
-                "fenceName": "PT. MAJU BERSAMA SEJAHTERA",
-                "type": "C",
-                "polyData": null,
-                "circData": "<(-6.200000,106.816666),150>",
-                "address": "Jl. Sudirman No. 123, Senayan, Jakarta Pusat",
-                "addressDetail": "Gedung Plaza Indonesia Lt. 15",
-                "province": "Daerah Khusus Ibukota Jakarta",
-                "city": "Jakarta Pusat",
-                "postalCode": "10270",
-                "category": "Customer",
-                "contactName": "Siti Nurhaliza",
-                "phoneNo": "021-5551234",
-                "isGarage": false,
-                "isServiceLoc": true,
-                "isBillingAddr": false,
-                "isDepot": false,
-                "isAlert": true,
-                "serviceStart": "08:00",
-                "serviceEnd": "17:00",
-                "breakStart": "12:00",
-                "breakEnd": "13:00",
-                "serviceLocType": "Office",
-                "customerName": "TELKOM_INDONESIA",
-                "hasRelation": true
-            },
-            {
-                "geofenceId": 26725,
-                "companyId": 2174,
-                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
-                "fenceName": "TOKO SUMBER REJEKI",
-                "type": "C",
-                "polyData": null,
-                "circData": "<(-6.175000,106.827000),80>",
-                "address": "Jl. Mangga Besar Raya No. 45, Taman Sari",
-                "addressDetail": "Sebelah Bank BCA",
-                "province": "Daerah Khusus Ibukota Jakarta",
-                "city": "Jakarta Barat",
-                "postalCode": "11180",
-                "category": "Customer",
-                "contactName": "Ahmad Wijaya",
-                "phoneNo": "021-6259876",
-                "isGarage": false,
-                "isServiceLoc": false,
-                "isBillingAddr": true,
-                "isDepot": false,
-                "isAlert": false,
-                "serviceStart": null,
-                "serviceEnd": null,
-                "breakStart": null,
-                "breakEnd": null,
-                "serviceLocType": null,
-                "customerName": "UNILEVER_INDONESIA",
-                "hasRelation": false
-            },
-            {
-                "geofenceId": 26726,
-                "companyId": 2174,
-                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
-                "fenceName": "GUDANG ELEKTRONIK JAYA",
-                "type": "W",
-                "polyData": null,
-                "circData": "<(-6.260000,106.890000),200>",
-                "address": "Jl. Raya Bekasi KM 18, Cakung, Jakarta Timur",
-                "addressDetail": "Kompleks Gudang Blok C-15",
-                "province": "Daerah Khusus Ibukota Jakarta",
-                "city": "Jakarta Timur",
-                "postalCode": "13910",
-                "category": "Warehouse",
-                "contactName": "Bambang Sutrisno",
-                "phoneNo": "021-4608123",
-                "isGarage": false,
-                "isServiceLoc": false,
-                "isBillingAddr": false,
-                "isDepot": true,
-                "isAlert": true,
-                "serviceStart": "07:00",
-                "serviceEnd": "16:00",
-                "breakStart": null,
-                "breakEnd": null,
-                "serviceLocType": "Warehouse",
-                "customerName": "SAMSUNG_ELECTRONICS",
-                "hasRelation": true
-            },
-            {
-                "geofenceId": 26727,
-                "companyId": 2174,
-                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
-                "fenceName": "APOTEK SEHAT BERSAMA",
-                "type": "C",
-                "polyData": null,
-                "circData": "<(-6.225000,106.845000),60>",
-                "address": "Jl. Kebon Sirih No. 88, Menteng, Jakarta Pusat",
-                "addressDetail": "",
-                "province": "Daerah Khusus Ibukota Jakarta",
-                "city": "Jakarta Pusat",
-                "postalCode": "10340",
-                "category": "Customer",
-                "contactName": "Dr. Maya Sari",
-                "phoneNo": "021-3904567",
-                "isGarage": false,
-                "isServiceLoc": true,
-                "isBillingAddr": false,
-                "isDepot": false,
-                "isAlert": true,
-                "serviceStart": "08:30",
-                "serviceEnd": "21:00",
-                "breakStart": null,
-                "breakEnd": null,
-                "serviceLocType": "Pharmacy",
-                "customerName": "KIMIA_FARMA",
-                "hasRelation": false
-            },
-            {
-                "geofenceId": 26728,
-                "companyId": 2174,
-                "customerId": "6e18b86d-0528-4ddd-94b5-159a7fa04004",
-                "fenceName": "RESTORAN PADANG MINANG",
-                "type": "C",
-                "polyData": null,
-                "circData": "<(-6.195000,106.820000),50>",
-                "address": "Jl. Sabang No. 25, Gambir, Jakarta Pusat",
-                "addressDetail": "Dekat Hotel Indonesia",
-                "province": "Daerah Khusus Ibukota Jakarta",
-                "city": "Jakarta Pusat",
-                "postalCode": "10160",
-                "category": "Customer",
-                "contactName": "Pak Joni",
-                "phoneNo": "021-3456789",
-                "isGarage": false,
-                "isServiceLoc": false,
-                "isBillingAddr": false,
-                "isDepot": false,
-                "isAlert": false,
-                "serviceStart": "10:00",
-                "serviceEnd": "22:00",
-                "breakStart": null,
-                "breakEnd": null,
-                "serviceLocType": "Restaurant",
-                "customerName": "FOOD_DELIVERY_SERVICE",
-                "hasRelation": false
-            }
-        ];
+       
 
         let allAddresses = [];
         let filteredAddresses = [];
-
-        // Function untuk membuka modal alamat
-        // async function openAddressModal() {
-        //     // const customerId = document.getElementById('customerId').value;
-        //     const customerId = "6e18b86d-0528-4ddd-94b5-159a7fa04004";
-
-        //     // Show modal
-        //     const addressModal = new bootstrap.Modal(document.getElementById('addressModal'));
-        //     addressModal.show();
-
-        //     // Show loading
-        //     showLoading(true);
-
-        //     // Reset search
-        //     document.getElementById('addressSearch').value = '';
-
-        //     try {
-        //         // Simulasi API call (ganti dengan real API call)
-        //         await loadAddresses(customerId);
-        //     } catch (error) {
-        //         console.error('Error loading addresses:', error);
-        //         showNoResults(true);
-        //     } finally {
-        //         showLoading(false);
-        //     }
-        // }
 
 
         // Function untuk membuka modal alamat

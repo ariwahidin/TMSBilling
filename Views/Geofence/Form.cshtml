@@ -117,12 +117,12 @@
                                 <div class="mb-4">
                                     <h5 class="text-black mb-3">Address Information</h5>
 
-                                    <div class="mb-3 position-relative">
+                                    @* <div class="mb-3 position-relative">
                                         <label class="form-label">ID <span class="required">*</span></label>
                                         <input type="hidden" asp-for="ID" id="iD" />
                                         <input type="text" class="form-control" asp-for="FenceID" id="fenceID" name="FenceID" required>
                                         <span asp-validation-for="FenceID" class="text-danger"></span>
-                                    </div>
+                                    </div> *@
 
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Name <span class="required">*</span></label>
@@ -143,7 +143,7 @@
                                         <span asp-validation-for="CUST_GROUP_CODE" class="text-danger"></span>
                                     </div>
 
-                                    <div class="mb-3">
+                                    @* <div class="mb-3">
                                         <label class="form-label">Category <span class="required">*</span></label>
                                         <select 
                                             id="category" 
@@ -155,9 +155,9 @@
                                             <option value="">Select an Option</option>
                                         </select>
                                         <span asp-validation-for="Category" class="text-danger"></span>
-                                    </div>
+                                    </div> *@
 
-                                    <div class="mb-3">
+                                    @* <div class="mb-3">
                                         <label class="form-label">Area <span class="required">*</span></label>
                                         <select id="areaGroup"
                                                 name="AreaGroup"
@@ -168,7 +168,7 @@
                                             <option value="">Select an Option</option>
                                         </select>
                                         <span asp-validation-for="AreaGroup" class="text-danger"></span>
-                                    </div>
+                                    </div> *@
 
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Address <span class="required">*</span></label>
@@ -337,7 +337,8 @@
                                 </div>
 
                                 <!-- Hidden Fields -->
-                                <input type="hidden" id="geofenceId" name="GeofenceId">
+                                <input type="hidden" asp-for="ID" id="id" name="ID">
+                                <input type="hidden" asp-for="GeofenceId" id="geofenceId" name="GeofenceId">
                                 <input type="hidden" id="companyId" name="CompanyId">
                                 <input type="hidden" id="type" name="Type" value="circle">
                                 <input type="hidden" id="polyData" name="PolyData">
@@ -789,12 +790,12 @@
                 data: JSON.stringify(formData),   // ubah objek ke JSON
                 success: function (response) {
                     console.log('Sukses:', response);
-                    // alert(response.message);
                     hideLoading();
                     Swal.fire({
-                      position: "top-end",
+                      position: "center",
                       icon: "success",
-                      title: response.message,
+                      title: "Success",
+                      text : response.message,
                       showConfirmButton: false,
                       timer: 1500
                     }).then(() => {
@@ -902,11 +903,11 @@
             }
         }
 
-        if(document.getElementById('iD').value.trim() > 0){
-            setTimeout(function(){
-                updateLocationFromForm()
-            },1000)
-        }
+        // if(document.getElementById('iD').value.trim() > 0){
+        //     setTimeout(function(){
+        //         updateLocationFromForm()
+        //     },1000)
+        // }
 
         
 

@@ -8,8 +8,7 @@ namespace TMSBilling.Models
     {
 
         [Key]
-        [Column("ID")]
-        public int? Id { get; set; }
+        public int Id { get; set; }
         [Column("GEOFENCE_ID")]
         public int? GeofenceId { get; set; }
 

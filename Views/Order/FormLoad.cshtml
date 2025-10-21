@@ -378,9 +378,10 @@
                     hideLoading()
                          console.log('Sukses:', response);
                     Swal.fire({
-                        position: "top-end",
+                        position: "center",
                         icon: "success",
-                        title: response.message,
+                        title: "Success",
+                        text : response.message,
                         showConfirmButton: false,
                         timer: 1000
                     }).then(() => {
@@ -400,9 +401,10 @@
                 data: JSON.stringify(formData),   // ubah objek ke JSON
                 success: function (response) {
                     Swal.fire({
-                        position: "top-end",
+                        position: "center",
                         icon: "success",
-                        title: response.message,
+                        title: "Success",
+                        text: response.message,
                         showConfirmButton: false,
                         timer: 1000
                     }).then(() => {

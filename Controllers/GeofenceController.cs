@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using TMSBilling.Data;
 using TMSBilling.Filters;
@@ -223,28 +224,29 @@ namespace TMSBilling.Controllers
             ViewBag.ListCustomerGroupGeofence = _selectList.getCustomerGroup();
             var model = new GeofenceViewModel();
             model.ID = 0;
+            model.GeofenceId = "0";
 
             if (!String.IsNullOrEmpty(category) && id != null) {
                 if (category == "consignee") {
-                    var consignee = _context.Consignees.FirstOrDefault(o=> o.ID == id);
+                    var consignee = _context.Geofences.FirstOrDefault(o=> o.GeofenceId == id);
                     if (consignee == null)
                     {
                         return View("Form", model);
                     }
                     else {
-                        model.ID = consignee.ID;
-                        model.FenceID = consignee.CNEE_CODE;
-                        model.FenceName = consignee.CNEE_NAME;
-                        model.CUST_GROUP_CODE = consignee.SUB_CODE;
-                        model.AreaGroup = consignee.AREA;
-                        model.Address = consignee.ADDRESS;
-                        model.PostalCode = consignee.POSTAL_CODE;
-                        model.Coordinates = consignee.CORDINATES;
-                        model.Radius = consignee.RADIUS;
-                        model.ContactName = consignee.CNEE_PIC;
-                        model.Province = consignee.PROVINCE;
-                        model.PhoneNo = consignee.CNEE_TEL;
-                        model.City = consignee.CITY;
+                        model.ID = consignee.GeofenceId;
+                        model.GeofenceId = consignee.GeofenceId.ToString();
+                        model.FenceID = consignee.FenceName;
+                        model.FenceName = consignee.FenceName;
+                        model.CUST_GROUP_CODE = consignee.CustomerName;
+                        model.Address = consignee.Address;
+                        model.PostalCode = consignee.PostalCode;
+                        model.Coordinates = consignee.Cordinates;
+                        model.Radius = consignee.Radius;
+                        model.ContactName = consignee.ContactName;
+                        model.Province = consignee.Province;
+                        model.PhoneNo = consignee.PhoneNo;
+                        model.City = consignee.City;
                     }
                 }
             }
@@ -260,6 +262,8 @@ namespace TMSBilling.Controllers
             {
                 return BadRequest(new { message = "All fields must be filled in" });
             }
+
+            model.Category = "Customer";
 
             var customerGroup = await _context.CustomerGroups
                 .Where(c => c.SUB_CODE == model.CUST_GROUP_CODE)
@@ -286,10 +290,10 @@ namespace TMSBilling.Controllers
             if (model.ID > 0)
             {
                 // EDIT
-                var existingConsignee = await _context.Consignees
-                    .FirstOrDefaultAsync(c => c.ID == model.ID);
+                var ng = await _context.Geofences
+                    .FirstOrDefaultAsync(c => c.GeofenceId == model.ID);
 
-                if (existingConsignee == null)
+                if (ng == null)
                 {
                     return NotFound(new { message = "Consignee not found" });
                 }
@@ -297,29 +301,26 @@ namespace TMSBilling.Controllers
                
 
                 // Kalau pakai API external juga update
-                if (customer.API_FLAG == 1 && existingConsignee.MCEASY_GEOFENCE_ID > 0)
+                if (customer.API_FLAG == 1 && ng.GeofenceId > 0)
                 {
 
                     var graphqlVariables = new
                     {
                         input = new
                         {
-                            geofenceId = existingConsignee.MCEASY_GEOFENCE_ID,
+                            geofenceId = ng.GeofenceId,
                             oldData = new
                             {
-                                fenceName = existingConsignee.CNEE_NAME,
-                                city = existingConsignee.CITY,
-                                address = existingConsignee.ADDRESS,
-                                postalCode = existingConsignee.POSTAL_CODE,
-                                province = existingConsignee.PROVINCE,
-                                category = existingConsignee.CATEGORY,
-                                contactName = existingConsignee.CNEE_PIC,
-                                phoneNo = existingConsignee.CNEE_TEL,
-                                circData = $"<{existingConsignee.CORDINATES},{existingConsignee.RADIUS}>",
+                                fenceName = ng.FenceName,
+                                city = ng.City,
+                                address = ng.Address,
+                                postalCode = ng.PostalCode,
+                                province = ng.Province,
+                                category = ng.Category,
+                                contactName = ng.ContactName,
+                                phoneNo = ng.PhoneNo,
+                                circData = $"<{ng.Cordinates},{ng.Radius}>",
                                 isGarage = model.IsGarage,
-                                //polyData = existingConsignee.POLYDATA,
-                                //isDepot = existingConsignee.IS_DEPOT == 1,
-                                //isBillingAddr = existingConsignee.IS_BILLING_ADDR == 1
                             },
                             newData = new
                             {
@@ -333,9 +334,6 @@ namespace TMSBilling.Controllers
                                 phoneNo = model.PhoneNo,
                                 circData = $"<{model.Coordinates},{model.Radius}>",
                                 isGarage = model.IsGarage,
-                                //polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
-                                //isDepot = model.IsDepot == "true",
-                                //isBillingAddr = model.IsBillingAddr == "true"
                             }
                         }
                     };
@@ -348,8 +346,39 @@ namespace TMSBilling.Controllers
                                 message
                                 geofence {
                                     geofenceId
+                                    companyId
+                                    customerId
                                     fenceName
+                                    type
+                                    polyData
+                                    circData
+                                    address
+                                    addressDetail
+                                    province
                                     city
+                                    postalCode
+                                    category
+                                    contactName
+                                    phoneNo
+                                    isGarage
+                                    isServiceLoc
+                                    isBillingAddr
+                                    isDepot
+                                    isAlert
+                                    serviceStart
+                                    serviceEnd
+                                    breakStart
+                                    breakEnd
+                                    serviceLocType
+                                    customerName
+                                    createdOn
+                                    hasRelation
+                                    contacts {
+                                      contactId
+                                      name
+                                      phoneNo
+                                      sendWhatsapp
+                                    }
                                 }
                             }
                         }",
@@ -367,51 +396,75 @@ namespace TMSBilling.Controllers
                         });
                     }
 
+
+                    var updateGeofence = result.GetProperty("data").GetProperty("updateGeofence");
+
+                    var success = updateGeofence.GetProperty("isSuccessful").GetBoolean();
+
+                    if (!success)
+                    {
+                        var message = updateGeofence.GetProperty("message").GetString();
+
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message
+                        });
+                    }
+
+                    var p = updateGeofence
+                             .GetProperty("geofence")
+                             .Deserialize<Geofence>() ?? new Geofence();
+
+                    if (p.circData != null)
+                    {
+                        var match = Regex.Match(p.circData, @"<\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\)\s*,\s*(\d+)\s*>");
+
+                        if (match.Success)
+                        {
+                            ng.Lat = $"{match.Groups[1].Value}";
+                            ng.Long = $"{match.Groups[2].Value}";
+                            ng.Cordinates = $"({ng.Lat},{ng.Long})";
+                            ng.Radius = $"{match.Groups[3].Value}";
+                        }
+                    }
+
                     // Update fields
-                    existingConsignee.CNEE_NAME = model.FenceName;
-                    existingConsignee.CNEE_ADDR1 = model.City;
-                    existingConsignee.CNEE_ADDR2 = model.City;
-                    existingConsignee.SUB_CODE = groupCustomer;
-                    existingConsignee.CNEE_PIC = model.ContactName;
-                    existingConsignee.CNEE_TEL = model.PhoneNo;
-                    existingConsignee.CITY = model.City;
-                    existingConsignee.CATEGORY = model.Category;
-                    existingConsignee.POSTAL_CODE = model.PostalCode;
-                    existingConsignee.ADDRESS = model.Address;
-                    existingConsignee.AREA = model.AreaGroup;
-                    existingConsignee.CORDINATES = model.Coordinates;
-                    existingConsignee.RADIUS = model.Radius;
-                    existingConsignee.PROVINCE = model.Province;
-                    existingConsignee.UPDATE_DATE = date;
-                    existingConsignee.UPDATE_USER = user;
+
+                    ng.CompanyId = p.companyId;
+                    ng.CustomerId = p.customerId;
+                    ng.FenceName = p.fenceName;
+                    ng.Type = p.type;
+                    ng.PolyData = p.polyData;
+                    ng.CircData = p.circData;
+                    ng.Address = p.address;
+                    ng.AddressDetail = p.addressDetail;
+                    ng.Province = p.province;
+                    ng.City = p.city;
+                    ng.PostalCode = p.postalCode;
+                    ng.Category = p.category;
+                    ng.ContactName = p.contactName;
+                    ng.PhoneNo = p.phoneNo;
+                    ng.IsGarage = p.isGarage;
+                    ng.IsServiceLoc = p.isServiceLoc;
+                    ng.IsBillingAddr = p.isBillingAddr;
+                    ng.IsDepot = p.isDepot;
+                    ng.IsAlert = p.isAlert;
+                    ng.ServiceStart = p.serviceStart;
+                    ng.ServiceEnd = p.serviceEnd;
+                    ng.BreakStart = p.breakStart;
+                    ng.BreakEnd = p.breakEnd;
+                    ng.ServiceLocType = p.serviceLocType;
+                    ng.CustomerName = p.customerName;
+                    ng.HasRelation = p.hasRelation;
+                    ng.UpdatedAt = DateTime.Now;
                 }
             }
             else
             {
+
                 // CREATE
-                var newConsignee = new Models.Consignee
-                {
-                    CNEE_CODE = model.FenceID,
-                    CNEE_NAME = model.FenceName,
-                    MCEASY_CUST_ID = model.MCEasyCustId,
-                    CNEE_ADDR1 = model.City,
-                    CNEE_ADDR2 = model.City,
-                    ACTIVE_FLAG = 1,
-                    SUB_CODE = groupCustomer,
-                    CNEE_PIC = model.ContactName,
-                    CNEE_TEL = model.PhoneNo,
-                    ENTRY_DATE = date,
-                    ENTRY_USER = user,
-                    CITY = model.City,
-                    CATEGORY = model.Category,
-                    POSTAL_CODE = model.PostalCode,
-                    ADDRESS = model.Address,
-                    AREA = model.AreaGroup,
-                    CORDINATES = model.Coordinates,
-                    RADIUS = model.Radius,
-                    PROVINCE = model.Province,
-                    IS_GARAGE = model.IsGarage,
-                };
+                var ng = new Models.GeofenceTable{};
 
                 if (customer.API_FLAG == 1)
                 {
@@ -450,8 +503,39 @@ namespace TMSBilling.Controllers
                                 message
                                 geofence {
                                     geofenceId
+                                    companyId
+                                    customerId
                                     fenceName
+                                    type
+                                    polyData
+                                    circData
+                                    address
+                                    addressDetail
+                                    province
                                     city
+                                    postalCode
+                                    category
+                                    contactName
+                                    phoneNo
+                                    isGarage
+                                    isServiceLoc
+                                    isBillingAddr
+                                    isDepot
+                                    isAlert
+                                    serviceStart
+                                    serviceEnd
+                                    breakStart
+                                    breakEnd
+                                    serviceLocType
+                                    customerName
+                                    createdOn
+                                    hasRelation
+                                    contacts {
+                                      contactId
+                                      name
+                                      phoneNo
+                                      sendWhatsapp
+                                    }
                                 }
                             }
                         }",
@@ -469,16 +553,71 @@ namespace TMSBilling.Controllers
                         });
                     }
 
-                    var data = result.GetProperty("data")
-                         .GetProperty("createGeofence")
-                         .GetProperty("geofence");
+                    var createGeofence = result.GetProperty("data").GetProperty("createGeofence");
 
-                    var geofenceId = data.TryGetProperty("geofenceId", out var idProp) ? idProp.GetInt32() : 0;
-                    newConsignee.MCEASY_GEOFENCE_ID = geofenceId;
-                    newConsignee.MCEASY_CUST_ID = customerGroup.MCEASY_CUST_ID;
+                    var success = createGeofence.GetProperty("isSuccessful").GetBoolean();
+
+                    if (!success)
+                    {
+                        var message = createGeofence.GetProperty("message").GetString();
+
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message
+                        });
+                    }
+
+                    var p = createGeofence
+                         .GetProperty("geofence")
+                         .Deserialize<Geofence>() ?? new  Geofence();
+
+                    if (p.circData != null)
+                    {
+                        var match = Regex.Match(p.circData, @"<\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\)\s*,\s*(\d+)\s*>");
+
+                        if (match.Success)
+                        {
+                            ng.Lat = $"{match.Groups[1].Value}";
+                            ng.Long = $"{match.Groups[2].Value}";
+                            ng.Cordinates = $"({ng.Lat},{ng.Long})";
+                            ng.Radius = $"{match.Groups[3].Value}";
+                        }
+                    }
+
+                    ng.GeofenceId = p.geofenceId;
+                    ng.CompanyId = p.companyId;
+                    ng.CustomerId = p.customerId;
+                    ng.FenceName = p.fenceName;
+                    ng.Type = p.type;
+                    ng.PolyData = p.polyData;
+                    ng.CircData = p.circData;
+                    ng.Address = p.address;
+                    ng.AddressDetail = p.addressDetail;
+                    ng.Province = p.province;
+                    ng.City = p.city;
+                    ng.PostalCode = p.postalCode;
+                    ng.Category = p.category;
+                    ng.ContactName = p.contactName;
+                    ng.PhoneNo = p.phoneNo;
+                    ng.IsGarage = p.isGarage;
+                    ng.IsServiceLoc = p.isServiceLoc;
+                    ng.IsBillingAddr = p.isBillingAddr;
+                    ng.IsDepot = p.isDepot;
+                    ng.IsAlert = p.isAlert;
+                    ng.ServiceStart = p.serviceStart;
+                    ng.ServiceEnd = p.serviceEnd;
+                    ng.BreakStart = p.breakStart;
+                    ng.BreakEnd = p.breakEnd;
+                    ng.ServiceLocType = p.serviceLocType;
+                    ng.CustomerName = p.customerName;
+                    ng.HasRelation = p.hasRelation;
+                    ng.CreatedAt = DateTime.Now;
+                    ng.UpdatedAt = DateTime.Now;
+
                 }
 
-                _context.Consignees.Add(newConsignee);
+                _context.Geofences.Add(ng);
             }
 
             await _context.SaveChangesAsync();
@@ -494,14 +633,13 @@ namespace TMSBilling.Controllers
     public class GeofenceViewModel
     {
         public int? ID { get; set; }
-        [Required]
+        
         public string? FenceID { get; set; }
         [Required]
         public string? FenceName { get; set; }
 
         public string? Customer {  get; set; }
 
-        [Required]
         public string? Category { get; set; }
         public string? Address { get; set; }
         public string? Province { get; set; }
@@ -532,6 +670,8 @@ namespace TMSBilling.Controllers
         public string? CreatedOn { get; set; }
         public string? HasRelation { get; set; }
         public string? MCEasyCustId { get; set; }
+
+        [Required]
         public string? CUST_GROUP_CODE { get; set; }
         public string? AreaGroup {  get; set; }
 

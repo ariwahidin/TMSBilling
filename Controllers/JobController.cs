@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using TMSBilling.Data;
 using TMSBilling.Filters;
@@ -26,24 +27,183 @@ namespace TMSBilling.Controllers
             _apiService = apiService;
         }
 
+        private async Task<List<FleetOrderMcEasy>> FetchFO()
+        {
+
+            var sql = @"SELECT 
+                mceasy_job_id AS JobID
+                FROM
+                TRC_JOB_H
+                WHERE status_job <> 'DRAFT' OR status_job is null";
+            var data = await _context.JobOrder
+                .FromSqlRaw(sql)
+                .ToListAsync();
+
+            var allFO = new List<FleetOrderMcEasy>();
+            bool ok;
+            JsonElement json = default;
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Get,
+                    $"fleet-planning/api/web/v1/fleet-task/{data[i].OrderID}"
+                );
+
+                if (!ok)
+                    throw new Exception($"Gagal ambil halaman ke-{i} dari API get fo");
+
+                var orders = json
+                    .GetProperty("data")
+                    .Deserialize<FleetOrderMcEasy>() ?? new FleetOrderMcEasy();
+
+                allFO.Add(orders);
+            }
+
+            return allFO;
+        }
+
+
+        //private async Task<int> SyncFOToDatabase(List<FleetOrderMcEasy> orders)
+        //{
+        //    int count = 0;
+
+
+        //    if (orders == null || !orders.Any())
+        //        return 0;
+
+        //    // --- Hapus semua data lama ---
+        //    await _context.Database.ExecuteSqlRawAsync("DELETE FROM MC_FO");
+        //    await _context.SaveChangesAsync();
+
+
+        //    var existingIds = _context.MCFleetOrders
+        //        .Select(p => p.id)
+        //        .ToHashSet();
+
+        //    var newOrders = new List<MCFleetOrder>();
+
+        //    foreach (var p in orders)
+        //    {
+        //        if (!existingIds.Contains(p.id))
+        //        {
+        //            var newOrder = new MCFleetOrder
+        //            {
+        //                id = p.id,
+        //                number = p.number,
+        //                shipment_reference = p.shipment_reference,
+        //                status = p.status.name,
+        //                status_raw_type = p.status.raw_type,
+        //                entry_date = DateTime.Now
+        //            };
+
+        //            newOrders.Add(newOrder);
+        //        }
+
+        //        count++;
+        //    }
+
+        //    if (newOrders.Any())
+        //    {
+        //        _context.MCFleetOrders.AddRange(newOrders);
+        //        await _context.SaveChangesAsync();
+        //    }
+        //    return count;
+        //}
+
+
+        private async Task<int> SyncFOToDatabase(List<FleetOrderMcEasy> orders)
+        {
+            int insertedCount = 0;
+            int updatedCount = 0;
+
+            if (orders == null || !orders.Any())
+                return 0;
+
+            // Ambil ID yang sudah ada untuk mencegah duplikasi
+            var existingIds = _context.MCFleetOrders
+                .Select(p => p.id)
+                .ToHashSet();
+
+            var newOrders = new List<MCFleetOrder>();
+
+            foreach (var p in orders)
+            {
+                if (!existingIds.Contains(p.id))
+                {
+                    var newOrder = new MCFleetOrder
+                    {
+                        id = p.id,
+                        number = p.number,
+                        shipment_reference = p.shipment_reference,
+                        status = p.status?.name,
+                        status_raw_type = p.status?.raw_type,
+                        entry_date = DateTime.Now
+                    };
+
+                    newOrders.Add(newOrder);
+                }
+
+                insertedCount++;
+            }
+
+            // Insert semua data baru
+            if (newOrders.Any())
+            {
+                _context.MCFleetOrders.AddRange(newOrders);
+                await _context.SaveChangesAsync();
+            }
+
+            // --- Update TRC_JOB_H.job_status = 2 hanya untuk yang status = "Dijadwalkan" ---
+            var scheduledIds = orders
+                .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase))
+                .Select(o => o.id)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToList();
+
+            if (scheduledIds.Any())
+            {
+                var idList = string.Join(",", scheduledIds.Select(id => $"'{id}'"));
+
+                var updateSql = $@"
+                    UPDATE TRC_JOB_H
+                    SET status_job = 'ENDED'
+                    WHERE mceasy_job_id IN ({idList})
+                ";
+
+                updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
+            }
+
+            return updatedCount;
+        }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> SyncronizeFO()
+        {
+            try
+            {
+                var ordersFromApi = await FetchFO();
+                var result = await SyncFOToDatabase(ordersFromApi);
+                return Json(new
+                {
+                    success = true,
+                    message = $"Synchronization successful. {result} order records have been updated.",
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Terjadi kesalahan saat sinkronisasi: {ex.Message}"
+                });
+            }
+        }
+
         public IActionResult Index()
         {
-            //var jobs = _context.Jobs
-            //    .ToList()
-            //    .GroupBy(j => j.jobid)
-            //    .OrderByDescending(g => g.Key)
-            //    .Select(g => new JobListViewModel
-            //    {
-            //        JobId = g.Key,
-            //        Origin = g.FirstOrDefault()?.origin_id,
-            //        Destination = g.FirstOrDefault()?.dest_id,
-            //        DeliveryDate = g.FirstOrDefault()?.dvdate,
-            //        Vendor = g.FirstOrDefault()?.vendorid,
-            //        TruckID = g.FirstOrDefault()?.truckid,
-            //    }).ToList();
-
-            //return View(jobs);
-
             var sql = @"
                 WITH tj AS (
                     SELECT 
@@ -59,10 +219,12 @@ namespace TMSBilling.Controllers
                     a.deliv_date AS DelivDate,
                     a.origin AS Origin,
                     a.dest AS Dest,
+					mc_fo.status AS MCStatus,
                     a.vendor_plan AS VendorPlan,
                     COALESCE(tj.total_do, 0) AS TotalDo
                 FROM TRC_JOB_H a
                 LEFT JOIN tj ON a.jobid = tj.jobid
+				LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
                 ORDER BY a.id_seq DESC
             ";
 
@@ -98,16 +260,6 @@ namespace TMSBilling.Controllers
 
             if (!string.IsNullOrEmpty(jobid))
             {
-                //var jobRows = _context.Jobs
-                //    .Where(o => o.jobid == jobid)
-                //    .OrderBy(o => o.drop_seq)
-                //    .ToList();
-
-                //if (jobRows.Any())
-                //{
-                    //vm.Header = jobRows.First();   // Ambil salah satu sbg header
-                    //vm.Details = jobRows;          // Semua jadi detail
-                //}
 
                 var jobHeader = _context.JobHeaders.FirstOrDefault(or => or.jobid == jobid);
                 if (jobHeader == null) {
@@ -115,21 +267,6 @@ namespace TMSBilling.Controllers
                 }
 
                 vm.Header = jobHeader;
-
-                //vm.Header.jobid = jobHeader.jobid;
-                //vm.Header. = jobHeader.cust_group;
-                //vm.Header.dvdate = jobHeader.deliv_date;
-                //vm.Header.origin_id = jobHeader.origin;
-                //vm.Header.dest_id = jobHeader.dest;
-                //vm.Header.servtype_ori = jobHeader.serv_type;
-                //vm.Header.truck_size = jobHeader.truck_size;
-                //vm.Header.moda_req = jobHeader.serv_moda;
-                //vm.Header.charge_uom = jobHeader.charge_uom;
-                //vm.Header.vendorid = jobHeader.vendor_plan;
-                //vm.Header.vendorid_act = jobHeader.vendor_act;
-                //vm.Header.truckid = jobHeader.truck_no;
-                //vm.Header.drivername = jobHeader.driver_name;
-                //vm.Header.multidrop = jobHeader.multidrop;
             }
 
             return View(vm);
@@ -255,7 +392,7 @@ namespace TMSBilling.Controllers
 
             if (CostRate == null)
             {
-                return BadRequest(new { success = false, message = "Header CostRate not found" });
+                return BadRequest(new { success = false, message = "Header, price buy not found" });
             }
 
             
@@ -597,6 +734,7 @@ namespace TMSBilling.Controllers
                 jobHeader.entry_date = DateTime.Now;
                 jobHeader.mceasy_job_id = mceasy_job_id;
                 jobHeader.starting_point = Header.starting_point;
+                jobHeader.status_job = "DRAFT";
                 _context.JobHeaders.Add(jobHeader);
             }
 
@@ -618,28 +756,45 @@ namespace TMSBilling.Controllers
         public IActionResult GetVendors(string originId, string destId, string truckSize, string servModa, string chargeUom)
         {
             var vendors = _context.PriceBuys
+                //.Where(v =>
+                //    v.active_flag == 1 &&
+                //    v.origin == originId &&
+                //    v.dest == destId &&
+                //    v.truck_size == truckSize &&
+                //    v.serv_moda == servModa &&
+                //    v.charge_uom == chargeUom
+                //)
                 .Where(v =>
                     v.active_flag == 1 &&
-                    v.origin == originId &&
-                    v.dest == destId &&
-                    v.truck_size == truckSize &&
-                    v.serv_moda == servModa &&
-                    v.charge_uom == chargeUom
+                    (string.IsNullOrEmpty(originId) || v.origin == originId) &&
+                    (string.IsNullOrEmpty(destId) || v.dest == destId) &&
+                    (string.IsNullOrEmpty(truckSize) || v.truck_size == truckSize) &&
+                    (string.IsNullOrEmpty(servModa) || v.serv_moda == servModa) &&
+                    (string.IsNullOrEmpty(chargeUom) || v.charge_uom == chargeUom)
                 )
                 .OrderBy(v => v.buy1)
                 .Select(v => new {
-                    SupCode = v.sup_code,
-                    SupName = v.sup_code
+                    vendor_code = v.sup_code,
+                    vendor_name = v.sup_code,
+                    origin = v.origin,
+                    destination = v.dest,
+                    service = v.serv_type,
+                    moda = v.serv_moda,
+                    truck_size = v.truck_size,
+                    uom = v.charge_uom
                 })
                 .Distinct()
                 .ToList();
 
+            //VendorCode = v.SUP_CODE,
+            //    VendorName = v.SUP_NAME
+
             if (vendors.Any())
             {
-                return Ok(new { success = true, vendors });
-            }
+                return Ok(new { success = true, data = vendors });
+            } 
 
-            return BadRequest(new { success = false, vendors = new List<object>(), message = "Vendor not found!" });
+            return BadRequest(new { success = false, data = new List<object>(), message = "Vendor not found!" });
         }
 
         [HttpGet]
@@ -737,6 +892,11 @@ namespace TMSBilling.Controllers
 
     }
 
+    public class JobOrder
+    {
+        public string? OrderID { get; set; }
+    }
+
     public class JobSummaryViewModel
     {
         public int IdSeq { get; set; }
@@ -746,6 +906,7 @@ namespace TMSBilling.Controllers
         public string? Origin { get; set; }
         public string? Dest { get; set; }
         public string? VendorPlan { get; set; }
+        public string? MCStatus { get; set; }
         public int TotalDo { get; set; }
     }
     public class VendorViewModel

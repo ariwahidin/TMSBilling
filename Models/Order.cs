@@ -176,4 +176,51 @@ namespace TMSBilling.Models
         public string? mceasy_product_id { get; set; }
 
     }
+
+
+    [Table("MC_ORDER")]
+    public class MCOrder
+    {
+        [Key]
+        public string? id { get; set; }
+        public string? number { get; set; }
+        public string? shipment_number { get; set; }
+        public string? reference_number { get; set; }
+        public string? shipment_type { get; set; }
+        public string? status { get; set; }
+        public string? fleet_task_id { get; set; }
+        public string? fleet_task_number { get; set; }
+        public DateTime? entry_date { get; set; }
+        public DateTime? updated_date { get; set; }
+    }
+
+
+    public class OrderMetaDataMcEasy {
+        public int? count { get; set; }
+        public int? page { get; set; }
+        public int? total_count { get; set; }
+        public int? total_page { get; set; }
+    }
+
+    public class OrderMcEasy
+    {
+        public string? id { get; set; }
+        public string? number { get; set; }
+        public string? shipment_number { get; set; }
+        public string? reference_number { get; set; }
+        public string? shipment_type { get; set; }
+        public OrderStatusMcEasy? status { get; set; }
+
+        public OrderFleetTaskMcEasy? fleet_task { get; set; }
+    }
+
+    public class OrderStatusMcEasy
+    {
+        public string? name { get; set; }
+    }
+
+    public class OrderFleetTaskMcEasy {
+        public string? id { get; set; }
+        public string? number { get; set; }
+    }
 }

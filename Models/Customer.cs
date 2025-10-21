@@ -102,11 +102,12 @@ namespace TMSBilling.Models
         [MaxLength(50)]
         public string SUB_CODE { get; set; } = string.Empty;
 
-
-
         [Required]
         [MaxLength(50)]
         public string CUST_CODE { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string MAIN_CUST { get; set; } = string.Empty;
 
         [MaxLength(50)]
         public string? MCEASY_CUST_ID { get; set; }

@@ -63,16 +63,26 @@ namespace TMSBilling.Data
 
         public DbSet<GeofenceTable> Geofences { get; set; }
 
+        public DbSet<MCOrder> MCOrders { get; set; }
+
+        public DbSet<MCFleetOrder> MCFleetOrders { get; set; }
+
 
         public DbSet<OrderSummaryViewModel> OrderSummaryView { get; set; }
         public DbSet<JobSummaryViewModel> JobSummaryView { get; set; }
-        //public DbSet<ItemStockViewModel> ItemStockView { get; set; }
+        public DbSet<ConsigneeViewModel> ConsigneeView { get; set; }
+
+        public DbSet<ConfirmOrderID> ConfirmOrderID { get; set; }
+
+        public DbSet<JobOrder> JobOrder { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<OrderSummaryViewModel>().HasNoKey().ToView(null);
             modelBuilder.Entity<JobSummaryViewModel>().HasNoKey().ToView(null);
-            //modelBuilder.Entity<ItemStockViewModel>().HasNoKey().ToView(null);
+            modelBuilder.Entity<ConsigneeViewModel>().HasNoKey().ToView(null);
+            modelBuilder.Entity<ConfirmOrderID>().HasNoKey().ToView(null);
+            modelBuilder.Entity<JobOrder>().HasNoKey().ToView(null);
         }
 
 

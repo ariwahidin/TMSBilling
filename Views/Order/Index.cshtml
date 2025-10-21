@@ -1,170 +1,4 @@
-﻿@* @model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
-@{
-    Layout = "~/Views/Shared/_MainLayout.cshtml";
-    ViewData["Title"] = "Order List";
-}
-<div class="mb-3">
-    <a href="/Order/Form" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus"></i> Create New Order
-    </a>
-    <a href="/Order/Import" class="btn btn-success btn-sm">
-        <i class="bi bi-upload me-2"></i> Import New Order
-    </a>
-</div>
-
-<table class="table table-bordered table-hover table-striped" id="tableOrder">
-    <thead class="table-light">
-        <tr>
-            <th>#</th>
-            <th>WH Code</th>
-            <th>Customer</th>
-            <th>Cnee</th>
-            <th>Invoice No</th>
-            <th>Delivery Date</th>
-            <th>Origin </th>
-            <th>Destination </th>
-            <th>Status</th>
-            <th>Item</th>
-            <th>Qty</th>
-            <th class="text-center">Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @{
-            var i = 1;
-            foreach (var item in Model)
-            {
-                <tr>
-                    <td>@i</td>
-                    <td>@item.WhCode</td>
-                    <td>@item.SubCustId</td>
-                    <td>@item.CneeCode</td>
-                    <td>@item.InvNo</td>
-                    <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
-                    <td>@item.OriginId</td>
-                    <td>@item.DestArea</td>
-                    <td>@(item.OrderStatus == 1 ? "confirmed" : "draft")</td>
-                    <td>@item.TotalItem</td>
-                    <td>@item.TotalQty</td>
-                    <td class="text-center">
-
-                        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="/Order/Form/@item.IdSeq" class="dropdown-item">
-                                    <i class="bi bi-pencil-square"></i> Edit
-                                </a>
-                            </li>
-
-                            @if (@item.McEasyOrderId != null && @item.OrderStatus != 1)
-                            {
-                                <li>
-                                    <a href="#" class="dropdown-item" onclick="confirmOrder(`@item.McEasyOrderId`)">
-                                        <i class="bi bi-check-square"></i> Confirm
-                                    </a>
-                                </li>
-                            }
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a href="#" class="dropdown-item" onclick="confirmDelete(@item.IdSeq)">
-                                    <i class="bi bi-trash"></i> Delete
-                                </a>
-                            </li>
-                        </ul>
-
-                        
-                        
-                    </td>
-                </tr>
-                i++;
-            }
-        }
-    </tbody>
-</table>
-
-@section Scripts {
-    <script>
-        function confirmDelete(id) {
-            if (confirm('Are you sure you want to delete this order?')) {
-                fetch(`/Order/Delete/${id}`, {
-                    method: 'POST'
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert(data.message || 'Delete failed.');
-                    }
-                });
-            }
-        }
-
-        function confirmOrder(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Do you want to confirm this order?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, confirm it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    showLoading();
-                    const url = `/Order/Confirm/${id}`;
-                    fetch(url, { method: 'POST' })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                hideLoading();
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Confirmed!',
-                                    text: 'The order has been confirmed.',
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                hideLoading();
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Failed',
-                                    text: data.message || 'Confirm failed.'
-                                });
-                            }
-                        })
-                        .catch(() => {
-                            hideLoading();
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: 'Something went wrong while confirming.'
-                            });
-                        });
-                }
-            });
-        }
-
-
-        $(document).ready(() => {
-            $('#tableOrder').DataTable({
-                language: {
-                    emptyTable: "No orders available"
-                }
-            });
-
-            
-        });
-    </script>
-}
- *@
-
-@model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
+﻿@model IEnumerable<TMSBilling.Controllers.OrderSummaryViewModel>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Order List";
@@ -178,6 +12,9 @@
     </a>
     <button id="btnBulkConfirm" class="btn btn-warning btn-sm" style="display:none;">
         <i class="bi bi-check-circle"></i> Confirm Selected (<span id="selectedCount">0</span>)
+    </button>
+    <button id="btnSyncOrder" class="btn btn-info btn-sm">
+        <i class="bi bi-check-circle"></i> Sync Order
     </button>
 </div>
 
@@ -208,7 +45,7 @@
             {
                 <tr>
                     <td>
-                        @if (@item.McEasyOrderId != null && @item.OrderStatus != 1)
+                        @if (@item.McEasyOrderId != null && @item.OrderStatus == 0)
                         {
                             <input type="checkbox" class="order-checkbox" data-order-id="@item.McEasyOrderId">
                         }
@@ -221,7 +58,15 @@
                     <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
                     <td>@item.OriginId</td>
                     <td>@item.DestArea</td>
-                    <td>@(item.OrderStatus == 1 ? "confirmed" : "draft")</td>
+                    <td>
+                        @(item.OrderStatus == 0
+                                        ? "Draft"
+                                        : item.OrderStatus == 1
+                                        ? "Confirmed"
+                                        : item.OrderStatus == 2
+                                        ? "Scheduled"
+                                        : "-")
+                    </td>
                     <td>@item.TotalItem</td>
                     <td>@item.TotalQty</td>
                     <td class="text-center">
@@ -251,9 +96,6 @@
                                 </a>
                             </li>
                         </ul>
-
-
-
                     </td>
                 </tr>
                 i++;
@@ -441,6 +283,52 @@
                     syncCheckboxes();
                 }
             });
+
+            $('#btnSyncOrder').on('click', function () {
+                    // Tampilkan indikator loading
+                    showLoading();
+
+                $.ajax({
+                    url: '/Order/SyncronizeOrder', // ganti sesuai route controller kamu
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function (response) {
+                        hideLoading();
+
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Synchronization Successful',
+                                text: response.message,
+                                confirmButtonColor: '#3085d6',
+                                confirmButtonText: 'OK'
+                            }).then(function(){
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sinkronisasi Gagal',
+                                text: response.message || 'Gagal memproses data dari API.',
+                                confirmButtonColor: '#d33',
+                                confirmButtonText: 'Tutup'
+                            });
+                        }
+                    },
+                    error: function (xhr) {
+                        hideLoading();
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Terjadi Kesalahan',
+                            text: xhr.responseText || 'Server tidak merespons.',
+                            confirmButtonColor: '#d33',
+                            confirmButtonText: 'Tutup'
+                        });
+                    }
+                });
+            });
+
 
             // Check All handler
             $('#checkAll').on('change', function() {

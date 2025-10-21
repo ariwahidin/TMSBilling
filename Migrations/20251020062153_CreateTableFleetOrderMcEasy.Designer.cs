@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251020062153_CreateTableFleetOrderMcEasy")]
+    partial class CreateTableFleetOrderMcEasy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,38 +24,6 @@ namespace TMSBilling.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("TMSBilling.Controllers.ConfirmOrderID", b =>
-                {
-                    b.Property<string>("OrderID")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.ToTable((string)null);
-
-                    b.ToView(null, (string)null);
-                });
-
-            modelBuilder.Entity("TMSBilling.Controllers.ConsigneeViewModel", b =>
-                {
-                    b.Property<string>("Customer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CustomerGroup")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FenceName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("GeofenceID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MainCustomer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.ToTable((string)null);
-
-                    b.ToView(null, (string)null);
-                });
 
             modelBuilder.Entity("TMSBilling.Controllers.JobSummaryViewModel", b =>
                 {
@@ -66,9 +37,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("JobId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MCStatus")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Origin")
@@ -665,7 +633,8 @@ namespace TMSBilling.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -1105,10 +1074,6 @@ namespace TMSBilling.Migrations
                     b.Property<int?>("starting_point")
                         .HasColumnType("int");
 
-                    b.Property<string>("status_job")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<string>("truck_no")
                         .HasMaxLength(11)
                         .HasColumnType("nvarchar(11)");
@@ -1234,7 +1199,7 @@ namespace TMSBilling.Migrations
                     b.Property<string>("number")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("shipment_reference")
+                    b.Property<string>("reference_number")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("status")

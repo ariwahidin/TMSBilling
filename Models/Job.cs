@@ -188,6 +188,9 @@ namespace TMSBilling.Models
 
         public DateTime? deliv_date { get; set; }
 
+        [StringLength(30)]
+        public string? status_job { get; set; }
+
         [StringLength(50)]
         public string? origin { get; set; }
         [StringLength(50)]
@@ -237,5 +240,44 @@ namespace TMSBilling.Models
         public string? update_user { get; set; }
 
         public DateTime? update_date { get; set; }
+    }
+
+
+    [Table("MC_FO")]
+    public class MCFleetOrder
+    {
+        [Key]
+        public string? id { get; set; }
+        public string? number { get; set; }
+        public string? shipment_reference { get; set; }
+        public string? status { get; set; }
+        public string? status_raw_type { get; set; }
+
+        public DateTime? entry_date { get; set; }
+
+        public DateTime? update_date { get; set; }
+    }
+
+    public class FleetOrderMetaDataMcEasy
+    {
+        public int? count { get; set; }
+        public int? page { get; set; }
+        public int? total_count { get; set; }
+        public int? total_page { get; set; }
+    }
+
+    public class FleetOrderMcEasy
+    {
+        public string? id { get; set; }
+        public string? number { get; set; }
+        public string? shipment_reference { get; set; }
+        public FleetOrderStatusMcEasy? status { get; set; }
+        public FleetOrderStatusMcEasy? status_raw_type { get; set; }
+    }
+
+    public class FleetOrderStatusMcEasy
+    {
+        public string? name { get; set; }
+        public string? raw_type { get; set; }
     }
 }

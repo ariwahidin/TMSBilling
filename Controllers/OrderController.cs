@@ -1,15 +1,10 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Math;
-using DocumentFormat.OpenXml.Office.CoverPageProps;
-using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
-using System.Globalization;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
+using System.ServiceModel.Channels;
 using System.Text;
 using System.Text.Json;
 using TMSBilling.Data;
@@ -17,7 +12,6 @@ using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
 using TMSBilling.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TMSBilling.Controllers
 {
@@ -41,16 +35,114 @@ namespace TMSBilling.Controllers
         }
 
 
-
-        public IActionResult Index()
+        private async Task<List<OrderMcEasy>> FetchOrderFromApi()
         {
-            //var orders = _context.Orders
-            //    .OrderByDescending(o => o.entry_date)
-            //    .Take(100)
-            //    .ToList();
+            var sql = @"select mceasy_order_id AS OrderID,  
+            order_status AS OrderStatus
+            from TRC_ORDER
+            where 
+            order_status = 1 
+            AND mceasy_order_id is not null";
+            var data = await _context.ConfirmOrderID
+                .FromSqlRaw(sql)
+                .ToListAsync();
 
-            //return View(orders); // kirim list ke view
+            var allOrders = new List<OrderMcEasy>();
+            bool ok;
+            JsonElement json = default;
 
+            for (int i = 0; i < data.Count; i++)
+            {
+                (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Get,
+                    $"order/api/web/v1/delivery-order/{data[i].OrderID}"
+                );
+
+                if (!ok)
+                    throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
+
+                var orders = json
+                    .GetProperty("data")
+                    .Deserialize<OrderMcEasy>() ?? new OrderMcEasy();
+
+                allOrders.Add(orders);
+            }
+
+            return allOrders;
+        }
+
+        private async Task<int> SyncOrderToDatabase(List<OrderMcEasy> orders)
+        {
+            int insertedCount = 0;
+            int updatedCount = 0;
+
+            if (orders == null || !orders.Any())
+                return 0;
+
+            // Ambil ID existing dari MC_ORDER
+            var existingIds = _context.MCOrders
+                .Select(p => p.id)
+                .ToHashSet();
+
+            var newOrders = new List<MCOrder>();
+
+            foreach (var p in orders)
+            {
+                if (!existingIds.Contains(p.id))
+                {
+                    var newOrder = new MCOrder
+                    {
+                        id = p.id,
+                        number = p.number,
+                        reference_number = p.reference_number,
+                        shipment_number = p.shipment_number,
+                        shipment_type = p.shipment_type,
+                        status = p.status?.name,
+                        fleet_task_id = p.fleet_task?.id,
+                        fleet_task_number = p.fleet_task?.number,
+                        entry_date = DateTime.Now
+                    };
+
+                    newOrders.Add(newOrder);
+                }
+
+                insertedCount++;
+            }
+
+            // Simpan data baru
+            if (newOrders.Any())
+            {
+                _context.MCOrders.AddRange(newOrders);
+                await _context.SaveChangesAsync();
+            }
+
+            // Filter hanya order dengan status "Dijadwalkan"
+            var scheduledOrderIds = orders
+                .Where(o => string.Equals(o.status?.name, "Dijadwalkan", StringComparison.OrdinalIgnoreCase))
+                .Select(o => o.id)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToList();
+
+            // Update TRC_ORDER status = 2 untuk order yang Dijadwalkan
+            if (scheduledOrderIds.Any())
+            {
+                var idList = string.Join(",", scheduledOrderIds.Select(id => $"'{id}'"));
+
+                var updateSql = $@"
+                    UPDATE TRC_ORDER 
+                    SET order_status = 2 
+                    WHERE mceasy_order_id IN ({idList})
+                ";
+
+                updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
+            }
+
+            // Kembalikan total affected (insert + update)
+            return updatedCount;
+        }
+
+        public async Task<IActionResult> Index()
+        {
             var sql = @"
                 WITH od AS (
                     SELECT 
@@ -70,19 +162,43 @@ namespace TMSBilling.Controllers
                     a.origin_id AS OriginId,
                     a.dest_area AS DestArea,
                     a.order_status AS OrderStatus,
+					mo.[status] AS MCOrderStatus,
                     a.mceasy_order_id AS McEasyOrderId,
                     COALESCE(od.total_item, 0) AS TotalItem,
                     COALESCE(od.total_qty, 0) AS TotalQty
                 FROM TRC_ORDER a 
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
+				LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
                 ORDER BY a.id_seq DESC
             ";
-
-            var data = _context.OrderSummaryView
+            var data = await _context.OrderSummaryView
                 .FromSqlRaw(sql)
-                .ToList();
+                .ToListAsync();
 
             return View(data);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SyncronizeOrder()
+        {
+            try
+            {
+                var ordersFromApi = await FetchOrderFromApi();
+                var result = await SyncOrderToDatabase(ordersFromApi);
+                return Json(new
+                {
+                    success = true,
+                    message = $"Synchronization successful. {result} order records have been updated.",
+            });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Terjadi kesalahan saat sinkronisasi: {ex.Message}"
+                });
+            }
         }
 
         public IActionResult Import()
@@ -113,14 +229,13 @@ namespace TMSBilling.Controllers
 
             return View(vm);
         }
-
         
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] OrderViewModel model)
         {
             if (model == null || model.Header == null || model.Details == null || model.Details.Count == 0)
             {
-                return BadRequest(new { success = false, message = "Data tidak lengkap!" });
+                return BadRequest(new { success = false, message = "Incomplete data!" });
             }
 
             var header = model.Header;
@@ -129,16 +244,52 @@ namespace TMSBilling.Controllers
             if (!_context.Warehouses.Any(w => w.wh_code == header.wh_code))
                 errors.Add($"Warehouse '{header.wh_code}' not found");
 
-            //if (!_context.Consignees.Any(c => c.CNEE_CODE == header.cnee_code))
-            //    errors.Add($"Consignee '{header.cnee_code}' not found");
-
             if (!_context.Origins.Any(l => l.origin_code == header.origin_id))
                 errors.Add($"Origin '{header.origin_id}' not found");
-
 
             if (header.id_seq == 0)
                 if (_context.Orders.Any(o => o.inv_no == header.inv_no))
                     errors.Add($"Inv No '{header.inv_no}' already exists!");
+
+            var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == header.sub_custid);
+            if (customerGroup == null)
+            {
+                errors.Add($"Customer Group '{header.sub_custid}' not found!.");
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed validation",
+                    errors
+                });
+            }
+
+            var priceSell = _context.PriceSells.FirstOrDefault(ps =>
+            ps.cust_code == customerGroup.MAIN_CUST
+            && ps.origin == header.origin_id
+            && ps.dest == header.dest_area
+            && ps.serv_type == header.serv_req
+            && ps.serv_moda == header.moda_req
+            && ps.truck_size == header.truck_size
+            && ps.charge_uom == header.uom);
+
+            if (priceSell == null)
+            {
+                errors.Add($"Price sell not found for this transaction");
+            }
+
+
+            var priceBuy = _context.PriceBuys.FirstOrDefault(pb =>
+            pb.origin == header.origin_id
+            && pb.dest == header.dest_area
+            && pb.serv_type == header.serv_req
+            && pb.serv_moda == header.moda_req
+            && pb.truck_size == header.truck_size
+            && pb.charge_uom == header.uom);
+
+            if (priceBuy == null)
+            {
+                errors.Add($"Price buy not found for this transaction");
+            }
 
             if (errors.Any())
             {
@@ -150,19 +301,10 @@ namespace TMSBilling.Controllers
                 });
             }
 
-            var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == header.sub_custid);
-            if (customerGroup == null || string.IsNullOrEmpty(customerGroup.MCEASY_CUST_ID))
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = $"Customer Group '{header.sub_custid}' tidak memiliki MCEASY_CUST_ID yang valid."
-                });
-            }
             var deliveryDateTime = header.delivery_date.HasValue ? header.delivery_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
             var pickupDateTime = header.pickup_date.HasValue ? header.pickup_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
-            var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
 
+            var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
             if (customer == null)
             {
                   return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
@@ -172,7 +314,6 @@ namespace TMSBilling.Controllers
             {
                 var payload = new
                 {
-
                     customer_id = customerGroup.MCEASY_CUST_ID,
                     billed_customer_id = customerGroup.MCEASY_CUST_ID,
                     origin_address_id = header.mceasy_origin_address_id,
@@ -224,8 +365,6 @@ namespace TMSBilling.Controllers
             }
 
 
-
-            // === Proses Simpan ===
             using var transaction = _context.Database.BeginTransaction();
             try
             {
@@ -233,8 +372,6 @@ namespace TMSBilling.Controllers
 
                 if (header.id_seq == 0)
                 {
-
-                    // INSERT
                     header.cnee_code = header.mceasy_dest_name;
                     header.mceasy_origin_address_id = header.mceasy_origin_address_id;
                     header.mceasy_destination_address_id = header.mceasy_destination_address_id;
@@ -247,7 +384,6 @@ namespace TMSBilling.Controllers
                 }
                 else
                 {
-                    // UPDATE
                     var existingHeader = _context.Orders.FirstOrDefault(o => o.id_seq == header.id_seq);
                     if (existingHeader == null)
                         return NotFound(new { success = false, message = "Data tidak ditemukan untuk update." });
@@ -287,7 +423,6 @@ namespace TMSBilling.Controllers
             }
         }
 
-
         [HttpGet]
         public IActionResult DownloadSample()
         {
@@ -295,13 +430,13 @@ namespace TMSBilling.Controllers
 
             // HEADER
             var headerSheet = workbook.Worksheets.Add("Header");
-            headerSheet.Cell("A1").Value = "ID*";
+            headerSheet.Cell("A1").Value = "No.";
             headerSheet.Cell("B1").Value = "Nama Pelanggan*";
             headerSheet.Cell("C1").Value = "Karyawan Pemasaran";
             headerSheet.Cell("D1").Value = "Target Diambil";
             headerSheet.Cell("E1").Value = "Target Dikirim";
             headerSheet.Cell("F1").Value = "No. AJU";
-            headerSheet.Cell("G1").Value = "No. Shipment*";
+            headerSheet.Cell("G1").Value = "No. DO*";
             headerSheet.Cell("H1").Value = "No. Referensi";
             headerSheet.Cell("I1").Value = "Catatan Lainya";
             headerSheet.Cell("J1").Value = "Alamat Asal";
@@ -327,7 +462,7 @@ namespace TMSBilling.Controllers
             headerSheet.Columns().AdjustToContents();
 
             // SAMPLE DATA
-            headerSheet.Cell("A2").Value = "IBM00011";
+            headerSheet.Cell("A2").Value = "1";
             headerSheet.Cell("B2").Value = "RBID-API";
             headerSheet.Cell("C2").Value = "-";
             headerSheet.Cell("D2").Value = DateTime.Now.AddDays(1);
@@ -350,7 +485,7 @@ namespace TMSBilling.Controllers
 
             // DETAIL
             var detailSheet = workbook.Worksheets.Add("Details");
-            detailSheet.Cell("A1").Value = "ID*";
+            detailSheet.Cell("A1").Value = "No. DO*";
             detailSheet.Cell("B1").Value = "Nama Produk*";
             detailSheet.Cell("C1").Value = "Kuantitas*";
             detailSheet.Cell("D1").Value = "Satuan Kuantitas*";
@@ -387,8 +522,6 @@ namespace TMSBilling.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "sample_import_order.xlsx");
         }
 
-
-
         [HttpPost]
         public IActionResult Preview(IFormFile file)
         {
@@ -408,7 +541,7 @@ namespace TMSBilling.Controllers
             int row = 2;
             while (!headerSheet.Cell(row, 1).IsEmpty())
             {
-                string invoice_no = headerSheet.Cell(row, 7).GetString();
+
 
                 string uniqueKey = string.Join("|", Enumerable.Range(1, 7).Select(c => headerSheet.Cell(row, c).GetString()));
                 if (!uniqueKeys.Add(uniqueKey))
@@ -416,64 +549,120 @@ namespace TMSBilling.Controllers
                     errors.Add(new { row, section = "header", field = "composite key", message = "Duplikat kombinasi 7 kolom (wh_code - dest_area) ditemukan." });
                 }
 
+                string invoiceNo = headerSheet.Cell(row, 7).GetString();
                 var header = new Order();
 
                 try
                 {
                     string whCode = headerSheet.Cell(row, 16).GetString();
-                    string subCustId = headerSheet.Cell(row, 2).GetString();
-                    string cneeCode = headerSheet.Cell(row, 11).GetString();
-                    string originId = headerSheet.Cell(row, 19).GetString();
+                    string customer = headerSheet.Cell(row, 2).GetString();
+                    string originArea = headerSheet.Cell(row, 19).GetString();
+                    string destArea = headerSheet.Cell(row, 20).GetString();
                     string originName = headerSheet.Cell(row, 10).GetString();
                     string destName = headerSheet.Cell(row, 11).GetString();
+                    DateTime? expectedDelivery = DateTime.TryParse(headerSheet.Cell(row, 5).GetString(), out var dateVal) ? dateVal : (DateTime?)null;
+                    DateTime? pickupDate = DateTime.TryParse(headerSheet.Cell(row, 4).GetString(), out var dateVa) ? dateVa : (DateTime?)null;
+                    DateTime? doRcvDate = DateTime.TryParse(headerSheet.Cell(row, 17).GetString(), out var drd) ? drd : (DateTime?)null;
+                    string? doRcvTime = headerSheet.Cell(row, 18).GetString();
+                    string? uomHeader = headerSheet.Cell(row, 15).GetString();
+                    string? modaHeader = headerSheet.Cell(row, 14).GetString();
+                    string? serviceHeader = headerSheet.Cell(row, 13).GetString();
+                    string? truckSizeHeader = headerSheet.Cell(row, 12).GetString();
+                    string? remarkHeader = headerSheet.Cell(row, 9).GetString();
+
 
                     // === Validasi ke master table (ganti sesuai tabel kamu)
                     if (!_context.Warehouses.Any(w => w.wh_code == whCode))
-                        errors.Add(new { row, section = "header", field = "wh_code", message = $"Warehouse '{whCode}' tidak ditemukan" });
+                        errors.Add(new { row, section = "header", field = "Whs Code", message = $"Warehouse '{whCode}' tidak ditemukan" });
 
-                    if (!_context.Geofences.Any(s => s.CustomerName == subCustId))
-                        errors.Add(new { row, section = "header", field = "sub_custid", message = $"Customer '{subCustId}' tidak ditemukan" });
+                    var originMaster = _context.Origins.FirstOrDefault(or => or.origin_code == originArea);
 
-                    if (!_context.Geofences.Any(c => c.FenceName == cneeCode))
-                        errors.Add(new { row, section = "header", field = "cnee_code", message = $"Consignee '{cneeCode}' tidak ditemukan" });
+                    if (originMaster == null) {
+                        errors.Add(new { row, section = "header", field = "Origin Area", message = $"Origin '{originArea}' tidak ditemukan" });
+                    }
+                        
 
-                    if (!_context.Origins.Any(l => l.origin_code == originId))
-                        errors.Add(new { row, section = "header", field = "origin_id", message = $"Origin '{originId}' tidak ditemukan" });
+                    var geofenceOrigin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName);
 
-                    var origin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName);
-
-                    if (origin == null) {
-                        errors.Add(new { row, section = "header", field = "Alamat asal : ", message = $"'{originName}' tidak ditemukan" });
+                    if (geofenceOrigin == null) {
+                        errors.Add(new { row, section = "header", field = "Alamat asal", message = $"'{originName}' tidak ditemukan" });
                     }
 
-                    var destination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName);
+                    var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName);
 
-                    if (destination == null)
+                    if (geofenceDestination == null)
                     {
-                        errors.Add(new { row, section = "header", field = "Alamat tujuan : ", message = $"'{destName}' tidak ditemukan" });
+                        errors.Add(new { row, section = "header", field = "Alamat tujuan", message = $"'{destName}' tidak ditemukan" });
+                    }
+
+                    var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == customer);
+
+                    if (customerGroup == null) {
+                        errors.Add(new { row, section = "header", field = "Nama Pelanggan", message = $"'{customer}' tidak ditemukan" });
+                    }
+
+                    if (customerGroup != null && originMaster != null && destArea != null && originArea != null)
+                    {
+                        var priceSell = _context.PriceSells.FirstOrDefault(ps =>
+                        ps.cust_code == customerGroup.MAIN_CUST
+                        && ps.origin == originArea
+                        && ps.dest == destArea
+                        && ps.serv_type == serviceHeader
+                        && ps.serv_moda == modaHeader
+                        && ps.truck_size == truckSizeHeader
+                        && ps.charge_uom == uomHeader);
+
+                        if (priceSell == null) {
+                            errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Price sell tidak ditemukan untuk order ini" });
+                        }
+
+
+                        var priceBuy = _context.PriceBuys.FirstOrDefault( pb =>
+                        pb.origin == originArea
+                        && pb.dest == destArea
+                        && pb.serv_type == serviceHeader
+                        && pb.serv_moda == modaHeader
+                        && pb.truck_size == truckSizeHeader
+                        && pb.charge_uom == uomHeader);
+
+                        if (priceBuy == null) {
+                            errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Price buy tidak ditemukan untuk order ini" });
+                        }
+
+
+                        var orderExist = _context.Orders.FirstOrDefault(or => or.inv_no == invoiceNo);
+                        if (orderExist != null) {
+                            errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $" Already exists" });
+                        }
+                    }
+                    else
+                    {
+
+                        errors.Add(new { row, section = "Header", field = "Your data invalid!" });
+
                     }
 
                     header = new Order
                     {
-                        inv_no = invoice_no,
+                        inv_no = invoiceNo,
                         wh_code = whCode,
-                        sub_custid = subCustId,
-                        cnee_code = cneeCode,
-                        delivery_date = DateTime.TryParse(headerSheet.Cell(row, 5).GetString(), out var dateVal) ? dateVal : (DateTime?)null,
-                        pickup_date = DateTime.TryParse(headerSheet.Cell(row, 4).GetString(), out var dateVa) ? dateVa : (DateTime?)null,
-                        origin_id = headerSheet.Cell(row, 19).GetString(),
-                        dest_area = headerSheet.Cell(row, 20).GetString(),
-                        uom = headerSheet.Cell(row, 15).GetString(),
-                        do_rcv_date = DateTime.TryParse(headerSheet.Cell(row, 17).GetString(), out var drd) ? drd : (DateTime?)null,
-                        do_rcv_time = headerSheet.Cell(row, 18).GetString(),
-                        moda_req = headerSheet.Cell(row, 14).GetString(),
-                        serv_req = headerSheet.Cell(row, 13).GetString(),
-                        truck_size = headerSheet.Cell(row, 12).GetString(),
-                        remark = headerSheet.Cell(row, 9).GetString(),
-                        mceasy_origin_address_id = origin?.GeofenceId,
-                        mceasy_destination_address_id = destination?.GeofenceId,
-                        mceasy_origin_name = headerSheet.Cell(row,10).GetString(),
-                        mceasy_dest_name = headerSheet.Cell(row, 11).GetString(),
+                        sub_custid = customer,
+                        cnee_code = destName,
+                        delivery_date = expectedDelivery,
+                        pickup_date = pickupDate,
+                        origin_id = originArea,
+                        dest_area = destArea,
+                        uom = uomHeader,
+                        do_rcv_date = doRcvDate,
+                        do_rcv_time = doRcvTime,
+                        moda_req = modaHeader,
+                        serv_req = serviceHeader,
+                        truck_size = truckSizeHeader,
+                        remark = remarkHeader,
+                        mceasy_origin_address_id = geofenceOrigin?.GeofenceId,
+                        mceasy_destination_address_id = geofenceDestination?.GeofenceId,
+                        mceasy_origin_name = originName,
+                        mceasy_dest_name = destName,
                     };
                 }
                 catch (Exception ex)
@@ -487,7 +676,7 @@ namespace TMSBilling.Controllers
                 while (!detailSheet.Cell(drow, 1).IsEmpty())
                 {
                     string invNoDetail = detailSheet.Cell(drow, 1).GetString();
-                    if (invNoDetail == invoice_no)
+                    if (invNoDetail == invoiceNo)
                     {
                         try
                         {
@@ -496,7 +685,7 @@ namespace TMSBilling.Controllers
 
                             if (product == null)
                             {
-                                errors.Add(new { row = drow, section = "detail", field = "item_name", message = $"Item '{itemName}' tidak ditemukan di master" });
+                                errors.Add(new { row = drow, section = "detail", field = "Nama Product*", message = $"Item '{itemName}' tidak ditemukan di master" });
                             }
 
                             details.Add(new OrderDetail
@@ -543,7 +732,6 @@ namespace TMSBilling.Controllers
                 data = result
             });
         }
-
 
         [HttpPost]
         public async Task<IActionResult> SaveExcel([FromBody] List<OrderViewModel> data)
@@ -783,7 +971,6 @@ namespace TMSBilling.Controllers
             return Ok(new { success = true, message = "Data submited successfully." });
         }
 
-
         public async Task<IActionResult> FormLoad(int? id)
         {
             var (ok, json) = await _apiService.SendRequestAsync(
@@ -830,8 +1017,6 @@ namespace TMSBilling.Controllers
 
             return View();
         }
-
-
 
         [HttpPost]
         public async Task<IActionResult> SaveProduct([FromBody] ProductViewModel model)
@@ -923,7 +1108,6 @@ namespace TMSBilling.Controllers
 
         }
 
-
         [HttpPatch] 
         public async Task<IActionResult> EditProduct([FromBody] ProductViewModel model)
         {
@@ -995,7 +1179,6 @@ namespace TMSBilling.Controllers
             return Ok(new { message = "Updated order load succesfully", data = orderLoad });
         }
 
-
         [HttpGet]
         public async Task<IActionResult> DeleteLoad(int? id)
         {
@@ -1030,8 +1213,6 @@ namespace TMSBilling.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { success = true, message = "Order load berhasil dihapus." });
         }
-
-
 
         [HttpPost]
         public async Task<IActionResult> Confirm(Guid? id)
@@ -1073,7 +1254,6 @@ namespace TMSBilling.Controllers
             _context.SaveChanges();
             return Ok(new { success = true, message = "Order confirm successfully." });
         }
-
 
         [HttpPost]
         public async Task<IActionResult> BulkConfirm([FromBody] BulkConfirmRequest request)
@@ -1147,6 +1327,11 @@ namespace TMSBilling.Controllers
 
     }
 
+
+    public class ConfirmOrderID {
+        public string? OrderID { get; set; }
+    }
+
     public class BulkConfirmRequest
     {
         public List<string>? OrderIds { get; set; }
@@ -1188,6 +1373,8 @@ namespace TMSBilling.Controllers
         public string? OriginId { get; set; }
         public string? DestArea { get; set; }
         public byte? OrderStatus { get; set; }
+
+        public string? MCOrderStatus { get; set; }
 
         public string? McEasyOrderId { get; set; }
         public int? TotalItem { get; set; }

@@ -1,5 +1,4 @@
-﻿
-@model IEnumerable<TMSBilling.Models.Consignee>
+﻿@model IEnumerable<TMSBilling.Controllers.ConsigneeViewModel>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Consignee";
@@ -8,15 +7,17 @@
 
 <button class="btn btn-primary btn-sm mb-3 d-none" id="btnAdd">Add Data</button>
 <a href="/Geofence/Form?category=consignee" class="btn btn-success btn-sm mb-3" id="btnAdd">Add Data</a>
+<button class="btn btn-info btn-sm mb-3" id="btnSyncGeofence">Sync Consignee</button>
 @* <button class="btn btn-primary btn-sm mb-3" id="btnAddGeofenceConsignee">Add Consignee With Geofence</button> *@
 
 <table class="table table-bordered table-striped" id="dataTable">
     <thead>
+        
         <tr>
-            <th>Customer ID</th>
-            <th>Consignee ID</th>
             <th>Consignee Name</th>
-            <th>Status</th>
+            <th>Customer Group</th>
+            <th>Customer</th>
+            <th>Main Customer</th>
             <th>Action</th>
         </tr>
     </thead>
@@ -24,17 +25,17 @@
         @foreach (var item in Model)
         {
             <tr>
-                <td>@item.SUB_CODE</td>
-                <td>@item.CNEE_CODE</td>
-                <td>@item.CNEE_NAME</td>
-                <td>@(item.ACTIVE_FLAG == 1 ? "Active" : "Inactive")</td>
+                <td>@item.FenceName</td>
+                <td>@item.CustomerGroup</td>
+                <td>@item.Customer</td>
+                <td>@item.MainCustomer</td>
                 <td>
-                    <button class="btn btn-sm btn-warning btnEdit d-none" data-id="@item.ID" title="Edit">
+                    <button class="btn btn-sm btn-warning btnEdit d-none" data-id="@item.GeofenceID" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </button>
-                    <a href="/Geofence/Form?category=consignee&id=@item.ID" class="btn btn-sm btn-success"><i class="bi bi-pencil-square"></i></a>
+                    <a href="/Geofence/Form?category=consignee&id=@item.GeofenceID" class="btn btn-sm btn-success"><i class="bi bi-pencil-square"></i></a>
                     @if(isAdmin){
-                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Hapus">
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.GeofenceID" title="Delete">
                         <i class="bi bi-trash"></i>
                     </button>
                     }
@@ -90,6 +91,49 @@
                     });
                 });
             });
+
+            $('#btnSyncGeofence').on('click', function(){
+                showLoading();
+                $.ajax({
+                    url: '/Consignee/SyncConsignee',
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function (response) {
+                        hideLoading();
+
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: response.message,
+                                confirmButtonColor: '#3085d6',
+                                confirmButtonText: 'OK'
+                            }).then(function(){
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sinkronisasi Gagal',
+                                text: response.message || 'Gagal memproses data dari API.',
+                                confirmButtonColor: '#d33',
+                                confirmButtonText: 'Tutup'
+                            });
+                        }
+                    },
+                    error: function (xhr) {
+                        hideLoading();
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Terjadi Kesalahan',
+                            text: xhr.responseText || 'Server tidak merespons.',
+                            confirmButtonColor: '#d33',
+                            confirmButtonText: 'Tutup'
+                        });
+                    }
+                });
+            })
 
             $('#btnAddGeofenceConsignee').click(function () {
                 $.get('/Consignee/OptionCustomerGroup', function (html) {
