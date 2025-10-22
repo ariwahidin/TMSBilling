@@ -34,7 +34,7 @@ namespace TMSBilling.Controllers
                 mceasy_job_id AS JobID
                 FROM
                 TRC_JOB_H
-                WHERE status_job = 'DRAFT' OR status_job is null";
+                WHERE status_job IN ('DRAFT', 'STARTED', 'SCHEDULED')";
             var data = await _context.JobOrder
                 .FromSqlRaw(sql)
                 .ToListAsync();
@@ -76,12 +76,18 @@ namespace TMSBilling.Controllers
                 .Select(p => p.id)
                 .ToHashSet();
 
+            var existingOrders = _context.MCFleetOrders.ToDictionary(p => p.id, p => p);
             var newOrders = new List<MCFleetOrder>();
+
 
             foreach (var p in orders)
             {
-                if (!existingIds.Contains(p.id))
+                if (string.IsNullOrEmpty(p.id))
+                    continue;
+
+                if (!existingOrders.TryGetValue(p.id, out var existing))
                 {
+                    // Data baru → insert
                     var newOrder = new MCFleetOrder
                     {
                         id = p.id,
@@ -93,10 +99,68 @@ namespace TMSBilling.Controllers
                     };
 
                     newOrders.Add(newOrder);
+                    insertedCount++;
                 }
+                else
+                {
+                    // Data sudah ada → update kalau ada perubahan
+                    bool updated = false;
 
-                insertedCount++;
+                    if (existing.status != p.status?.name)
+                    {
+                        existing.status = p.status?.name;
+                        updated = true;
+                    }
+
+                    if (existing.status_raw_type != p.status?.raw_type)
+                    {
+                        existing.status_raw_type = p.status?.raw_type;
+                        updated = true;
+                    }
+
+                    if (existing.shipment_reference != p.shipment_reference)
+                    {
+                        existing.shipment_reference = p.shipment_reference;
+                        updated = true;
+                    }
+
+                    if (updated)
+                    {
+                        existing.entry_date = DateTime.Now; // update timestamp
+                        //updatedCount++;
+                    }
+                }
             }
+
+            // insert data baru dalam batch
+            if (newOrders.Any())
+            {
+                await _context.MCFleetOrders.AddRangeAsync(newOrders);
+            }
+
+            // simpan semua perubahan (insert + update)
+            await _context.SaveChangesAsync();
+
+
+            //foreach (var p in orders)
+            //{
+            //    if (!existingIds.Contains(p.id))
+            //    {
+            //        var newOrder = new MCFleetOrder
+            //        {
+            //            id = p.id,
+            //            number = p.number,
+            //            shipment_reference = p.shipment_reference,
+            //            status = p.status?.name,
+            //            status_raw_type = p.status?.raw_type,
+            //            entry_date = DateTime.Now
+            //        };
+
+            //        newOrders.Add(newOrder);
+            //    }
+
+            //    insertedCount++;
+            //}
 
             // Insert semua data baru
             if (newOrders.Any())
