@@ -1,6 +1,8 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TMSBilling.Data;
@@ -336,7 +338,6 @@ namespace TMSBilling.Controllers
             return View(vm);
         }
 
-
         [HttpGet]
         public IActionResult GetOrdersByDate(string date, string jobid)
         {
@@ -400,10 +401,9 @@ namespace TMSBilling.Controllers
             }
         }
 
-
         [HttpPost]
         [Route("Job/Save/{jobid?}")]
-        public async Task<IActionResult> Save([FromBody] JobViewModel model, string? jobid)
+        public async Task<IActionResult> Save([FromBody] JobViewModel model, string? jobid) 
         {
 
 
@@ -452,6 +452,7 @@ namespace TMSBilling.Controllers
             hm.sup_code == Header.vendor_id
             && hm.origin == Header.origin_id
             && hm.dest == Header.dest_area
+            && hm.serv_moda == Header.serv_moda
             && hm.truck_size == Header.truck_size);
 
             if (CostRate == null)
@@ -470,16 +471,14 @@ namespace TMSBilling.Controllers
                 }
 
                 // Cek apakah order cocok dengan CostRate dari Header
-                bool isMatch =
-                    orderExisting.origin_id == CostRate.origin &&
-                    orderExisting.dest_area == CostRate.dest &&
-                    orderExisting.truck_size == CostRate.truck_size &&
-                    orderExisting.uom == CostRate.charge_uom;
+                //bool isMatch =
+                //    orderExisting.origin_id == CostRate.origin &&
+                //    orderExisting.dest_area == CostRate.dest;
 
-                if (!isMatch)
-                {
-                    return BadRequest(new { success = false, message = $"Cost rate mismatch for INV {ord.inv_no}" });
-                }
+                //if (!isMatch)
+                //{
+                //    return BadRequest(new { success = false, message = $"Cost rate mismatch for INV {ord.inv_no}" });
+                //}
 
                 var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == orderExisting.sub_custid);
 
@@ -596,6 +595,11 @@ namespace TMSBilling.Controllers
                 newJob.moda_req = order?.moda_req;
                 newJob.serv_req = order?.serv_req;
                 newJob.truck_size = order?.truck_size;
+
+                newJob.drop_seq = ordx.drop_seq;
+                newJob.multidrop = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0);
+                newJob.flag_charge = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0);
+
                 newJob.charge_uom = CostRate.charge_uom;
                 newJob.inv_no = order?.inv_no;
                 newJob.origin_id = order?.origin_id;
@@ -640,13 +644,6 @@ namespace TMSBilling.Controllers
                 var payload = new
                 {
                     delivery_order_ids = deliveryOrderIds,
-                    //transit_delivery_orders = new[]
-                    //{
-                    //    new {
-                    //        delivery_order_ids = deliveryOrderIds,
-                    //        transit_address_id = 0
-                    //    }
-                    //}
                 };
 
                 var (ok, json) = await _apiService.SendRequestAsync(
@@ -722,8 +719,6 @@ namespace TMSBilling.Controllers
                     {
                         var payload = new
                         {
-                            //delivery_order_ids = deliveryOrderIds,
-                            //expected_departure_on = "2024-09-05T15:51:28.071Z",
                             expected_departure_on = Header.dvdate.HasValue
                             ? Header.dvdate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             : null,
@@ -820,14 +815,6 @@ namespace TMSBilling.Controllers
         public IActionResult GetVendors(string originId, string destId, string truckSize, string servModa, string chargeUom)
         {
             var vendors = _context.PriceBuys
-                //.Where(v =>
-                //    v.active_flag == 1 &&
-                //    v.origin == originId &&
-                //    v.dest == destId &&
-                //    v.truck_size == truckSize &&
-                //    v.serv_moda == servModa &&
-                //    v.charge_uom == chargeUom
-                //)
                 .Where(v =>
                     v.active_flag == 1 &&
                     (string.IsNullOrEmpty(originId) || v.origin == originId) &&
@@ -850,8 +837,6 @@ namespace TMSBilling.Controllers
                 .Distinct()
                 .ToList();
 
-            //VendorCode = v.SUP_CODE,
-            //    VendorName = v.SUP_NAME
 
             if (vendors.Any())
             {
@@ -895,8 +880,6 @@ namespace TMSBilling.Controllers
             return Json(new { success = true, data = details });
         }
 
-
-        //[HttpGet("GetOrders")]
 
         public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate)
         {
@@ -952,15 +935,12 @@ namespace TMSBilling.Controllers
             return Ok(new { success = true, data = result }); // hasilnya JSON
         }
 
-
-
     }
 
     public class JobOrder
     {
         public string? OrderID { get; set; }
     }
-
     public class JobSummaryViewModel
     {
         public int IdSeq { get; set; }
@@ -981,4 +961,5 @@ namespace TMSBilling.Controllers
         [JsonPropertyName("vendor_name")]
         public string? VendorName { get; set; } = string.Empty;
     }
+    
 }

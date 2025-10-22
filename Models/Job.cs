@@ -41,11 +41,11 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? charge_uom { get; set; }
 
-        public byte? multidrop { get; set; }
+        public byte? multidrop { get; set; } = 0;
 
         public byte? multitrip { get; set; }
 
-        public int? drop_seq { get; set; }
+        public int? drop_seq { get; set; } = 0;
 
         //public int? total_pkgs { get; set; }
 
