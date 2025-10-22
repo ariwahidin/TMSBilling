@@ -106,8 +106,16 @@ namespace TMSBilling.Controllers
             }
 
             // --- Update TRC_JOB_H.job_status = 2 hanya untuk yang status = "Dijadwalkan" ---
+            //var scheduledIds = orders
+            //    .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase))
+            //    .Select(o => o.id)
+            //    .Where(id => !string.IsNullOrEmpty(id))
+            //    .ToList();
+
             var scheduledIds = orders
-                .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase))
+                .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(o.status?.raw_type, "SCHEDULED", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(o.status?.raw_type, "STARTED", StringComparison.OrdinalIgnoreCase))
                 .Select(o => o.id)
                 .Where(id => !string.IsNullOrEmpty(id))
                 .ToList();
