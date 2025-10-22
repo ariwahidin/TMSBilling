@@ -636,8 +636,7 @@ namespace TMSBilling.Controllers
                         && pb.dest == destArea
                         && pb.serv_type == serviceHeader
                         && pb.serv_moda == modaHeader
-                        && pb.truck_size == truckSizeHeader
-                        && pb.charge_uom == uomHeader);
+                        && pb.truck_size == truckSizeHeader);
 
                         if (priceBuy == null) {
                             errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Price buy tidak ditemukan untuk order ini" });
