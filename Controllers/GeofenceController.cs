@@ -247,6 +247,7 @@ namespace TMSBilling.Controllers
                         model.Province = consignee.Province;
                         model.PhoneNo = consignee.PhoneNo;
                         model.City = consignee.City;
+                        model.IsGarage = consignee.IsGarage;
                     }
                 }
             }
@@ -320,7 +321,7 @@ namespace TMSBilling.Controllers
                                 contactName = ng.ContactName,
                                 phoneNo = ng.PhoneNo,
                                 circData = $"<{ng.Cordinates},{ng.Radius}>",
-                                isGarage = model.IsGarage,
+                                isGarage = ng.IsGarage,
                             },
                             newData = new
                             {
@@ -435,8 +436,8 @@ namespace TMSBilling.Controllers
                     ng.CustomerId = p.customerId;
                     ng.FenceName = p.fenceName;
                     ng.Type = p.type;
-                    ng.PolyData = p.polyData;
-                    ng.CircData = p.circData;
+                    ng.PolyData = model.PolyData;
+                    ng.CircData = $"<{model.Coordinates},{model.Radius}>";
                     ng.Address = p.address;
                     ng.AddressDetail = p.addressDetail;
                     ng.Province = p.province;
@@ -445,7 +446,7 @@ namespace TMSBilling.Controllers
                     ng.Category = p.category;
                     ng.ContactName = p.contactName;
                     ng.PhoneNo = p.phoneNo;
-                    ng.IsGarage = p.isGarage;
+                    ng.IsGarage = model.IsGarage;
                     ng.IsServiceLoc = p.isServiceLoc;
                     ng.IsBillingAddr = p.isBillingAddr;
                     ng.IsDepot = p.isDepot;
