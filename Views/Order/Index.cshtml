@@ -17,7 +17,7 @@
         <i class="bi bi-check-circle"></i> Sync Order
     </button>
 </div>
-
+@* 
 <table class="table table-bordered table-hover table-striped" id="tableOrder">
     <thead class="table-light">
         <tr>
@@ -102,7 +102,124 @@
             }
         }
     </tbody>
+</table> *@
+
+
+
+<table class="table table-bordered table-hover table-striped table-sm align-middle compact" id="tableOrder">
+    <thead class="table-light">
+        <tr>
+            <th><input type="checkbox" id="checkAll" title="Select All"></th>
+            <th>#</th>
+            <th>WH Code</th>
+            <th>Customer</th>
+            <th>Cnee</th>
+            <th>Invoice No</th>
+            <th>Delivery Date</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Status</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th class="text-center">Action</th>
+        </tr>
+        <tr class="filter-row">
+            <th></th>
+            <th></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search WH" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Customer" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Cnee" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Invoice No" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="YYYY-MM-DD" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Origin" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Destination" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Status" /></th>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            var i = 1;
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @if (item.McEasyOrderId != null && item.OrderStatus == 0)
+                        {
+                            <input type="checkbox" class="order-checkbox" data-order-id="@item.McEasyOrderId">
+                        }
+            </td>
+            <td>@i</td>
+            <td>@item.WhCode</td>
+            <td>@item.SubCustId</td>
+            <td>@item.CneeCode</td>
+            <td>@item.InvNo</td>
+            <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
+            <td>@item.OriginId</td>
+            <td>@item.DestArea</td>
+            <td>
+                @(item.OrderStatus == 0 ? "Draft" :
+                                item.OrderStatus == 1 ? "Confirmed" :
+                                item.OrderStatus == 2 ? "Scheduled" : "-")
+            </td>
+            <td>@item.TotalItem</td>
+            <td>@item.TotalQty</td>
+            <td class="text-center">
+                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="/Order/Form/@item.IdSeq" class="dropdown-item"><i class="bi bi-pencil-square"></i> Edit</a></li>
+                    @if (item.McEasyOrderId != null && item.OrderStatus != 1)
+                            {
+                                <li><a href="#" class="dropdown-item" onclick="confirmOrder(`@item.McEasyOrderId`)"><i class="bi bi-check-square"></i> Confirm</a></li>
+                            }
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><a href="#" class="dropdown-item" onclick="confirmDelete(@item.IdSeq)"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </td>
+                </tr>
+                i++;
+            }
+        }
+    </tbody>
 </table>
+
+<style>
+    /* Biar tabel lebih rapat */
+    #tableOrder th,
+    #tableOrder td {
+        padding: 3px 6px !important;
+        vertical-align: middle !important;
+    }
+
+    /* Biar input filter lebih kecil */
+    #tableOrder thead input.form-control {
+        font-size: 11px !important;
+        height: 24px !important;
+        padding: 2px 4px !important;
+        line-height: 1 !important;
+    }
+
+    /* Placeholder juga ikut kecil */
+    #tableOrder thead input::placeholder {
+        font-size: 11px !important;
+        color: #999;
+    }
+
+    /* Hilangkan margin antar input */
+    #tableOrder thead .form-control {
+        margin: 0 !important;
+    }
+
+    /* Supaya header filter gak terlalu tinggi */
+    #tableOrder thead tr.filter-row th {
+        padding: 2px 4px !important;
+    }
+</style>
+
 
 @section Scripts {
     <script>
@@ -273,16 +390,49 @@
         }
 
         $(document).ready(() => {
+            // dataTable = $('#tableOrder').DataTable({
+            //     language: {
+            //         emptyTable: "No orders available"
+            //     },
+            //     ordering: false, // matiin semua fitur sorting
+            //     drawCallback: function() {
+            //         // Sync checkboxes setiap kali table di-draw (paging, filter, dll)
+            //         syncCheckboxes();
+            //     }
+            // });
+
             dataTable = $('#tableOrder').DataTable({
-                language: {
-                    emptyTable: "No orders available"
-                },
-                ordering: false, // matiin semua fitur sorting
+                orderCellsTop: true,
+                fixedHeader: true,
+                pageLength: 25,
+                ordering: false,
+                dom: 'lrtip',
                 drawCallback: function() {
-                    // Sync checkboxes setiap kali table di-draw (paging, filter, dll)
                     syncCheckboxes();
                 }
             });
+
+            // Tambahkan filter per kolom
+            $('#tableOrder thead tr.filter-row th').each(function (i) {
+                $('input', this).on('keyup change', function () {
+                    if (dataTable.column(i).search() !== this.value) {
+                        dataTable.column(i).search(this.value).draw();
+                    }
+                });
+            });
+
+
+            // CSS compact
+            $('table.dataTable').css({
+                'font-size': '12px',
+                'line-height': '1.1',
+                'margin-bottom': '0'
+            });
+            $('#tableOrder th, #tableOrder td').css({
+                'padding': '4px 6px',
+                'vertical-align': 'middle'
+            });
+
 
             $('#btnSyncOrder').on('click', function () {
                     // Tampilkan indikator loading
@@ -328,7 +478,6 @@
                     }
                 });
             });
-
 
             // Check All handler
             $('#checkAll').on('change', function() {

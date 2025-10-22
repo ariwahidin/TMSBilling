@@ -1,4 +1,4 @@
-﻿@* @model IEnumerable<TMSBilling.Models.Job> *@
+﻿@* 
 @model IEnumerable<TMSBilling.Controllers.JobSummaryViewModel>
 
 @{
@@ -135,4 +135,180 @@
             });
         });
     </script>
+}
+ *@
+
+
+@model IEnumerable<TMSBilling.Controllers.JobSummaryViewModel>
+
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Job List";
+}
+
+<div class="mb-3">
+    <a href="/Job/Form" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus"></i> Create New Job
+    </a>
+    <button id="btnSyncJob" class="btn btn-info btn-sm">
+        <i class="bi bi-check-circle"></i> Sync Job
+    </button>
+</div>
+
+<table class="table table-sm table-bordered table-hover table-striped align-middle" id="tableJob">
+    <thead class="table-light">
+        <tr>
+            <th>#</th>
+            <th>Job ID</th>
+            <th>Status</th>
+            <th>Truck ID</th>
+            <th>Delivery Date</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Vendor ID</th>
+            <th>Total DO</th>
+            <th class="text-center">Action</th>
+        </tr>
+        <tr>
+            <th></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Job ID"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Status"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Truck"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Date"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Origin"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Destination"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Vendor"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search DO"></th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            var i = 1;
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>@i</td>
+                    <td>@item.JobId</td>
+                    <td>@item.MCStatus</td>
+                    <td>@item.TruckNo</td>
+                    <td>@item.DelivDate?.ToString("yyyy-MM-dd")</td>
+                    <td>@item.Origin</td>
+                    <td>@item.Dest</td>
+                    <td>@item.VendorPlan</td>
+                    <td>@item.TotalDo</td>
+                    <td class="text-center">
+                        <a href="/Job/Form/@item.JobId" class="text-primary me-2">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="#" class="text-danger" onclick="confirmDelete('@item.JobId')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                i++;
+            }
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        // Delete confirmation
+        function confirmDelete(id) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Are you sure?',
+                text: 'This action cannot be undone.',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/Job/Delete/${id}`, { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('Deleted!', 'The job has been deleted.', 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', data.message || 'Delete failed.', 'error');
+                            }
+                        });
+                }
+            });
+        }
+
+        $(document).ready(() => {
+            var table = $('#tableJob').DataTable({
+                orderCellsTop: true,
+                fixedHeader: true,
+                pageLength: 25,
+                language: { emptyTable: "No jobs available" }
+            });
+
+            // Filter per kolom
+            $('#tableJob thead tr:eq(1) th').each(function (i) {
+                $('input', this).on('keyup change', function () {
+                    if (table.column(i).search() !== this.value) {
+                        table.column(i).search(this.value).draw();
+                    }
+                });
+            });
+
+            // Sync Job handler
+            $('#btnSyncJob').on('click', function () {
+                Swal.fire({
+                    title: 'Syncing...',
+                    text: 'Please wait while we synchronize jobs.',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                $.ajax({
+                    url: '/Job/SyncronizeFO',
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function (response) {
+                        Swal.close();
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Synchronization Successful',
+                                text: response.message,
+                                confirmButtonColor: '#3085d6'
+                            }).then(() => window.location.reload());
+                        } else {
+                            Swal.fire('Failed', response.message || 'Synchronization failed.', 'warning');
+                        }
+                    },
+                    error: function (xhr) {
+                        Swal.close();
+                        Swal.fire('Error', xhr.responseText || 'Server not responding.', 'error');
+                    }
+                });
+            });
+        });
+    </script>
+
+    <style>
+        /* Compact mode */
+        #tableJob th, #tableJob td {
+            padding: 4px 6px !important;
+            font-size: 13px;
+        }
+
+        /* Placeholder kecil */
+        #tableJob input::placeholder {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        #tableJob input.form-control-sm {
+            height: 24px;
+            padding: 2px 6px;
+        }
+    </style>
 }
