@@ -63,55 +63,6 @@ namespace TMSBilling.Controllers
             return allFO;
         }
 
-
-        //private async Task<int> SyncFOToDatabase(List<FleetOrderMcEasy> orders)
-        //{
-        //    int count = 0;
-
-
-        //    if (orders == null || !orders.Any())
-        //        return 0;
-
-        //    // --- Hapus semua data lama ---
-        //    await _context.Database.ExecuteSqlRawAsync("DELETE FROM MC_FO");
-        //    await _context.SaveChangesAsync();
-
-
-        //    var existingIds = _context.MCFleetOrders
-        //        .Select(p => p.id)
-        //        .ToHashSet();
-
-        //    var newOrders = new List<MCFleetOrder>();
-
-        //    foreach (var p in orders)
-        //    {
-        //        if (!existingIds.Contains(p.id))
-        //        {
-        //            var newOrder = new MCFleetOrder
-        //            {
-        //                id = p.id,
-        //                number = p.number,
-        //                shipment_reference = p.shipment_reference,
-        //                status = p.status.name,
-        //                status_raw_type = p.status.raw_type,
-        //                entry_date = DateTime.Now
-        //            };
-
-        //            newOrders.Add(newOrder);
-        //        }
-
-        //        count++;
-        //    }
-
-        //    if (newOrders.Any())
-        //    {
-        //        _context.MCFleetOrders.AddRange(newOrders);
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    return count;
-        //}
-
-
         private async Task<int> SyncFOToDatabase(List<FleetOrderMcEasy> orders)
         {
             int insertedCount = 0;
@@ -177,8 +128,6 @@ namespace TMSBilling.Controllers
             return updatedCount;
         }
 
-
-
         [HttpPost]
         public async Task<IActionResult> SyncronizeFO()
         {
@@ -202,8 +151,21 @@ namespace TMSBilling.Controllers
             }
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+
+
+            try
+            {
+                var ordersFromApi = await FetchFO();
+                var result = await SyncFOToDatabase(ordersFromApi);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sync data: {ex.Message}");
+            }
+
+
             var sql = @"
                 WITH tj AS (
                     SELECT 

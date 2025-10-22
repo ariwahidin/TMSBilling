@@ -1,4 +1,4 @@
-﻿@model IEnumerable<TMSBilling.Models.PriceSell>
+﻿@* @model IEnumerable<TMSBilling.Models.PriceSell>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Price Sell";
@@ -42,9 +42,6 @@
                     <button class="btn btn-sm btn-warning" onclick="loadForm(@item.id_seq)">
                         <i class="bi bi-pencil-square"></i>
                     </button>
-                    @* <button class="btn btn-sm btn-danger" onclick="remove(@item.id_seq)">
-                        <i class="bi bi-trash"></i>
-                    </button> *@
 
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.id_seq">
                         <i class="bi bi-trash"></i>
@@ -131,6 +128,197 @@
                             icon: "error"
                         });
                     });
+                }
+            });
+        });
+    </script>
+}
+ *@
+
+@model IEnumerable<TMSBilling.Models.PriceSell>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Price Sell";
+}
+
+<div class="mb-3 d-flex gap-2">
+    <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Sell</button>
+    <a href="/PriceSell/Upload" class="btn btn-success btn-sm">Import</a>
+</div>
+
+<table class="table table-bordered table-sm table-striped nowrap" id="priceSellTable">
+    <thead>
+        <tr>
+            <th>Customer Main</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Service Type</th>
+            <th>Moda</th>
+            <th>Truk Size</th>
+            <th>Charge UoM</th>
+            <th>Status</th>
+            <th style="width:80px">Action</th>
+        </tr>
+        <tr>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Customer"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Origin"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Search Destination"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Service Type"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Moda"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Truck Size"></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Charge UoM"></th>
+            <th>
+                <select class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.cust_code</td>
+                <td>@item.origin</td>
+                <td>@item.dest</td>
+                <td>@item.serv_type</td>
+                <td>@item.serv_moda</td>
+                <td>@item.truck_size</td>
+                <td>@item.charge_uom</td>
+                <td>@(item.active_flag == 1 ? "Aktif" : "Nonaktif")</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" onclick="loadForm(@item.id_seq)">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.id_seq">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Selling Price</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="formBody">
+                <!-- form will load here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Compact table look */
+    #priceSellTable {
+        font-size: 13px;
+    }
+
+        #priceSellTable th,
+        #priceSellTable td {
+            padding: 4px 8px !important;
+            vertical-align: middle;
+        }
+
+        #priceSellTable thead input,
+        #priceSellTable thead select {
+            width: 100%;
+            padding: 2px 4px;
+            font-size: 12px;
+            height: 24px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+</style>
+
+@section Scripts {
+    <script>
+        function loadForm(id) {
+            $.get('/PriceSell/Form', { id })
+                .done((html) => {
+                    $('#formBody').html(html);
+                    const modal = new bootstrap.Modal(document.getElementById('formModal'));
+                    modal.show();
+                    $('.select2').select2({
+                        dropdownParent: $('#formModal'),
+                        placeholder: "Select an Option",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                })
+                .fail(() => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Failed to load form',
+                        text: 'Please try again later.'
+                    });
+                });
+        }
+
+        $(document).ready(function () {
+            const table = $('#priceSellTable').DataTable({
+                responsive: true,
+                orderCellsTop: true,
+                fixedHeader: true,
+                pageLength: 25
+            });
+
+            // Filter per kolom
+            $('#priceSellTable thead tr:eq(1) th').each(function (i) {
+                const input = $('input, select', this);
+                if (input.length) {
+                    input.on('keyup change', function () {
+                        if (table.column(i).search() !== this.value) {
+                            table
+                                .column(i)
+                                .search(this.value)
+                                .draw();
+                        }
+                    });
+                }
+            });
+        });
+
+        $(document).on("click", ".btnDelete", function () {
+            const id = $(this).data("id");
+
+            Swal.fire({
+                title: "Delete this record?",
+                text: "This action cannot be undone.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Delete",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post("/PriceSell/Delete", { id })
+                        .done(() => {
+                            Swal.fire({
+                                title: "Deleted",
+                                text: "Record deleted successfully.",
+                                icon: "success",
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => location.reload());
+                        })
+                        .fail(() => {
+                            Swal.fire({
+                                title: "Error",
+                                text: "Failed to delete the record.",
+                                icon: "error"
+                            });
+                        });
                 }
             });
         });

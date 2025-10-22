@@ -143,6 +143,20 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> Index()
         {
+
+            try
+            {
+                var orders = await FetchOrderFromApi();
+
+                if (orders != null && orders.Any()) { 
+                   await SyncOrderToDatabase(orders);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sync data: {ex.Message}");
+            }
+
             var sql = @"
                 WITH od AS (
                     SELECT 
