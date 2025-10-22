@@ -585,7 +585,6 @@ namespace TMSBilling.Controllers
                     string? remarkHeader = headerSheet.Cell(row, 9).GetString();
 
 
-                    // === Validasi ke master table (ganti sesuai tabel kamu)
                     if (!_context.Warehouses.Any(w => w.wh_code == whCode))
                         errors.Add(new { row, section = "header", field = "Whs Code", message = $"Warehouse '{whCode}' tidak ditemukan" });
 
@@ -596,13 +595,13 @@ namespace TMSBilling.Controllers
                     }
                         
 
-                    var geofenceOrigin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName);
+                    var geofenceOrigin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName && o.CustomerName == customer);
 
                     if (geofenceOrigin == null) {
                         errors.Add(new { row, section = "header", field = "Alamat asal", message = $"'{originName}' tidak ditemukan" });
                     }
 
-                    var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName);
+                    var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName && d.CustomerName == customer);
 
                     if (geofenceDestination == null)
                     {
