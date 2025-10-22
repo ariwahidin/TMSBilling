@@ -105,33 +105,63 @@ namespace TMSBilling.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            // --- Update TRC_JOB_H.job_status = 2 hanya untuk yang status = "Dijadwalkan" ---
             //var scheduledIds = orders
-            //    .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase))
+            //    .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase)
+            //             || string.Equals(o.status?.raw_type, "SCHEDULED", StringComparison.OrdinalIgnoreCase)
+            //             || string.Equals(o.status?.raw_type, "STARTED", StringComparison.OrdinalIgnoreCase))
             //    .Select(o => o.id)
             //    .Where(id => !string.IsNullOrEmpty(id))
             //    .ToList();
 
-            var scheduledIds = orders
-                .Where(o => string.Equals(o.status?.raw_type, "ENDED", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(o.status?.raw_type, "SCHEDULED", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(o.status?.raw_type, "STARTED", StringComparison.OrdinalIgnoreCase))
+            //if (scheduledIds.Any())
+            //{
+            //    var idList = string.Join(",", scheduledIds.Select(id => $"'{id}'"));
+
+            //    var updateSql = $@"
+            //        UPDATE TRC_JOB_H
+            //        SET status_job = 'ENDED'
+            //        WHERE mceasy_job_id IN ({idList})
+            //    ";
+
+            //    updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
+            //}
+
+            var filteredIds = orders
+                .Where(o => o.status?.raw_type != null)
                 .Select(o => o.id)
                 .Where(id => !string.IsNullOrEmpty(id))
                 .ToList();
 
-            if (scheduledIds.Any())
+            if (filteredIds.Any())
             {
-                var idList = string.Join(",", scheduledIds.Select(id => $"'{id}'"));
+                // ambil rows yang ada di DB
+                var jobs = await _context.JobHeaders
+                    .Where(j => filteredIds.Contains(j.mceasy_job_id))
+                    .ToListAsync();
 
-                var updateSql = $@"
-                    UPDATE TRC_JOB_H
-                    SET status_job = 'ENDED'
-                    WHERE mceasy_job_id IN ({idList})
-                ";
+                // buat lookup status berdasarkan id
+                var statusLookup = orders
+                    .Where(o => o.status?.raw_type != null && !string.IsNullOrEmpty(o.id))
+                    .ToDictionary(o => o.id, o => o.status.raw_type.Trim().ToUpperInvariant());
 
-                updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
+                foreach (var job in jobs)
+                {
+                    if (statusLookup.TryGetValue(job.mceasy_job_id, out var raw))
+                    {
+                        // mapping kalau perlu
+                        job.status_job = raw switch
+                        {
+                            "ENDED" => "ENDED",
+                            "SCHEDULED" => "SCHEDULED",
+                            "STARTED" => "STARTED",
+                            _ => job.status_job // biarkan kalau unknown
+                        };
+                    }
+                }
+
+                updatedCount = await _context.SaveChangesAsync();
             }
+
 
             return updatedCount;
         }
