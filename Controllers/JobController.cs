@@ -34,7 +34,7 @@ namespace TMSBilling.Controllers
                 mceasy_job_id AS JobID
                 FROM
                 TRC_JOB_H
-                WHERE status_job <> 'DRAFT' OR status_job is null";
+                WHERE status_job = 'DRAFT' OR status_job is null";
             var data = await _context.JobOrder
                 .FromSqlRaw(sql)
                 .ToListAsync();
