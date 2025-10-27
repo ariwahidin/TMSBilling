@@ -874,7 +874,7 @@ namespace TMSBilling.Controllers
                         {
                             product_id = product.ProductID,
                             quantity = detail.item_qty,
-                            uom = product.Sku,
+                            uom = product.Uom,
                             note = "",
                         };
 
