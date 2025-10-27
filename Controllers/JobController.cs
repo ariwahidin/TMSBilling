@@ -11,6 +11,7 @@ using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
 using TMSBilling.Services;
 using static TMSBilling.Models.ViewModels.JobViewModel;
+using Microsoft.Extensions.Configuration;
 
 namespace TMSBilling.Controllers
 {
@@ -22,11 +23,14 @@ namespace TMSBilling.Controllers
         private readonly AppDbContext _context;
         private readonly SelectListService _selectList;
         private readonly ApiService _apiService;
-        public JobController(AppDbContext context, SelectListService selectList, ApiService apiService)
+        private readonly IConfiguration _configuration;
+
+        public JobController(AppDbContext context, SelectListService selectList, ApiService apiService, IConfiguration configuration)
         {
             _context = context;
             _selectList = selectList;
             _apiService = apiService;
+            _configuration = configuration;
         }
 
         private async Task<List<FleetOrderMcEasy>> FetchFO()
@@ -470,16 +474,6 @@ namespace TMSBilling.Controllers
                     return BadRequest(new { success = false, message = "Order not found" });
                 }
 
-                // Cek apakah order cocok dengan CostRate dari Header
-                //bool isMatch =
-                //    orderExisting.origin_id == CostRate.origin &&
-                //    orderExisting.dest_area == CostRate.dest;
-
-                //if (!isMatch)
-                //{
-                //    return BadRequest(new { success = false, message = $"Cost rate mismatch for INV {ord.inv_no}" });
-                //}
-
                 var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == orderExisting.sub_custid);
 
                 if (customerGroup == null) {
@@ -510,7 +504,8 @@ namespace TMSBilling.Controllers
 
             // Bagian Eksekusi
             // Buat prefix bulanan: TRYP2507
-            string monthPrefix = "TRYP" + DateTime.Now.ToString("yyMM");
+            string jobPrefix = _configuration["Tms:JobPrefix"];
+            string monthPrefix = jobPrefix + DateTime.Now.ToString("yyMM");
 
             // Hitung jumlah jobid yang sudah ada untuk bulan ini
             int existingCount = _context.JobHeaders
@@ -518,6 +513,7 @@ namespace TMSBilling.Controllers
                 .Count();
 
             // Buat jobid baru
+
             string newJobId = jobid ?? GenerateJobId(existingCount + 1);
 
             //return Json(new { success = true, message = "BOLEH LANJUT, JOB ID : "+jobid });
@@ -803,7 +799,7 @@ namespace TMSBilling.Controllers
 
         private string GenerateJobId(int sequence)
         {
-            string prefix = "TRYN";
+            string prefix = _configuration["Tms:JobPrefix"];
             string year = DateTime.Now.ToString("yy");  // contoh: 25
             string month = DateTime.Now.ToString("MM"); // contoh: 07
             string sequencePart = sequence.ToString("D4"); // 0001, 0002, dst
