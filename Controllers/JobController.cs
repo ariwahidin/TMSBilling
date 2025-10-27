@@ -803,7 +803,7 @@ namespace TMSBilling.Controllers
 
         private string GenerateJobId(int sequence)
         {
-            string prefix = "TRYP";
+            string prefix = "TRYN";
             string year = DateTime.Now.ToString("yy");  // contoh: 25
             string month = DateTime.Now.ToString("MM"); // contoh: 07
             string sequencePart = sequence.ToString("D4"); // 0001, 0002, dst
