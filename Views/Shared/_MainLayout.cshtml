@@ -1,4 +1,9 @@
-﻿@functions {
+﻿@{
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
+}
+
+
+@functions {
     public bool IsActive(string controller, string? action = null)
     {
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
@@ -152,15 +157,20 @@
                                 <span class="nav-text">Product</span>
                             </a>
 
-                            <a href="/User/Index" class="nav-link @(IsActive("User") ? "active" : "")">
-                                <i class="bi bi-person nav-icon"></i>
-                                <span class="nav-text">User</span>
-                            </a>
+                            @if (isAdmin)
+                            {
 
-                            <a href="/Master/Settings" class="nav-link @(IsControllerActive("Master", "Settings") ? "active" : "")">
-                                <i class="bi bi-sliders nav-icon"></i>
-                                <span class="nav-text">Settings</span>
-                            </a>
+                                <a href="/User/Index" class="nav-link @(IsActive("User") ? "active" : "")">
+                                    <i class="bi bi-person nav-icon"></i>
+                                    <span class="nav-text">User</span>
+                                </a>
+
+                                <a href="/Master/Settings" class="nav-link @(IsControllerActive("Master", "Settings") ? "active" : "")">
+                                    <i class="bi bi-sliders nav-icon"></i>
+                                    <span class="nav-text">Settings</span>
+                                </a>
+
+                            }
 
                         </div>
                     </div>
@@ -189,6 +199,8 @@
                         </div>
                     </div>
 
+                        @if (isAdmin)
+    {
 
                     <div class="nav-item">
                         <a href="/Reporting/Index" class="nav-link">
@@ -196,6 +208,9 @@
                             <span class="nav-text">Reporting</span>
                         </a>
                     </div>
+
+    }
+
                 </nav>
 
                 <div class="theme-section d-none">

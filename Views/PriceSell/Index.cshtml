@@ -139,11 +139,18 @@
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Price Sell";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
 <div class="mb-3 d-flex gap-2">
-    <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Sell</button>
-    <a href="/PriceSell/Upload" class="btn btn-success btn-sm">Import</a>
+
+    @if (isAdmin)
+    {
+
+        <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Sell</button>
+        <a href="/PriceSell/Upload" class="btn btn-success btn-sm">Import</a>
+
+    }
 </div>
 
 <table class="table table-bordered table-sm table-striped nowrap" id="priceSellTable">
@@ -190,12 +197,15 @@
                 <td>@item.charge_uom</td>
                 <td>@(item.active_flag == 1 ? "Aktif" : "Nonaktif")</td>
                 <td>
+                @if (isAdmin)
+                {
                     <button class="btn btn-sm btn-warning" onclick="loadForm(@item.id_seq)">
                         <i class="bi bi-pencil-square"></i>
                     </button>
                     <button class="btn btn-sm btn-danger btnDelete" data-id="@item.id_seq">
                         <i class="bi bi-trash"></i>
                     </button>
+                }
                 </td>
             </tr>
         }

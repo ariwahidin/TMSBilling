@@ -85,7 +85,7 @@ namespace TMSBilling.Controllers
             {
                 var hasher = new PasswordHasher<User>();
                 user.Password = hasher.HashPassword(user, user.Password);
-                user.CreatedBy = HttpContext.Session.GetString("username"); // atau admin, dsb
+                user.CreatedBy = HttpContext.Session.GetString("username"); 
                 user.CreatedAt = DateTime.Now;
                 user.UpdatedBy = HttpContext.Session.GetString("username");
                 user.UpdatedAt = DateTime.Now;
