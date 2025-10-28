@@ -447,23 +447,23 @@ namespace TMSBilling.Controllers
             headerSheet.Cell("A1").Value = "No.";
             headerSheet.Cell("B1").Value = "Nama Pelanggan*";
             headerSheet.Cell("C1").Value = "Karyawan Pemasaran";
-            headerSheet.Cell("D1").Value = "Target Diambil";
-            headerSheet.Cell("E1").Value = "Target Dikirim";
+            headerSheet.Cell("D1").Value = "Target Diambil*";
+            headerSheet.Cell("E1").Value = "Target Dikirim*";
             headerSheet.Cell("F1").Value = "No. AJU";
             headerSheet.Cell("G1").Value = "No. DO*";
             headerSheet.Cell("H1").Value = "No. Referensi";
             headerSheet.Cell("I1").Value = "Catatan Lainya";
-            headerSheet.Cell("J1").Value = "Alamat Asal";
-            headerSheet.Cell("K1").Value = "Alamat Tujuan";
-            headerSheet.Cell("L1").Value = "Truck Size";
-            headerSheet.Cell("M1").Value = "Service Type";
-            headerSheet.Cell("N1").Value = "Moda";
-            headerSheet.Cell("O1").Value = "UOM";
-            headerSheet.Cell("P1").Value = "Whs Code";
-            headerSheet.Cell("Q1").Value = "Rcv DO Date";
-            headerSheet.Cell("R1").Value = "Rcv DO Time";
-            headerSheet.Cell("S1").Value = "Origin Area";
-            headerSheet.Cell("T1").Value = "Destination Area";
+            headerSheet.Cell("J1").Value = "Alamat Asal*";
+            headerSheet.Cell("K1").Value = "Alamat Tujuan*";
+            headerSheet.Cell("L1").Value = "Truck Size*";
+            headerSheet.Cell("M1").Value = "Service Type*";
+            headerSheet.Cell("N1").Value = "Moda*";
+            headerSheet.Cell("O1").Value = "UOM*";
+            headerSheet.Cell("P1").Value = "Whs Code*";
+            headerSheet.Cell("Q1").Value = "Rcv DO Date*";
+            headerSheet.Cell("R1").Value = "Rcv DO Time*";
+            headerSheet.Cell("S1").Value = "Origin Area*";
+            headerSheet.Cell("T1").Value = "Destination Area*";
 
             // Format header (bold + background biru muda)
             var headerRange = headerSheet.Range("A1:T1");
@@ -824,7 +824,7 @@ namespace TMSBilling.Controllers
                         return BadRequest(new
                         {
                             success = false,
-                            message = "Failed Add Order to API",
+                            message = "Failed Add Order to API : "+json,
                             detail = json
                         });
                     }
@@ -888,7 +888,7 @@ namespace TMSBilling.Controllers
                             return BadRequest(new
                             {
                                 success = false,
-                                message = "Failed Add Order to API",
+                                message = "Failed Add Order to API : "+ json,
                                 detail = json
                             });
                         }

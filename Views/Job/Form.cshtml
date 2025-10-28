@@ -590,7 +590,8 @@
                 data: {
                     originId: origin,
                     destArea: destination,
-                    deliveryDate: deliveryDate
+                    deliveryDate: deliveryDate,
+                    multidrop: $('#multidrop').val() === "true",
                 },
                 success: function (res) {
                     console.log("Orders:", res);

@@ -877,28 +877,39 @@ namespace TMSBilling.Controllers
         }
 
 
-        public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate)
+        //public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate, bool multidrop)
+        //{
+        //    var nextDay = deliveryDate.AddDays(1);
+        //    var result = await _context.Orders
+        //    .Where(
+        //        o => o.origin_id == originId
+        //        && o.dest_area == destArea
+        //        && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
+        //        && o.mceasy_status == "CONFIRMED"
+        //        && o.mceasy_is_upload == false
+        //        )
+        //    .ToListAsync();
+        //    return Ok(new {success = true, data = result});
+        //}
+
+        public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate, bool multidrop)
         {
+            var query = _context.Orders
+                .Where(o =>
+                    o.origin_id == originId &&
+                    EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0 &&
+                    o.mceasy_status == "CONFIRMED" &&
+                    o.mceasy_is_upload == false
+                );
 
-        var nextDay = deliveryDate.AddDays(1);
-            Console.WriteLine($"deliveryDate: {deliveryDate:yyyy-MM-dd HH:mm:ss}");
-            Console.WriteLine($"nextDay: {nextDay:yyyy-MM-dd HH:mm:ss}");
+            if (!multidrop)
+            {
+                query = query.Where(o => o.dest_area == destArea);
+            }
 
-            //var result = await _context.Orders
-            //    .Where(o => o.origin_id == originId
-            //     && o.dest_area == destArea
-            //     && o.delivery_date >= deliveryDate
-            //     && o.delivery_date < nextDay
-            //     && o.order_status == 1)
+            var result = await query.ToListAsync();
 
-            var result = await _context.Orders
-            .Where(o => o.origin_id == originId
-                && o.dest_area == destArea
-                && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
-                && o.mceasy_status == "CONFIRMED"
-                && o.mceasy_is_upload == false)
-            .ToListAsync();
-            return Ok(new {success = true, data = result}); // hasilnya JSON
+            return Ok(new { success = true, data = result });
         }
 
 
