@@ -5,9 +5,9 @@
     string iframeSrc = "";
     if (ViewBag.Config != null)
     {
-        string hostname = ViewBag.Config.hostname;
-        int port = ViewBag.Config.port;
-        iframeSrc = $"{hostname}:{port}/Page/ReportPrice";
+        // string hostname = ViewBag.Config.hostname;
+        // int port = ViewBag.Config.port;
+        iframeSrc = $"{ViewBag.Config.value}";
     }
 }
 
