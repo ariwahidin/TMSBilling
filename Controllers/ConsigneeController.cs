@@ -31,16 +31,12 @@ namespace TMSBilling.Controllers
         [HttpPost]
         public async Task<IActionResult> SyncConsignee()
         {
-            //var list = _context.Consignees
-            //    .OrderByDescending(o => o.ID)
-            //    .ToList();
-
-
             var graphqlVariables = new
             {
                 filter = new
                 {
-                    ownership = "Customer"
+                    ownership = "Customer",
+                    isGarage = false
                 }
             };
 
@@ -115,6 +111,94 @@ namespace TMSBilling.Controllers
                              .GetProperty("geofences")
                              .GetProperty("data")
                              .Deserialize<List<Geofence>>() ?? new List<Geofence>();
+
+
+
+            var graphqlVariables2 = new
+            {
+                filter = new
+                {
+                    isGarage = true
+                }
+            };
+
+
+            var (ok2, result2) = await _apiService.ExecuteGraphQLAsync(
+                @"query Geofences($filter: GetGeofencesFilter) {
+                      geofences(filter: $filter) {
+                        geofences {
+                          data {
+                            geofenceId
+                            companyId
+                            customerId
+                            fenceName
+                            type
+                            polyData
+                            circData
+                            address
+                            addressDetail
+                            province
+                            city
+                            postalCode
+                            category
+                            contactName
+                            phoneNo
+                            isGarage
+                            isServiceLoc
+                            isBillingAddr
+                            isDepot
+                            isAlert
+                            serviceStart
+                            serviceEnd
+                            breakStart
+                            breakEnd
+                            serviceLocType
+                            customerName
+                            createdOn
+                            hasRelation
+                            contacts {
+                              contactId
+                              name
+                              phoneNo
+                              sendWhatsapp
+                            }
+                          }
+                          pagination {
+                            total
+                            page
+                            show
+                            startCursor
+                            endCursor
+                            actualTotal
+                          }
+                        }
+                      }
+                    }",
+                graphqlVariables2,
+                "Geofences"
+            );
+
+            if (!ok2)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "GraphQL get geofences request failed",
+                    detail = result2.ToString()
+                });
+            }
+
+            var data2 = result2.GetProperty("data")
+                 .GetProperty("geofences")
+                 .GetProperty("geofences")
+                 .GetProperty("data")
+                 .Deserialize<List<Geofence>>() ?? new List<Geofence>();
+
+            data.AddRange(data2);
+
+
+
+
 
             if (data == null || data.Count < 1) {
                 return BadRequest(new
