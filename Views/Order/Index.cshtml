@@ -146,7 +146,7 @@
             {
                 <tr>
                     <td>
-                        @if (item.McEasyOrderId != null && item.OrderStatus == 0)
+                        @if (item.MCOrderStatus == "Draf")
                         {
                             <input type="checkbox" class="order-checkbox" data-order-id="@item.McEasyOrderId">
                         }
@@ -160,9 +160,7 @@
             <td>@item.OriginId</td>
             <td>@item.DestArea</td>
             <td>
-                @(item.OrderStatus == 0 ? "Draft" :
-                                item.OrderStatus == 1 ? "Confirmed" :
-                                item.OrderStatus == 2 ? "Scheduled" : "-")
+                @item.MCOrderStatus
             </td>
             <td>@item.TotalItem</td>
             <td>@item.TotalQty</td>
@@ -390,16 +388,6 @@
         }
 
         $(document).ready(() => {
-            // dataTable = $('#tableOrder').DataTable({
-            //     language: {
-            //         emptyTable: "No orders available"
-            //     },
-            //     ordering: false, // matiin semua fitur sorting
-            //     drawCallback: function() {
-            //         // Sync checkboxes setiap kali table di-draw (paging, filter, dll)
-            //         syncCheckboxes();
-            //     }
-            // });
 
             dataTable = $('#tableOrder').DataTable({
                 orderCellsTop: true,

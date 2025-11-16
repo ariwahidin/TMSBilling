@@ -226,6 +226,16 @@
                                     </select>
                                 </div>
                             </div>
+
+                        <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Multi Drop:</label>
+                            <div class="col-sm-8">
+                                <select id="multidrop" asp-for="Header.multidrop" class="form-select form-select-sm">
+                                    <option value="false" selected>No</option>
+                                    <option value="true">Yes</option>
+                                </select>
+                            </div>
+                        </div>
                         </div>
                         <div class="col-md-4">
                         <div class="mb-2 row">
@@ -283,10 +293,8 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
                             <div class="mb-2 row">
-                                <label class="col-sm-4 col-form-label text-end">Act Vendor:</label>
+                                <label class="col-sm-4 col-form-label text-end">Actual Vendor:</label>
                                 <div class="col-sm-8">
                                     <div class="position-relative-custom">
                                         <input type="text"
@@ -308,6 +316,9 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="col-md-4">
+                            
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Truck ID:</label>
                                 <div class="col-sm-8">
@@ -317,21 +328,14 @@
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Driver Name:</label>
                                 <div class="col-sm-8">
-                                    <select id="drivername" asp-for="Header.driver_name" class="form-select form-select-sm">
+                                    @* <select id="drivername" asp-for="Header.driver_name" class="form-select form-select-sm">
                                         <option value="Budi Santoso" selected>Budi Santoso</option>
                                         <option value="Ahmad Yani">Ahmad Yani</option>
-                                    </select>
+                                    </select> *@
+                                    <input style="font-size:12px" id="drivername" asp-for="Header.driver_name" class="form-control" type="text" />
                                 </div>
                             </div>
-                            <div class="mb-2 row">
-                                <label class="col-sm-4 col-form-label text-end">Multi Drop:</label>
-                                <div class="col-sm-8">
-                                    <select id="multidrop" asp-for="Header.multidrop" class="form-select form-select-sm">
-                                        <option value="false" selected>No</option>
-                                        <option value="true">Yes</option>
-                                    </select>
-                                </div>
-                            </div>
+                            
                              <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Start/Finish Point:</label>
                                 <div class="col-sm-8">
@@ -366,11 +370,11 @@
                                     <th style="width: 100px;">Invoice No</th>
                                     <th style="width: 80px;">Customer</th>
                                     <th style="width: 80px;">Consignee</th>
+                                    <th style="width: 100px;">Origin</th>
                                     <th style="width: 100px;">Destination</th>
-                                    <th style="width: 60px;">PKGS</th>
-                                    <th style="width: 60px;">Pallet</th>
+                                    <th style="width: 60px;">Charge UOM</th>
+                                    <th style="width: 60px;">Service</th>
                                     <th style="width: 80px;">Truck Size</th>
-                                    <th style="width: 100px;">Remark</th>
                                     <th style="width: 80px;">Empty Pallet</th>
                                     <th style="width: 80px;">Return Cargo</th>
                                     <th style="width: 80px;">Overnight</th>
@@ -429,12 +433,11 @@
                                     <th>Invoice No</th>
                                     <th>Customer</th>
                                     <th>Consignee</th>
+                                    <th>Origin</th>
                                     <th>Destination</th>
-                                    <th>PKGS</th>
-                                    <th>Weight (KG)</th>
-                                    <th>Volume (M³)</th>
-                                    <th>Truck Size</th>
+                                    <th>Charge UOM</th>
                                     <th>Service</th>
+                                    <th>Truck Size</th>
                                     <th>Delivery Date</th>
                                     <th>Status</th>
                                 </tr>
@@ -560,6 +563,19 @@
     </script>
 
     <script>
+        function formatDateReadable(dateStr) {
+            const date = new Date(dateStr);
+
+            if (isNaN(date)) return dateStr; // fallback kalau input invalid
+
+            return date.toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+        }
         $(document).ready(function() {
             // Initialize Select2
             $('.form-select').select2({
@@ -614,12 +630,11 @@
                                 <td>${order.inv_no}</td>
                                 <td title="${order.sub_custid}">${order.sub_custid}</td>
                                 <td title="${order.cnee_code}">${order.cnee_code}</td>
-                                <td>${ order.dest_area ?? order.mceasy_dest_name}</td>
-                                <td class="text-end">${order.tot_pkgs ?? ''}</td>
-                                <td class="text-end">${order.uom ?? ''}</td>
-                                <td class="text-end">${order.pallet_consume ?? ''}</td>
-                                <td>${order.truck_size ?? ''}</td>
+                                <td>${order.origin_id ?? ''}</td>
+                                <td>${order.dest_area ?? ''}</td>
+                                <td>${order.uom ?? ''}</td>
                                 <td>${order.serv_req ?? ''}</td>
+                                <td>${order.truck_size ?? ''}</td>
                                 <td>${order.delivery_date ? new Date(order.delivery_date).toLocaleString() : ''}</td>
                                 <td><span class="badge bg-success">${order.mceasy_status ?? ''}</span></td>
                             </tr>
@@ -634,8 +649,8 @@
                     showToast("Terjadi error saat ambil data order", "error");
                 }
             });
-
-            $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${deliveryDate}`);
+            const formattedDate = formatDateReadable(deliveryDate);
+            $('#modalOrderInfo').text(`${origin} → ${destination}, Date: ${formattedDate}`);
         }
 
             // Check All functionality
@@ -680,13 +695,15 @@
 
             // Apply Selection
             $('#applySelection').click(function() {
-                selectedOrders = [];
+                selectedOrders = selectedOrders;
                 $('.order-checkbox:checked').each(function() {
                     const orderId = $(this).data('order-id');
                     const orderData = realOrders.find(o => o.id_seq === orderId);
                     if (orderData) {
+                        console.log("before apply : ",selectedOrders)
                         selectedOrders.push(orderData);
-                        console.table(orderData)
+                        console.log("order applied : ",orderData);
+                        console.log("after applied : ",selectedOrders)
                     }
                 });
 
@@ -706,7 +723,10 @@
                 }
 
                 selectedOrders.forEach((order, index) => {
-                    const renderYesNoSelect = (name, selected = "No") => {
+                    const renderYesNoSelect = (name, value, selected = "No") => {
+                        if(value == 1){
+                            selected = "Yes"
+                        }
                         return `
                             <select class="form-select form-select-sm" name="${name}">
                                 <option value="No" ${selected === "No" ? 'selected' : ''}>No</option>
@@ -724,16 +744,16 @@
                             <td><input type="text" name="Details[${index}].inv_no" class="form-control form-control-sm" value="${order.inv_no}" readonly /></td>
                             <td><input type="text" name="Details[${index}].sub_custid" class="form-control form-control-sm" value="${order.sub_custid}" readonly /></td>
                             <td><input type="text" name="Details[${index}].cnee_code" class="form-control form-control-sm" value="${order.cnee_code}" readonly /></td>
+                            <td><input type="text" name="Details[${index}].origin_id" class="form-control form-control-sm" value="${order.origin_id}" readonly /></td>
                             <td><input type="text" name="Details[${index}].dest_area" class="form-control form-control-sm" value="${order.dest_area}" readonly /></td>
-                            <td><input type="number" name="Details[${index}].tot_pkgs" class="form-control form-control-sm text-end" value="${order.tot_pkgs}" readonly /></td>
-                            <td><input type="number" name="Details[${index}].pallet" class="form-control form-control-sm text-end" value="0" /></td>
+                            <td><input type="text" name="Details[${index}].uom" class="form-control form-control-sm" value="${order.uom}" readonly /></td>
+                            <td><input type="text" name="Details[${index}].serv_req" class="form-control form-control-sm" value="${order.serv_req}" readonly /></td>
                             <td><input type="text" name="Details[${index}].truck_size" class="form-control form-control-sm" value="${order.truck_size}" /></td>
-                            <td><input type="text" name="Details[${index}].remark" class="form-control form-control-sm" value="${order.remark}" /></td>
-                            <td>${renderYesNoSelect(`Details[${index}].empty_pallet`)}</td>
-                            <td>${renderYesNoSelect(`Details[${index}].return_cargo`)}</td>
-                            <td>${renderYesNoSelect(`Details[${index}].overnight`)}</td>
-                            <td>${renderYesNoSelect(`Details[${index}].cancel_cargo`)}</td>
-                            <td>${renderYesNoSelect(`Details[${index}].diff_area`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].flag_ep`, `${order.flag_ep}`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].flag_rc`, `${order.flag_rc}`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].flag_ov`, `${order.flag_ov}`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].flag_cc`, `${order.flag_cc}`)}</td>
+                            <td>${renderYesNoSelect(`Details[${index}].flag_diffa`, `${order.flag_diffa}`)}</td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-danger btn-remove-order" data-order-id="${order.id_seq}">
                                     <i class="fas fa-trash"></i>
@@ -806,16 +826,16 @@
                         inv_no: row.find('[name*=".inv_no"]').val(),
                         sub_custid: row.find('[name*=".sub_custid"]').val(),
                         cnee_code: row.find('[name*=".cnee_code"]').val(),
+                        origin_id: row.find('[name*=".origin_id"]').val(),
                         dest_area: row.find('[name*=".dest_area"]').val(),
-                        tot_pkgs: parseInt(row.find('[name*=".tot_pkgs"]').val()) || 0,
-                        pallet_delivery	: parseInt(row.find('[name*=".pallet"]').val()) || 0,
                         truck_size: row.find('[name*=".truck_size"]').val(),
-                        remark: row.find('[name*=".remark"]').val(),
-                        empty_pallet: row.find('[name*=".empty_pallet"]').val(),
-                        return_cargo: row.find('[name*=".return_cargo"]').val(),
-                        overnight: row.find('[name*=".overnight"]').val(),
-                        cancel_cargo: row.find('[name*=".cancel_cargo"]').val(),
-                        diff_area: row.find('[name*=".diff_area"]').val()
+                        uom: row.find('[name*=".uom"]').val(),
+                        serv_req: row.find('[name*=".serv_req"]').val(),
+                        flag_ep: row.find('[name*=".flag_ep"]').val() == 'Yes' ? 1 : 0,
+                        flag_rc: row.find('[name*=".flag_rc"]').val() == 'Yes' ? 1 : 0,
+                        flag_ov: row.find('[name*=".flag_ov"]').val() == 'Yes' ? 1 : 0,
+                        flag_cc: row.find('[name*=".flag_cc"]').val() == 'Yes' ? 1 : 0,
+                        flag_diffa: row.find('[name*=".flag_diffa"]').val() == 'Yes' ? 1 : 0
                     };
                     details.push(detail);
                 });
@@ -851,13 +871,16 @@
                     contentType: 'application/json',
                     success: function (res) {
                         hideLoading();
-                        Swal.fire('Success', res.message, 'success').then((result) => {
-                            if (result.isConfirmed || result.isDismissed) {
-                                // contoh redirect
-                                window.location.href = '/Job/Index';
-                            }
-                        });
-                        
+                        Swal.fire({
+                            position: "center",
+                            icon: "success",
+                            title: "Success!",
+                            text : res.message,
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then((result) => {
+                            window.location.href = '/Job/Index';
+                        });   
                     },
                     error: function (e) {
                         hideLoading();
@@ -909,7 +932,6 @@
                         if (res.success && res.data.length > 0) {
                             console.log("Detail Data:", res.data);
                             res.data.forEach(function(item) {
-
                                 selectedOrders.push(item)
                             });
                             renderSelectedOrders();
@@ -924,6 +946,20 @@
                     }
                 });
             }
+
+            // on servtype_ori change
+            $('#servtype_ori').change(function () {
+                const val = $(this).val();
+                console.log('VALUE:', val);
+
+                if (val === 'LTL') {
+                    console.log('OPTION VALUE:', $('#truck_size').find('option').map(function(){return this.value}).get());
+                    $('#truck_size')
+                        .val('NON-SIZE')
+                        .trigger('change.select2');
+                }
+            });
+
         });
     </script>
 
@@ -1090,6 +1126,7 @@
             // Fill form fields berdasarkan type
             if (currentVendorType === 'planVendor') {
                 document.getElementById('planVendor').value = vendor.vendor_code;
+                document.getElementById('actualVendor').value = vendor.vendor_code;
             } else if (currentVendorType === 'actualVendor') {
                 document.getElementById('actualVendor').value = vendor.vendor_code;
             }

@@ -17,7 +17,9 @@ namespace TMSBilling.Controllers
 
         public IActionResult Index()
         {
-            var config  = _context.Configs.FirstOrDefault();
+            var config = _context.Configs.
+                Where( e => e.key == "reporting").
+                FirstOrDefault();
 
             if (config == null)
             {

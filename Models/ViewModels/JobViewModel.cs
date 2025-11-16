@@ -152,6 +152,14 @@ namespace TMSBilling.Models.ViewModels
 
             public bool? mceasy_is_upload { get; set; } = false;
 
+            public byte? flag_pu { get; set; }
+            public byte? flag_diffa { get; set; }
+            public byte? flag_ep { get; set; }
+            public byte? flag_rc { get; set; }
+            public byte? flag_ov { get; set; }
+            public byte? flag_cc { get; set; }
+            public byte? flag_charge { get; set; }
+
         }
     }
 }

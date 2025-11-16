@@ -1,8 +1,12 @@
 ﻿
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TMSBilling.Data;
@@ -11,7 +15,6 @@ using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
 using TMSBilling.Services;
 using static TMSBilling.Models.ViewModels.JobViewModel;
-using Microsoft.Extensions.Configuration;
 
 namespace TMSBilling.Controllers
 {
@@ -435,20 +438,20 @@ namespace TMSBilling.Controllers
             }
 
 
-            if (!string.IsNullOrEmpty(jobid))
-            {
-                // delete existing job first
-                var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
+            //if (!string.IsNullOrEmpty(jobid))
+            //{
+            //    // delete existing job first
+            //    var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
 
-                if (jobExistingList.Any())
-                {
-                    _context.Jobs.RemoveRange(jobExistingList); 
-                    _context.SaveChanges();
-                }
+            //    if (jobExistingList.Any())
+            //    {
+            //        _context.Jobs.RemoveRange(jobExistingList); 
+            //        _context.SaveChanges();
+            //    }
 
-                _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
+            //    _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
 
-            }
+            //}
 
 
 
@@ -464,6 +467,39 @@ namespace TMSBilling.Controllers
                 return BadRequest(new { success = false, message = "Header, price buy not found" });
             }
 
+            var OriginIsMatch = false;
+            var DestinationMatch = false;
+
+            // check origin order min 1 is match
+            foreach (var oro in Details) {
+                if (CostRate.origin == oro.origin_id) { 
+                    OriginIsMatch = true;
+                    break;
+                }
+            }
+
+            if (!OriginIsMatch) {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Origin not found in order. Required origin: {CostRate.origin}"
+                });
+            }
+
+            // check destination order min 1 is match
+            foreach (var ordes in Details) {
+                if (CostRate.dest == ordes.dest_area) { 
+                    DestinationMatch = true;
+                    break;
+                }
+            }
+
+            if (!DestinationMatch) {
+                return BadRequest(new { 
+                    success = false,
+                    message = $"Destination not found in order. Required destiation : {CostRate.dest}"
+                });
+            }
             
 
             foreach (var ord in Details)
@@ -504,7 +540,11 @@ namespace TMSBilling.Controllers
 
             // Bagian Eksekusi
             // Buat prefix bulanan: TRYP2507
-            string jobPrefix = _configuration["Tms:JobPrefix"];
+            //string jobPrefix = _configuration["Tms:JobPrefix"];
+            var jobPrefix = _context.Configs
+                .Where(x => x.key == "job-prefix")
+                .Select(x => x.value)
+                .FirstOrDefault();
             string monthPrefix = jobPrefix + DateTime.Now.ToString("yyMM");
 
             // Hitung jumlah jobid yang sudah ada untuk bulan ini
@@ -518,122 +558,18 @@ namespace TMSBilling.Controllers
 
             //return Json(new { success = true, message = "BOLEH LANJUT, JOB ID : "+jobid });
 
-
-
             // awal kosong
             var deliveryOrderIds = new List<string>();
             var mceasy_job_id = string.Empty;
 
 
             // BAGIAN INSERT NEW JOB ADA DISINI
-            foreach (var ordx in Details)
-            {
-                var order = _context.Orders.FirstOrDefault(j => j.inv_no == ordx.inv_no);
-                if (order == null)
-                {
-                    return BadRequest(new { success = false, message = "Order not found" });
-                }
-                else
-                {
-                    order.order_status = 1;
-                    order.mceasy_is_upload = true;
-                    order.jobid = newJobId;
-                    order.update_user = HttpContext.Session.GetString("username") ?? "System";
-                    order.update_date = DateTime.Now;
-                    _context.Orders.Update(order);
-                }
+            var result = InsertOrderToJob(Details, newJobId, Header, CostRate);
 
+            if (!result.ok)
+                return BadRequest(new { success = false, message = result.message });
 
-                var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == order.sub_custid);
-
-                if (customerGroup == null)
-                {
-                    return NotFound(new { success = false, message = "Customer group not found" });
-                }
-
-
-
-                var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
-
-                
-
-                if (customer == null)
-                {
-                    return BadRequest(new { success = false, message = "Customer not found" });
-                }
-
-                if (customer.API_FLAG == 1) {
-                    if (!string.IsNullOrEmpty(order.mceasy_order_id))
-                    {
-                        deliveryOrderIds.Add(order.mceasy_order_id);
-                    }
-                }
-
-                var SellRate = _context.PriceSells.FirstOrDefault(sr =>
-                                    sr.cust_code == customer.MAIN_CUST
-                                    && sr.origin == order.origin_id
-                                    && sr.dest == order.dest_area
-                                    && sr.truck_size == order.truck_size
-                                    && sr.serv_type == order.serv_req
-                                    && sr.serv_moda == order.moda_req
-                                    && sr.charge_uom == order.uom
-                                    );
-                if (SellRate == null)
-                {
-                    return BadRequest(new { success = false, message = "Sell rate not found for INV " + order.inv_no });
-                }
-
-                var newJob = new Job();
-                newJob.jobid = newJobId;
-                newJob.vendorid = CostRate.sup_code;
-                newJob.truckid = Header.truck_id;
-                newJob.drivername = Header.driver_name;
-                newJob.moda_req = order?.moda_req;
-                newJob.serv_req = order?.serv_req;
-                newJob.truck_size = order?.truck_size;
-
-                newJob.drop_seq = ordx.drop_seq;
-                newJob.multidrop = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0);
-                newJob.flag_charge = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0);
-
-                newJob.charge_uom = CostRate.charge_uom;
-                newJob.inv_no = order?.inv_no;
-                newJob.origin_id = order?.origin_id;
-                newJob.dest_id = order?.dest_area;
-                newJob.dvdate = Header.dvdate;
-
-                newJob.buy1 = CostRate.buy1;
-                newJob.buy2 = CostRate.buy2;
-                newJob.buy3 = CostRate.buy3;
-
-                newJob.buy_ov = CostRate.buy_ovnight;
-                newJob.buy_cc = CostRate.buy_cancel;
-                newJob.buy_rc = CostRate.buy_ret_cargo;
-                newJob.buy_ep = CostRate.buy_ret_empt;
-                newJob.buy_diffa = CostRate.buy_diff_area;
-
-                newJob.buy_trip2 = CostRate.buytrip2;
-                newJob.buy_trip3 = CostRate.buytrip3;
-
-                newJob.sell1 = SellRate?.sell1;
-                newJob.sell2 = SellRate?.sell2;
-                newJob.sell3 = SellRate?.sell3;
-
-                newJob.sell_trip2 = SellRate?.selltrip2;
-                newJob.sell_trip3 = SellRate?.selltrip3;
-                newJob.sell_diffa = SellRate?.sell_diff_area;
-                newJob.sell_ep = SellRate?.sell_ret_empty;
-                newJob.sell_rc = SellRate?.sell_ret_cargo;
-                newJob.sell_ov = SellRate?.sell_ovnight;
-                newJob.sell_cc = SellRate?.sell_cancel;
-
-                newJob.entry_user = HttpContext.Session.GetString("username") ?? "System";
-                newJob.entry_date = DateTime.Now;
-                newJob.update_user = HttpContext.Session.GetString("username") ?? "System";
-                newJob.update_date = DateTime.Now;
-
-                _context.Jobs.Add(newJob);
-            }
+            deliveryOrderIds = result.deliveryOrderIds;
 
             if (deliveryOrderIds.Count > 0 && string.IsNullOrEmpty(jobid))
             {
@@ -713,6 +649,25 @@ namespace TMSBilling.Controllers
                 {
                     if (!string.IsNullOrEmpty(jobHeader.mceasy_job_id))
                     {
+                        foreach (var idDel in deliveryOrderIds) {
+                            var payloadDel = new { };
+                            var (okDel, jsonDel) = await _apiService.SendRequestAsync(
+                                HttpMethod.Delete,
+                                $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/delivery-order/{idDel}",
+                                payloadDel
+                            );
+                            //if (!okDel)
+                            //{
+                            //    return BadRequest(new
+                            //    {
+                            //        success = false,
+                            //        message = "Failed delete order from fleet task",
+                            //        detail = jsonDel
+                            //    });
+                            //}
+
+                        }
+
                         var payload = new
                         {
                             expected_departure_on = Header.dvdate.HasValue
@@ -737,6 +692,37 @@ namespace TMSBilling.Controllers
                                 detail = json
                             });
                         }
+
+                        var newOrderIDs = new List<string>();
+
+                        foreach (var item in Details) { 
+                            Console.WriteLine("NEW ORDER ID : {0}", item.mceasy_order_id);
+                            var orderExisting = _context.Orders.FirstOrDefault(or => or.inv_no == item.inv_no);
+                            if (orderExisting != null && orderExisting.mceasy_order_id != null) { 
+                                newOrderIDs.Add(orderExisting.mceasy_order_id);
+                            }
+                        }
+
+                        var payloadNewOrder = new
+                        {
+                            delivery_order_ids = newOrderIDs,
+                        };
+
+                        var (okNew, jsonNew) = await _apiService.SendRequestAsync(
+                            HttpMethod.Put,
+                            $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/delivery-order",
+                            payloadNewOrder
+                        );
+                        if (!okNew)
+                        {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Gagal kirim ke API Store Fleet Task",
+                                detail = jsonNew
+                            });
+                        }
+
                     }
                     jobHeader.cust_group = Header.cust_group;
                     jobHeader.vendor_plan = Header.vendor_id;
@@ -760,6 +746,19 @@ namespace TMSBilling.Controllers
                         jobHeader.mceasy_job_id = mceasy_job_id;
                     }
                     _context.JobHeaders.Update(jobHeader);
+
+                    // delete existing job first
+                    var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
+
+                    if (jobExistingList.Any())
+                    {
+                        Console.WriteLine("DELETE JOB : {0}",jobid);
+                        var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_JOB WHERE jobid = {0}", jobid);
+                        Console.WriteLine("Rows delete affected: " + rows);
+                    }
+
+                    var rowUpd =  _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
+                    Console.WriteLine("Rows update affected: " + rowUpd);
                 }
                 else
                 {
@@ -797,9 +796,122 @@ namespace TMSBilling.Controllers
             return Json(new { success = true, message = "Job saved successfully" });
         }
 
+    private (bool ok, string message, List<string> deliveryOrderIds) InsertOrderToJob(
+        IEnumerable<OrderForJobForm> Details,
+        String newJobId,
+        HeaderFormJob Header,
+        PriceBuy CostRate)
+        {
+            var deliveryOrderIds = new List<string>();
+
+            foreach (var ordx in Details)
+            {
+                var order = _context.Orders.FirstOrDefault(j => j.inv_no == ordx.inv_no);
+                if (order == null)
+                    return (false, $"Order not found for INV {ordx.inv_no}", deliveryOrderIds);
+
+                order.order_status = 1;
+                order.mceasy_is_upload = true;
+                order.jobid = newJobId;
+                order.update_user = HttpContext.Session.GetString("username") ?? "System";
+                order.update_date = DateTime.Now;
+                _context.Orders.Update(order);
+
+                var customerGroup = _context.CustomerGroups
+                    .FirstOrDefault(g => g.SUB_CODE == order.sub_custid);
+
+                if (customerGroup == null)
+                    return (false, "Customer group not found", deliveryOrderIds);
+
+                var customer = _context.Customers
+                    .FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+                if (customer == null)
+                    return (false, "Customer not found", deliveryOrderIds);
+
+                if (customer.API_FLAG == 1 && !string.IsNullOrEmpty(order.mceasy_order_id))
+                    deliveryOrderIds.Add(order.mceasy_order_id);
+
+                var SellRate = _context.PriceSells.FirstOrDefault(sr =>
+                                    sr.cust_code == customer.MAIN_CUST
+                                    && sr.origin == order.origin_id
+                                    && sr.dest == order.dest_area
+                                    && sr.truck_size == order.truck_size
+                                    && sr.serv_type == order.serv_req
+                                    && sr.serv_moda == order.moda_req
+                                    && sr.charge_uom == order.uom);
+
+                if (SellRate == null)
+                    return (false, $"Sell rate not found for INV {order.inv_no}", deliveryOrderIds);
+
+                var newJob = new Job
+                {
+                    jobid = newJobId,
+                    vendorid = CostRate.sup_code,
+                    truckid = Header.truck_id,
+                    drivername = Header.driver_name,
+                    moda_req = order.moda_req,
+                    serv_req = order.serv_req,
+                    truck_size = order.truck_size,
+                    flag_ep = ordx.flag_ep,
+                    flag_rc = ordx.flag_rc,
+                    flag_ov = ordx.flag_ov,
+                    flag_cc = ordx.flag_cc,
+                    flag_diffa = ordx.flag_diffa,
+                    charge_uom_v = CostRate.charge_uom,
+                    charge_uom_c = order.uom,
+                    drop_seq = ordx.drop_seq,
+                    multidrop = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0),
+                    flag_charge = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0),
+
+                    charge_uom = CostRate.charge_uom,
+                    inv_no = order.inv_no,
+                    origin_id = order.origin_id,
+                    dest_id = order.dest_area,
+                    dvdate = Header.dvdate,
+
+                    buy1 = CostRate.buy1,
+                    buy2 = CostRate.buy2,
+                    buy3 = CostRate.buy3,
+                    buy_ov = CostRate.buy_ovnight,
+                    buy_cc = CostRate.buy_cancel,
+                    buy_rc = CostRate.buy_ret_cargo,
+                    buy_ep = CostRate.buy_ret_empt,
+                    buy_diffa = CostRate.buy_diff_area,
+                    buy_trip2 = CostRate.buytrip2,
+                    buy_trip3 = CostRate.buytrip3,
+
+                    sell1 = SellRate.sell1,
+                    sell2 = SellRate.sell2,
+                    sell3 = SellRate.sell3,
+                    sell_trip2 = SellRate.selltrip2,
+                    sell_trip3 = SellRate.selltrip3,
+                    sell_diffa = SellRate.sell_diff_area,
+                    sell_ep = SellRate.sell_ret_empty,
+                    sell_rc = SellRate.sell_ret_cargo,
+                    sell_ov = SellRate.sell_ovnight,
+                    sell_cc = SellRate.sell_cancel,
+
+                    entry_user = HttpContext.Session.GetString("username") ?? "System",
+                    entry_date = DateTime.Now,
+                    update_user = HttpContext.Session.GetString("username") ?? "System",
+                    update_date = DateTime.Now
+                };
+
+                _context.Jobs.Add(newJob);
+            }
+
+            return (true, "OK", deliveryOrderIds);
+        }
+
+
         private string GenerateJobId(int sequence)
         {
-            string prefix = _configuration["Tms:JobPrefix"];
+            //string prefix = _configuration["Tms:JobPrefix"];
+            var prefix = _context.Configs
+                .Where(x => x.key == "job-prefix")
+                .Select(x => x.value)
+                .FirstOrDefault();
             string year = DateTime.Now.ToString("yy");  // contoh: 25
             string month = DateTime.Now.ToString("MM"); // contoh: 07
             string sequencePart = sequence.ToString("D4"); // 0001, 0002, dst
@@ -869,37 +981,43 @@ namespace TMSBilling.Controllers
         [HttpGet]
         public IActionResult GetJobDetails(string jobid)
         {
-            var details = _context.Orders
-                .Where(j => j.jobid == jobid)
+            string sql = @"
+            select 
+                a.*,
+                b.flag_cc,
+                b.flag_charge,
+                b.flag_diffa,
+                b.flag_ep,
+                b.flag_ov,
+                b.flag_pu,
+                b.flag_rc
+            from trc_order a
+            left join (
+                select top 1 *
+                from trc_job 
+                where jobid = @jobid
+                order by jobid
+            ) b on a.jobid = b.jobid
+            where a.jobid = @jobid";
+
+            var details = _context.OrderForJob
+                .FromSqlRaw(sql, new SqlParameter("@jobid", jobid))
                 .ToList();
 
             return Json(new { success = true, data = details });
         }
 
 
-        //public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate, bool multidrop)
-        //{
-        //    var nextDay = deliveryDate.AddDays(1);
-        //    var result = await _context.Orders
-        //    .Where(
-        //        o => o.origin_id == originId
-        //        && o.dest_area == destArea
-        //        && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
-        //        && o.mceasy_status == "CONFIRMED"
-        //        && o.mceasy_is_upload == false
-        //        )
-        //    .ToListAsync();
-        //    return Ok(new {success = true, data = result});
-        //}
-
         public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime deliveryDate, bool multidrop)
         {
+            var allowedStatus = new[] { "Dikonfirmasi", "Dijadwalkan" };
+
             var query = _context.Orders
                 .Where(o =>
                     o.origin_id == originId &&
                     EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0 &&
-                    o.mceasy_status == "CONFIRMED" &&
-                    o.mceasy_is_upload == false
+                    allowedStatus.Contains(o.mceasy_status) &&
+                    o.jobid == null
                 );
 
             if (!multidrop)
@@ -911,7 +1029,6 @@ namespace TMSBilling.Controllers
 
             return Ok(new { success = true, data = result });
         }
-
 
         public async Task<IActionResult> GetVendor(string? originId, string? destArea, DateTime? deliveryDate)
         {
@@ -944,6 +1061,106 @@ namespace TMSBilling.Controllers
 
     }
 
+    public class OrderForJob {
+        public int id_seq { get; set; }
+
+        [StringLength(50)]
+        public string? wh_code { get; set; }
+
+        [StringLength(50)]
+        public string? sub_custid { get; set; }
+
+        [StringLength(50)]
+        public string? cnee_code { get; set; }
+
+        [StringLength(50)]
+        public string? inv_no { get; set; }
+
+        public DateTime? delivery_date { get; set; }
+
+        public DateTime? pickup_date { get; set; }
+
+
+        [StringLength(50)]
+        public string? origin_id { get; set; }
+
+        [StringLength(50)]
+        public string? dest_area { get; set; }
+
+        [Column(TypeName = "decimal(9,2)")]
+        public decimal? tot_pkgs { get; set; }
+
+        [StringLength(10)]
+        public string? uom { get; set; }
+
+        public int? pallet_consume { get; set; }
+
+        public int? pallet_delivery { get; set; }
+
+        [StringLength(50)]
+        public string? si_no { get; set; }
+
+        public DateTime? do_rcv_date { get; set; }
+
+        [StringLength(10)]
+        public string? do_rcv_time { get; set; }
+
+        [StringLength(10)]
+        public string? moda_req { get; set; }
+
+        [StringLength(10)]
+        public string? serv_req { get; set; }
+
+        [StringLength(50)]
+        public string? truck_size { get; set; }
+
+        [StringLength(50)]
+        public string? remark { get; set; }
+
+        public byte? order_status { get; set; }
+
+        [StringLength(50)]
+        public string? entry_user { get; set; }
+
+        public DateTime? entry_date { get; set; }
+
+        [StringLength(50)]
+        public string? update_user { get; set; }
+
+        public DateTime? update_date { get; set; }
+
+        [StringLength(50)]
+        public string? jobid { get; set; }
+
+        public int? total_pkgs { get; set; }
+
+        [StringLength(50)]
+        public string? mceasy_order_id { get; set; }
+
+        [StringLength(50)]
+        public string? mceasy_do_number { get; set; }
+
+        public int? mceasy_origin_address_id { get; set; }
+        public int? mceasy_destination_address_id { get; set; }
+
+        [StringLength(50)]
+        public string? mceasy_origin_name { get; set; }
+        [StringLength(50)]
+        public string? mceasy_dest_name { get; set; }
+
+        [StringLength(20)]
+        public string? mceasy_status { get; set; }
+
+        public bool? mceasy_is_upload { get; set; } = false;
+
+        public byte? flag_pu { get; set; }
+        public byte? flag_diffa { get; set; }
+        public byte? flag_ep { get; set; }
+        public byte? flag_rc { get; set; }
+        public byte? flag_ov { get; set; }
+        public byte? flag_cc { get; set; }
+        public byte? flag_charge { get; set; }
+    }
     public class JobOrder
     {
         public string? OrderID { get; set; }

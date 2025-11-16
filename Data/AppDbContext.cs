@@ -76,6 +76,8 @@ namespace TMSBilling.Data
 
         public DbSet<JobOrder> JobOrder { get; set; }
 
+        public DbSet<OrderForJob> OrderForJob { get; set; }
+ 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<OrderSummaryViewModel>().HasNoKey().ToView(null);
@@ -83,6 +85,7 @@ namespace TMSBilling.Data
             modelBuilder.Entity<ConsigneeViewModel>().HasNoKey().ToView(null);
             modelBuilder.Entity<ConfirmOrderID>().HasNoKey().ToView(null);
             modelBuilder.Entity<JobOrder>().HasNoKey().ToView(null);
+            modelBuilder.Entity<OrderForJob>().HasNoKey().ToView(null);
         }
 
 

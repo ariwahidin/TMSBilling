@@ -1,30 +1,59 @@
-﻿using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
+﻿using DocumentFormat.OpenXml.InkML;
+using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using TMSBilling.Data;
 using TMSBilling.Models;
 
 namespace TMSBilling.Services
 {
     public class ApiService
     {
+        private readonly AppDbContext _context;
         private readonly HttpClient _httpClient;
         private readonly ApiSettings _apiSettings;
 
-        public ApiService(HttpClient httpClient, ApiSettings apiSettings)
+        //public ApiService(HttpClient httpClient, ApiSettings apiSettings)
+        //{
+        //    _httpClient = httpClient;
+        //    _apiSettings = apiSettings;
+        //    _httpClient.BaseAddress = new Uri(_apiSettings.BaseUrl);
+        //    _httpClient.DefaultRequestHeaders.Authorization =
+        //        new System.Net.Http.Headers.AuthenticationHeaderValue(
+        //            "Bearer",
+        //            _apiSettings.Token.Replace("Bearer ", "")
+        //        );
+        //}
+
+        public ApiService(HttpClient httpClient, AppDbContext context)
         {
             _httpClient = httpClient;
-            _apiSettings = apiSettings;
+            _context = context;
 
-            _httpClient.BaseAddress = new Uri(_apiSettings.BaseUrl);
+            var baseUrl = context.Configs
+                .Where(x => x.key == "api-rest-mceasy")
+                .Select(x => x.value)
+                .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                throw new Exception("Config 'api-rest-mceasy' tidak ditemukan.");
+
+            var token = context.Configs
+                .Where(x => x.key == "access-token")
+                .Select(x => x.value)
+                .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(token))
+                throw new Exception("Config 'access-token' tidak ditemukan.");
+
+            _httpClient.BaseAddress = new Uri(baseUrl);
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue(
-                    "Bearer",
-                    _apiSettings.Token.Replace("Bearer ", "")
-                );
+                new AuthenticationHeaderValue("Bearer", token.Replace("Bearer ", ""));
         }
+
 
         public async Task<(bool ok, JsonElement json)> SendRequestAsync(
         HttpMethod method,
@@ -145,6 +174,11 @@ namespace TMSBilling.Services
             {
             try
             {
+                var urlGraphQL = _context.Configs
+                .Where(x => x.key == "api-graph-mceasy")
+                .Select(x => x.value)
+                .FirstOrDefault();
+
                 var gqlRequest = new
                 {
                     query,
@@ -158,7 +192,8 @@ namespace TMSBilling.Services
                     WriteIndented = true
                 });
 
-                using var request = new HttpRequestMessage(HttpMethod.Post, _apiSettings.BaseUrlGraphql);
+                //using var request = new HttpRequestMessage(HttpMethod.Post, _apiSettings.BaseUrlGraphql);
+                using var request = new HttpRequestMessage(HttpMethod.Post, urlGraphQL);
                 request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
                 request.Headers.Add("Accept", "*/*");
                 request.Headers.Add("User-Agent", "PostmanRuntime/7.37.0");
@@ -216,67 +251,6 @@ namespace TMSBilling.Services
                     JsonDocument.Parse($"{{\"error\":\"{ex.Message}\"}}").RootElement.Clone());
             }
         }
-
-
-
-        //public async Task<(bool ok, JsonElement json)> ExecuteGraphQLAsync(
-        //string query,
-        //object? variables = null,
-        //string? operationName = null)
-        //{
-        //    try
-        //    {
-        //        var gqlRequest = new
-        //        {
-        //            query,
-        //            variables,
-        //            operationName
-        //        };
-
-        //        string jsonString = JsonSerializer.Serialize(gqlRequest, new JsonSerializerOptions
-        //        {
-        //            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        //            WriteIndented = true
-        //        });
-
-        //        using var request = new HttpRequestMessage(HttpMethod.Post, _apiSettings.BaseUrlGraphql);
-        //        request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-        //        // 🔍 Debug
-        //        Console.WriteLine("=== DEBUG GRAPHQL REQUEST ===");
-        //        Console.WriteLine(jsonString);
-        //        Console.WriteLine("=============================");
-
-        //        using var response = await _httpClient.SendAsync(request);
-        //        string responseContent = await response.Content.ReadAsStringAsync();
-
-        //        // 🔍 Debug
-        //        Console.WriteLine("=== DEBUG GRAPHQL RESPONSE ===");
-        //        Console.WriteLine($"Status: {(int)response.StatusCode} {response.ReasonPhrase}");
-        //        Console.WriteLine(responseContent);
-        //        Console.WriteLine("==============================");
-
-        //        try
-        //        {
-        //            var jsonDoc = JsonDocument.Parse(responseContent);
-        //            return (response.IsSuccessStatusCode, jsonDoc.RootElement.Clone());
-        //        }
-        //        catch
-        //        {
-        //            return (response.IsSuccessStatusCode,
-        //                JsonDocument.Parse($"{{\"raw\":\"{responseContent}\"}}").RootElement.Clone());
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine("=== DEBUG GRAPHQL ERROR ===");
-        //        Console.WriteLine(ex.ToString());
-        //        Console.WriteLine("===========================");
-
-        //        return (false,
-        //            JsonDocument.Parse($"{{\"error\":\"{ex.Message}\"}}").RootElement.Clone());
-        //    }
-        //}
 
     }
 }
