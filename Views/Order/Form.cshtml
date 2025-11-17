@@ -472,6 +472,14 @@
                         </div>
                     </div>
                     <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Packing Type : </label>
+                        <div class="col-sm-8">
+                            <select id="packing_type" asp-for="Header.packing_type" asp-items="ViewBag.ListPackingType" class="form-select select2" required>
+                                <option value="">Select an Option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
                         <label class="col-sm-4 col-form-label text-end">Remarks : </label>
                         <div class="col-sm-8">
                             <input type="text" id="remark" name="remark" class="form-control" value="@Model.Header.remark" />
@@ -629,6 +637,7 @@
                     uom : $('#uom').val(),
                     pallet_consume : $('#pallet_consume').val(),
                     pallet_delivery : $('#pallet_delivery').val(),
+                    packing_type : $('#packing_type').val(),
                     si_no : $('#si_no').val(),
                     do_rcv_date : $('#do_rcv_date').val(),
                     do_rcv_time : $('#do_rcv_time').val(),

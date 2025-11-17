@@ -45,7 +45,7 @@ namespace TMSBilling.Models
         public int? pallet_delivery { get; set; }
 
         [StringLength(50)]
-        public string? si_no { get; set; }
+        public string? si_no { get; set; } = "";
 
         public DateTime? do_rcv_date { get; set; }
 
@@ -79,10 +79,10 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? jobid { get; set; }
 
-        public int? total_pkgs { get; set; }
+        public int? total_pkgs { get; set; } = 0;
 
         [StringLength(50)]
-        public string? mceasy_order_id { get; set; }
+        public string? mceasy_order_id { get; set; } = "0";
 
         [StringLength(50)]
         public string? mceasy_do_number { get; set; }
@@ -100,6 +100,8 @@ namespace TMSBilling.Models
 
         public bool? mceasy_is_upload { get; set; } = false;
 
+        [StringLength(100)]
+        public string? packing_type { get; set; }
     }
 
     [Table("TRC_ORDER_DTL")]

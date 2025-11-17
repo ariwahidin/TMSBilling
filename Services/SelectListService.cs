@@ -138,6 +138,15 @@ public class SelectListService
         };
     }
 
+    public List<SelectListItem> PackingTypeOption()
+    {
+        return new List<SelectListItem>
+        {
+            new SelectListItem { Value = "semi wooden", Text = "Semi Wooden" },
+            new SelectListItem { Value = "none", Text = "None" },
+        };
+    }
+
     public List<SelectListItem> getCustomerGroupGeofence()
     {
         return _context.CustomerGroups

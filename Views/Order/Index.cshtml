@@ -17,93 +17,6 @@
         <i class="bi bi-check-circle"></i> Sync Order
     </button>
 </div>
-@* 
-<table class="table table-bordered table-hover table-striped" id="tableOrder">
-    <thead class="table-light">
-        <tr>
-            <th>
-                <input type="checkbox" id="checkAll" title="Select All">
-            </th>
-            <th>#</th>
-            <th>WH Code</th>
-            <th>Customer</th>
-            <th>Cnee</th>
-            <th>Invoice No</th>
-            <th>Delivery Date</th>
-            <th>Origin </th>
-            <th>Destination </th>
-            <th>Status</th>
-            <th>Item</th>
-            <th>Qty</th>
-            <th class="text-center">Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @{
-            var i = 1;
-            foreach (var item in Model)
-            {
-                <tr>
-                    <td>
-                        @if (@item.McEasyOrderId != null && @item.OrderStatus == 0)
-                        {
-                            <input type="checkbox" class="order-checkbox" data-order-id="@item.McEasyOrderId">
-                        }
-                    </td>
-                    <td>@i</td>
-                    <td>@item.WhCode</td>
-                    <td>@item.SubCustId</td>
-                    <td>@item.CneeCode</td>
-                    <td>@item.InvNo</td>
-                    <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
-                    <td>@item.OriginId</td>
-                    <td>@item.DestArea</td>
-                    <td>
-                        @(item.OrderStatus == 0
-                                        ? "Draft"
-                                        : item.OrderStatus == 1
-                                        ? "Confirmed"
-                                        : item.OrderStatus == 2
-                                        ? "Scheduled"
-                                        : "-")
-                    </td>
-                    <td>@item.TotalItem</td>
-                    <td>@item.TotalQty</td>
-                    <td class="text-center">
-
-                        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="/Order/Form/@item.IdSeq" class="dropdown-item">
-                                    <i class="bi bi-pencil-square"></i> Edit
-                                </a>
-                            </li>
-
-                            @if (@item.McEasyOrderId != null && @item.OrderStatus != 1)
-                            {
-                                <li>
-                                    <a href="#" class="dropdown-item" onclick="confirmOrder(`@item.McEasyOrderId`)">
-                                        <i class="bi bi-check-square"></i> Confirm
-                                    </a>
-                                </li>
-                            }
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a href="#" class="dropdown-item" onclick="confirmDelete(@item.IdSeq)">
-                                    <i class="bi bi-trash"></i> Delete
-                                </a>
-                            </li>
-                        </ul>
-                    </td>
-                </tr>
-                i++;
-            }
-        }
-    </tbody>
-</table> *@
-
 
 
 <table class="table table-bordered table-hover table-striped table-sm align-middle compact" id="tableOrder">
@@ -170,11 +83,13 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li><a href="/Order/Form/@item.IdSeq" class="dropdown-item"><i class="bi bi-pencil-square"></i> Edit</a></li>
+                    <li><a href="/Order/FormLoad/@item.IdSeq" class="dropdown-item"><i class="bi bi-box"></i> View Load</a></li>
                     @if (item.McEasyOrderId != null && item.OrderStatus != 1)
                             {
-                                <li><a href="#" class="dropdown-item" onclick="confirmOrder(`@item.McEasyOrderId`)"><i class="bi bi-check-square"></i> Confirm</a></li>
+                                <li><a href="#" class="dropdown-item d-none" onclick="confirmOrder(`@item.McEasyOrderId`)"><i class="bi bi-check-square"></i> Confirm</a></li>
                             }
                             <li><hr class="dropdown-divider" /></li>
+                            
                             <li><a href="#" class="dropdown-item" onclick="confirmDelete(@item.IdSeq)"><i class="bi bi-trash"></i> Delete</a></li>
                         </ul>
                     </td>
@@ -226,19 +141,52 @@
         let dataTable;
 
         function confirmDelete(id) {
-            if (confirm('Are you sure you want to delete this order?')) {
-                fetch(`/Order/Delete/${id}`, {
-                    method: 'POST'
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert(data.message || 'Delete failed.');
-                    }
-                });
-            }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Are you sure you want to delete this order?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoading();
+                    const url = `/Order/DeleteOrder/${id}`;
+                    fetch(url, { method: 'DELETE' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                hideLoading();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success!',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.href = '/Order/Index'
+                                });
+                            } else {
+                                hideLoading();
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Failed',
+                                    text: data.message || 'Deleting failed.'
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            hideLoading();
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Something went wrong while deleting.'
+                            });
+                        });
+                }
+            });
+
         }
 
         function confirmOrder(id) {
@@ -266,7 +214,7 @@
                                     timer: 1500,
                                     showConfirmButton: false
                                 }).then(() => {
-                                    location.reload();
+                                    window.location.href = '/Order/IndexSync'
                                 });
                             } else {
                                 hideLoading();
@@ -365,7 +313,7 @@
                                 timer: 2000,
                                 showConfirmButton: false
                             }).then(() => {
-                                location.reload();
+                                window.location.href = '/Order/IndexSync'
                             });
                         } else {
                             Swal.fire({

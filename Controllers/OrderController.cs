@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Math;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -131,7 +132,7 @@ namespace TMSBilling.Controllers
             }
 
             // Filter hanya order dengan status
-            var allowedStatuses = new[] { "Dijadwalkan", "Dijalankan", "Diambil", "Terkirim" };
+            var allowedStatuses = new[] {"Draf", "Dijadwalkan", "Dijalankan", "Diambil", "Terkirim" };
             var filteredOrders = orders
                 .Where(o => allowedStatuses.Contains(o.status?.name, StringComparer.OrdinalIgnoreCase))
                 .Select(o => new {
@@ -145,15 +146,6 @@ namespace TMSBilling.Controllers
             if (filteredOrders.Any())
             {
                 Console.WriteLine("ORDER FILTERED : ", filteredOrders);
-                //var idList = string.Join(",", scheduledOrderIds.Select(id => $"'{id}'"));
-
-                //var updateSql = $@"
-                //    UPDATE TRC_ORDER 
-                //    SET order_status = 2 , mceasy_status = {}
-                //    WHERE mceasy_order_id IN ({idList})
-                //";
-
-                //updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
 
                 foreach (var ford in filteredOrders) {
                     var updateSql = $@"
@@ -172,12 +164,64 @@ namespace TMSBilling.Controllers
         public async Task<IActionResult> Index()
         {
 
+            //try
+            //{
+            //    var orders = await FetchOrderFromApi();
+
+            //    if (orders != null && orders.Any()) { 
+            //       await SyncOrderToDatabase(orders);
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine($"Error sync data: {ex.Message}");
+            //}
+
+            var sql = @"
+                WITH od AS (
+                    SELECT 
+                        id_seq_order, 
+                        COUNT(item_name) AS total_item,
+                        SUM(item_qty) AS total_qty
+                    FROM TRC_ORDER_DTL
+                    GROUP BY id_seq_order
+                )
+                SELECT 
+                    a.id_seq AS IdSeq, 
+                    a.wh_code AS WhCode, 
+                    a.sub_custid AS SubCustId,
+                    a.cnee_code AS CneeCode,
+                    a.inv_no AS InvNo,
+                    CAST(a.delivery_date AS date) AS DeliveryDate,
+                    a.origin_id AS OriginId,
+                    a.dest_area AS DestArea,
+                    a.order_status AS OrderStatus,
+					a.mceasy_status AS MCOrderStatus,
+                    a.mceasy_order_id AS McEasyOrderId,
+                    COALESCE(od.total_item, 0) AS TotalItem,
+                    COALESCE(od.total_qty, 0) AS TotalQty
+                FROM TRC_ORDER a 
+                LEFT JOIN od ON a.id_seq = od.id_seq_order
+				LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
+                ORDER BY a.id_seq DESC
+            ";
+            var data = await _context.OrderSummaryView
+                .FromSqlRaw(sql)
+                .ToListAsync();
+
+            return View(data);
+        }
+
+        public async Task<IActionResult> IndexSync()
+        {
+
             try
             {
                 var orders = await FetchOrderFromApi();
 
-                if (orders != null && orders.Any()) { 
-                   await SyncOrderToDatabase(orders);
+                if (orders != null && orders.Any())
+                {
+                    await SyncOrderToDatabase(orders);
                 }
             }
             catch (Exception ex)
@@ -217,7 +261,7 @@ namespace TMSBilling.Controllers
                 .FromSqlRaw(sql)
                 .ToListAsync();
 
-            return View(data);
+            return View("Index", data);
         }
 
         [HttpPost]
@@ -260,6 +304,7 @@ namespace TMSBilling.Controllers
             ViewBag.ListModa = _selectList.GetServiceModas();
             ViewBag.ListServiceType = _selectList.GetServiceTypes();
             ViewBag.ListTruckSize = _selectList.GetTruckSizes();
+            ViewBag.ListPackingType = _selectList.PackingTypeOption();
 
             if (id.HasValue)
             {
@@ -275,10 +320,10 @@ namespace TMSBilling.Controllers
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] OrderViewModel model)
         {
-            if (model == null || model.Header == null || model.Details == null || model.Details.Count == 0)
-            {
-                return BadRequest(new { success = false, message = "Incomplete data!" });
-            }
+            //if (model == null || model.Header == null || model.Details == null || model.Details.Count == 0)
+            //{
+            //    return BadRequest(new { success = false, message = "Incomplete data!" });
+            //}
 
             var header = model.Header;
             var errors = new List<string>();
@@ -328,11 +373,6 @@ namespace TMSBilling.Controllers
             && pb.truck_size == header.truck_size
             && pb.charge_uom == header.uom);
 
-            if (priceBuy == null)
-            {
-                errors.Add($"Price buy not found for this transaction");
-            }
-
             if (errors.Any())
             {
                 return BadRequest(new
@@ -345,6 +385,7 @@ namespace TMSBilling.Controllers
 
             var deliveryDateTime = header.delivery_date.HasValue ? header.delivery_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
             var pickupDateTime = header.pickup_date.HasValue ? header.pickup_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
+
 
             var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
             if (customer == null)
@@ -370,6 +411,24 @@ namespace TMSBilling.Controllers
 
                 if (header.id_seq == 0)
                 {
+                    if (!header.delivery_date.HasValue || header.delivery_date.Value.ToUniversalTime() <= DateTime.UtcNow)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "Expected delivery must be greater than the current time"
+                        });
+                    }
+
+                    if (!header.pickup_date.HasValue || header.pickup_date.Value.ToUniversalTime() <= DateTime.UtcNow)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "Pick up time must be greater than the current time"
+                        });
+                    }
+
                     (ok, json) = await _apiService.SendRequestAsync(
                         HttpMethod.Post,
                         "order/api/web/v1/delivery-order",
@@ -420,6 +479,10 @@ namespace TMSBilling.Controllers
                     header.mceasy_origin_name = header.mceasy_origin_name;
                     header.mceasy_dest_name = header.mceasy_dest_name;
                     header.order_status = 0;
+                    header.mceasy_status = "Draf";
+                    header.pallet_delivery = header.pallet_delivery;
+                    header.pallet_consume = header.pallet_consume;
+                    header.packing_type = header.packing_type;
                     header.entry_date = DateTime.Now;
                     header.entry_user = username;
                     _context.Orders.Add(header);
@@ -442,12 +505,15 @@ namespace TMSBilling.Controllers
                     existingHeader.moda_req = header.moda_req;
                     existingHeader.serv_req = header.serv_req;
                     existingHeader.tot_pkgs = header.tot_pkgs;
+                    existingHeader.pallet_delivery = header.pallet_delivery;
+                    existingHeader.pallet_consume = header.pallet_consume;
                     existingHeader.do_rcv_time = header.do_rcv_time;
                     existingHeader.remark = header.remark;
                     existingHeader.order_status = header.order_status ?? 0;
                     existingHeader.uom = header.uom;
                     existingHeader.update_date = DateTime.Now;
                     existingHeader.update_user = username;
+                    existingHeader.packing_type = header.packing_type;
 
                     _context.Orders.Update(existingHeader);
                 }
@@ -611,6 +677,29 @@ namespace TMSBilling.Controllers
                     string? serviceHeader = headerSheet.Cell(row, 13).GetString();
                     string? truckSizeHeader = headerSheet.Cell(row, 12).GetString();
                     string? remarkHeader = headerSheet.Cell(row, 9).GetString();
+
+
+                    if (pickupDate == null || pickupDate <= DateTime.Now)
+                    {
+                        errors.Add(new
+                        {
+                            row,
+                            section = "header",
+                            field = "Target Diambil",
+                            message = "Target Diambil harus lebih besar dari waktu sekarang"
+                        });
+                    }
+
+                    if (expectedDelivery == null || expectedDelivery <= DateTime.Now)
+                    {
+                        errors.Add(new
+                        {
+                            row,
+                            section = "header",
+                            field = "Target Dikirim",
+                            message = "Target Dikirim harus lebih besar dari waktu sekarang"
+                        });
+                    }
 
 
                     if (!_context.Warehouses.Any(w => w.wh_code == whCode))
@@ -916,6 +1005,9 @@ namespace TMSBilling.Controllers
                         header.mceasy_order_id = json.GetProperty("data").GetProperty("id").GetString();
                         header.mceasy_do_number = json.GetProperty("data").GetProperty("number").GetString();
                         header.order_status = 0;
+                        header.tot_pkgs = 0;
+                        header.pallet_consume = 0;
+                        header.pallet_delivery = 0;
                         header.entry_user = HttpContext.Session.GetString("username") ?? "System";
                         header.entry_date = DateTime.Now;
                         _context.Orders.Add(header);
@@ -1239,6 +1331,51 @@ namespace TMSBilling.Controllers
             return Ok(new { message = "Updated order load succesfully", data = orderLoad });
         }
 
+        [HttpDelete]
+        public async Task<IActionResult> DeleteOrder(int? id) {
+
+            var order = await _context.Orders.FirstOrDefaultAsync(od => od.id_seq == id);
+
+            if (order == null)
+            {
+                return NotFound(new { success = false, message = "Order load not found" });
+            }
+
+            if (order.mceasy_status != "Draf") {
+                return NotFound(new { success = false, message = "Order cannot be deleted" });
+            }
+
+            var (ok, json) = await _apiService.SendRequestAsync(
+                HttpMethod.Delete,
+                $"/order/api/web/v1/delivery-order/{order.mceasy_order_id}"
+            );
+            if (!ok)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed deleting order",
+                    detail = json
+                });
+            }
+
+            Console.WriteLine("DELETE ORDER : {0}", id);
+            var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", id);
+            Console.WriteLine("Rows delete affected: " + rows);
+
+            if (rows < 1) {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed deleting order from database",
+                    detail = json
+                });
+            }
+
+            return Ok(new { success = true, message = "Order deleted successfully" });
+        }
+
+
         [HttpGet]
         public async Task<IActionResult> DeleteLoad(int? id)
         {
@@ -1283,8 +1420,8 @@ namespace TMSBilling.Controllers
 
             if (order == null)
                 return NotFound("Order not found");
-            if (order.order_status != 0)
-                return BadRequest("Order already confirm.");
+            if (order.mceasy_status != "Draf")
+                return BadRequest("Status order not in Draf");
 
             var payload = new
             {
@@ -1340,8 +1477,10 @@ namespace TMSBilling.Controllers
 
                         if (order == null)
                             return NotFound("Order not found");
-                        if (order.order_status != 0)
-                            return BadRequest("Order already confirm.");
+                        //if (order.order_status != 0)
+                        //    return BadRequest("Order already confirm.");
+                        if (order.mceasy_status != "Draf")
+                            return BadRequest("Status order not in Draf");
 
                         var payload = new
                         {
@@ -1386,7 +1525,6 @@ namespace TMSBilling.Controllers
 
 
     }
-
 
     public class ConfirmOrderID {
         public string? OrderID { get; set; }
