@@ -1035,7 +1035,7 @@ namespace TMSBilling.Controllers
         {
             var (ok, json) = await _apiService.SendRequestAsync(
                 HttpMethod.Get,
-                $"/order/api/web/v1/product?limit={1000}&page={1}&search={""}",
+                $"/order/api/web/v1/product?limit={1000}&page={1}",
                 new { }
             );
             if (!ok)
