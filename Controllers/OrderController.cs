@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Math;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -1035,8 +1036,7 @@ namespace TMSBilling.Controllers
         {
             var (ok, json) = await _apiService.SendRequestAsync(
                 HttpMethod.Get,
-                $"/order/api/web/v1/product?limit={1000}&page={1}",
-                new { }
+                $"/order/api/web/v1/product?limit={1000}&page={1}"
             );
             if (!ok)
             {
