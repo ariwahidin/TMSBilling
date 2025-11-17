@@ -622,7 +622,7 @@ namespace TMSBilling.Controllers
                     }
                         
 
-                    var geofenceOrigin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName && o.CustomerName == customer);
+                    var geofenceOrigin = _context.Geofences.FirstOrDefault(o => o.FenceName == originName);
 
                     if (geofenceOrigin == null) {
                         errors.Add(new { row, section = "header", field = "Alamat asal", message = $"'{originName}' tidak ditemukan" });
