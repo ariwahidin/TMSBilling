@@ -864,10 +864,6 @@ namespace TMSBilling.Controllers
                         expected_pickup_on = pickupDateTime,
                         expected_delivered_on = deliveryDateTime,
                         shipment_number = header.inv_no,
-                        udf1 = new {},
-                        udf2 = new {},
-                        udf3 = new {},
-                        udf4 = new {}
                     }
                 ;
 
