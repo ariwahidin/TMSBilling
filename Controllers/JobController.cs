@@ -613,15 +613,15 @@ namespace TMSBilling.Controllers
                                 $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/delivery-order/{idDel}",
                                 payloadDel
                             );
-                            if (!okDel)
-                            {
-                                return BadRequest(new
-                                {
-                                    success = false,
-                                    message = "Failed delete order from fleet task",
-                                    detail = jsonDel
-                                });
-                            }
+                            //if (!okDel)
+                            //{
+                            //    return BadRequest(new
+                            //    {
+                            //        success = false,
+                            //        message = "Failed delete order from fleet task",
+                            //        detail = jsonDel
+                            //    });
+                            //}
 
                         }
 
@@ -685,6 +685,7 @@ namespace TMSBilling.Controllers
                     jobHeader.vendor_plan = Header.vendor_id;
                     jobHeader.vendor_act = Header.vendor_act;
                     jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                    jobHeader.pickup_date = Header.pickup_date;
                     jobHeader.deliv_date = Header.dvdate;
                     jobHeader.charge_uom = Header.charge_uom;
                     jobHeader.dest = Header.dest_area;
@@ -731,6 +732,7 @@ namespace TMSBilling.Controllers
                 jobHeader.vendor_plan = Header.vendor_id;
                 jobHeader.vendor_act = Header.vendor_act;
                 jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                jobHeader.pickup_date = Header.pickup_date;
                 jobHeader.deliv_date = Header.dvdate;
                 jobHeader.charge_uom = Header.charge_uom;
                 jobHeader.dest = Header.dest_area;
