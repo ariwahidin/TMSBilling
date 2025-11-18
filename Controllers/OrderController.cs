@@ -161,22 +161,9 @@ namespace TMSBilling.Controllers
             return updatedCount;
         }
 
-        public async Task<IActionResult> Index()
+
+        private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
         {
-
-            //try
-            //{
-            //    var orders = await FetchOrderFromApi();
-
-            //    if (orders != null && orders.Any()) { 
-            //       await SyncOrderToDatabase(orders);
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    Console.WriteLine($"Error sync data: {ex.Message}");
-            //}
-
             var sql = @"
                 WITH od AS (
                     SELECT 
@@ -192,23 +179,28 @@ namespace TMSBilling.Controllers
                     a.sub_custid AS SubCustId,
                     a.cnee_code AS CneeCode,
                     a.inv_no AS InvNo,
+                    CAST(a.pickup_date AS date) AS PickupDate,
                     CAST(a.delivery_date AS date) AS DeliveryDate,
                     a.origin_id AS OriginId,
                     a.dest_area AS DestArea,
                     a.order_status AS OrderStatus,
-					a.mceasy_status AS MCOrderStatus,
+                    a.mceasy_status AS MCOrderStatus,
                     a.mceasy_order_id AS McEasyOrderId,
                     COALESCE(od.total_item, 0) AS TotalItem,
                     COALESCE(od.total_qty, 0) AS TotalQty
                 FROM TRC_ORDER a 
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
-				LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
+                LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
                 ORDER BY a.id_seq DESC
             ";
-            var data = await _context.OrderSummaryView
-                .FromSqlRaw(sql)
-                .ToListAsync();
 
+            return _context.OrderSummaryView.FromSqlRaw(sql);
+        }
+
+
+        public async Task<IActionResult> Index()
+        {
+            var data = await GetOrderSummaryQuery().ToListAsync();
             return View(data);
         }
 
@@ -229,37 +221,7 @@ namespace TMSBilling.Controllers
                 Console.WriteLine($"Error sync data: {ex.Message}");
             }
 
-            var sql = @"
-                WITH od AS (
-                    SELECT 
-                        id_seq_order, 
-                        COUNT(item_name) AS total_item,
-                        SUM(item_qty) AS total_qty
-                    FROM TRC_ORDER_DTL
-                    GROUP BY id_seq_order
-                )
-                SELECT 
-                    a.id_seq AS IdSeq, 
-                    a.wh_code AS WhCode, 
-                    a.sub_custid AS SubCustId,
-                    a.cnee_code AS CneeCode,
-                    a.inv_no AS InvNo,
-                    CAST(a.delivery_date AS date) AS DeliveryDate,
-                    a.origin_id AS OriginId,
-                    a.dest_area AS DestArea,
-                    a.order_status AS OrderStatus,
-					a.mceasy_status AS MCOrderStatus,
-                    a.mceasy_order_id AS McEasyOrderId,
-                    COALESCE(od.total_item, 0) AS TotalItem,
-                    COALESCE(od.total_qty, 0) AS TotalQty
-                FROM TRC_ORDER a 
-                LEFT JOIN od ON a.id_seq = od.id_seq_order
-				LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
-                ORDER BY a.id_seq DESC
-            ";
-            var data = await _context.OrderSummaryView
-                .FromSqlRaw(sql)
-                .ToListAsync();
+            var data = await GetOrderSummaryQuery().ToListAsync();
 
             return View("Index", data);
         }
@@ -1567,6 +1529,7 @@ namespace TMSBilling.Controllers
         public string? SubCustId { get; set; }
         public string? CneeCode { get; set; }
         public string? InvNo { get; set; }
+        public DateTime PickupDate { get; set; }
         public DateTime DeliveryDate { get; set; }
         public string? OriginId { get; set; }
         public string? DestArea { get; set; }

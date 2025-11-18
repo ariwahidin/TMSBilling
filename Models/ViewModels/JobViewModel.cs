@@ -25,6 +25,8 @@ namespace TMSBilling.Models.ViewModels
             public string cust_group { get; set; } = string.Empty;
             public string vendor_id { get; set; } = string.Empty;
             public string vendor_act { get; set; } = string.Empty;
+
+            public DateTime? pickup_date { get; set; }
             public DateTime? dvdate { get; set; }
             public string truck_id { get; set; } = string.Empty;
 

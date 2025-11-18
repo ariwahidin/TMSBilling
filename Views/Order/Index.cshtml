@@ -28,7 +28,8 @@
             <th>Customer</th>
             <th>Cnee</th>
             <th>Invoice No</th>
-            <th>Delivery Date</th>
+            <th>Pickup Date</th>
+            <th>Deliv Date</th>
             <th>Origin</th>
             <th>Destination</th>
             <th>Status</th>
@@ -43,6 +44,7 @@
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Customer" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Cnee" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Invoice No" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="YYYY-MM-DD" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="YYYY-MM-DD" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Origin" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Destination" /></th>
@@ -69,6 +71,7 @@
             <td>@item.SubCustId</td>
             <td>@item.CneeCode</td>
             <td>@item.InvNo</td>
+            <td>@item.PickupDate.ToString("yyyy-MM-dd")</td>
             <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
             <td>@item.OriginId</td>
             <td>@item.DestArea</td>

@@ -62,6 +62,8 @@ namespace TMSBilling.Models
 
         public DateTime? dvdate { get; set; }
 
+        public DateTime? pickup_date { get; set; }
+
         [StringLength(50)]
         public string? cust_ori { get; set; }
 
@@ -187,6 +189,8 @@ namespace TMSBilling.Models
         public string? cust_group { get; set; }
 
         public DateTime? deliv_date { get; set; }
+
+        public DateTime? pickup_date { get; set; }
 
         [StringLength(30)]
         public string? status_job { get; set; }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251118024947_AddPickupDateInJobAndJobHeader")]
+    partial class AddPickupDateInJobAndJobHeader
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -280,9 +283,6 @@ namespace TMSBilling.Migrations
 
                     b.Property<string>("OriginId")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("PickupDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("SubCustId")
                         .HasColumnType("nvarchar(max)");
@@ -1795,7 +1795,7 @@ namespace TMSBilling.Migrations
                         .HasColumnName("buytrip3");
 
                     b.Property<decimal?>("charge_min")
-                        .HasColumnType("money");
+                        .HasColumnType("decimal(7,2)");
 
                     b.Property<string>("charge_uom")
                         .HasMaxLength(50)

@@ -34,7 +34,7 @@ namespace TMSBilling.Models
 
         public byte? flag_min { get; set; }
 
-        [Column(TypeName = "decimal(7,2)")]
+        [Column(TypeName = "money")]
         public decimal? charge_min { get; set; }
 
         public byte? flag_range { get; set; }
