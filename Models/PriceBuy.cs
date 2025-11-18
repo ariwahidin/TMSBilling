@@ -11,7 +11,7 @@ namespace TMSBilling.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int id_seq { get; set; }
 
-        [StringLength(10)]
+        [StringLength(100)]
         public string? sup_code { get; set; }
 
         [StringLength(50)]
@@ -20,16 +20,16 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? dest { get; set; }
 
-        [StringLength(10)]
+        [StringLength(50)]
         public string? serv_type { get; set; }
 
-        [StringLength(10)]
+        [StringLength(50)]
         public string? serv_moda { get; set; }
 
         [StringLength(50)]
         public string? truck_size { get; set; }
 
-        [StringLength(10)]
+        [StringLength(50)]
         public string? charge_uom { get; set; }
 
         public byte? flag_min { get; set; }
