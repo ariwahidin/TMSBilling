@@ -58,6 +58,8 @@ namespace TMSBilling.Controllers
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();
+            HttpContext.Session.Remove("username");
+            HttpContext.Session.Remove("is_admin");
             return RedirectToAction("Login");
         }
 

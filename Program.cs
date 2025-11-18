@@ -22,7 +22,16 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddSession();
+//builder.Services.AddSession();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromHours(12);
+    options.Cookie.MaxAge = TimeSpan.FromDays(7);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+
 builder.Services.AddScoped<SelectListService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
