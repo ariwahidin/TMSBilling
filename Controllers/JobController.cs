@@ -243,6 +243,12 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> Index()
         {
+            var data = await GetJobSummaryQuery().ToListAsync();
+            return View(data);
+        }
+
+        public async Task<IActionResult> IndexSync()
+        {
 
 
             try
@@ -256,6 +262,12 @@ namespace TMSBilling.Controllers
             }
 
 
+            var data = await GetJobSummaryQuery().ToListAsync();
+
+            return View("Index", data);
+        }
+
+        private IQueryable<JobSummaryViewModel> GetJobSummaryQuery() {
             var sql = @"
                 WITH tj AS (
                     SELECT 
@@ -280,13 +292,8 @@ namespace TMSBilling.Controllers
                 ORDER BY a.id_seq DESC
             ";
 
-            var data = _context.JobSummaryView
-                .FromSqlRaw(sql)
-                .ToList();
-
-            return View(data);
+            return _context.JobSummaryView.FromSqlRaw(sql);
         }
-
 
         [Route("Job/Form/{jobid?}")]
         public IActionResult Form(string? jobid)
@@ -408,12 +415,44 @@ namespace TMSBilling.Controllers
             var Header = model.FormJobHeader;
             var Details = model.FormJobDetails;
 
-            // Bagian Validasi
+            var customerGroup = await _context.CustomerGroups.FirstOrDefaultAsync( c => c.SUB_CODE == Header.cust_group);
+            if (customerGroup == null) {
+                return Json(new { success = true, message = "Customer group not found!" });
+            }
+
+            var customerApi = await _context.Customers.AnyAsync(cs => cs.MAIN_CUST == customerGroup.MAIN_CUST && cs.API_FLAG == 1);
+
+            if (customerApi)
+            {
+                var run = await RunSaveWithApi(Header, Details, jobid);
+                if (!run.ok)
+                    return BadRequest(new { success = false, message = run.message });
+            }
+            else {
+                    return BadRequest(new { success = false, message = "Customer not using API" });
+            }
+
+            return Json(new { success = true, message = "Job saved successfully" });
+        }
+
+        private async Task<(bool ok, string message)> RunSaveWithApi(
+            HeaderFormJob Header,
+            List<OrderForJobForm> Details,
+            string? jobid
+        )
+        {
+            // 👉 Pindahkan SELURUH kode dari:
+            // Start di taro fungsi runSaveWithApi
+            // sampai End di taro fungsi runSaveWithApi
+            //
+            // Jangan ubah logika, cuma copy-paste.
+            // Semua yang butuh _context atau _apiService tetap bisa dipakai,
+            // karena method ini masih di dalam controller.
 
             if (Details == null || Details.Count == 0)
             {
-                return BadRequest(new { success = false, message = "Order detail not found." });
-
+                //return BadRequest(new { success = false, message = "Order detail not found." });
+                return (false, "Order detail not found.");
             }
 
             var CostRate = _context.PriceBuys.FirstOrDefault(hm =>
@@ -425,62 +464,77 @@ namespace TMSBilling.Controllers
 
             if (CostRate == null)
             {
-                return BadRequest(new { success = false, message = "Header, price buy not found" });
+                //return BadRequest(new { success = false, message = "Header, price buy not found" });
+                return (false, "Header, price buy not found");
             }
 
             var OriginIsMatch = false;
             var DestinationMatch = false;
 
             // check origin order min 1 is match
-            foreach (var oro in Details) {
-                if (CostRate.origin == oro.origin_id) { 
+            foreach (var oro in Details)
+            {
+                if (CostRate.origin == oro.origin_id)
+                {
                     OriginIsMatch = true;
                     break;
                 }
             }
 
-            if (!OriginIsMatch) {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = $"Origin not found in order. Required origin: {CostRate.origin}"
-                });
+            if (!OriginIsMatch)
+            {
+                //return BadRequest(new
+                //{
+                //    success = false,
+                //    message = $"Origin not found in order. Required origin: {CostRate.origin}"
+                //});
+                return (false, $"Origin not found in order. Required origin: {CostRate.origin}");
             }
 
             // check destination order min 1 is match
-            foreach (var ordes in Details) {
-                if (CostRate.dest == ordes.dest_area) { 
+            foreach (var ordes in Details)
+            {
+                if (CostRate.dest == ordes.dest_area)
+                {
                     DestinationMatch = true;
                     break;
                 }
             }
 
-            if (!DestinationMatch) {
-                return BadRequest(new { 
-                    success = false,
-                    message = $"Destination not found in order. Required destiation : {CostRate.dest}"
-                });
+            if (!DestinationMatch)
+            {
+                //return BadRequest(new
+                //{
+                //    success = false,
+                //    message = $"Destination not found in order. Required destiation : {CostRate.dest}"
+                //});
+                return (false, $"Destination not found in order. Required destiation : {CostRate.dest}");
             }
-            
+
 
             foreach (var ord in Details)
             {
                 var orderExisting = _context.Orders.FirstOrDefault(or => or.inv_no == ord.inv_no);
                 if (orderExisting == null)
                 {
-                    return BadRequest(new { success = false, message = "Order not found" });
+                    //return BadRequest(new { success = false, message = "Order not found" });
+                    return (false, "Order not found");
                 }
 
                 var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == orderExisting.sub_custid);
 
-                if (customerGroup == null) {
-                    return NotFound(new { success = false, message = "Customer group not found" });
+                if (customerGroup == null)
+                {
+                    //return NotFound(new { success = false, message = "Customer group not found" });
+                    return (false, "Customer group not found");
                 }
 
                 var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
 
-                if (customer == null) {
-                    return BadRequest(new { success = false, message = "Customer not found" });
+                if (customer == null)
+                {
+                    //return BadRequest(new { success = false, message = "Customer not found" });
+                    return (false, "Customer not found");
                 }
 
 
@@ -493,8 +547,11 @@ namespace TMSBilling.Controllers
                                     && sr.serv_moda == orderExisting.moda_req
                                     && sr.charge_uom == orderExisting.uom
                                     );
-                if (SellRateCheck == null) {
-                    return BadRequest(new { success = false, message = "Sell rate not found for INV "+ orderExisting.inv_no });
+                if (SellRateCheck == null)
+                {
+                    //return BadRequest(new { success = false, message = "Sell rate not found for INV " + orderExisting.inv_no });
+                    return (false, "Sell rate not found for INV " + orderExisting.inv_no);
+
                 }
             }
 
@@ -524,7 +581,8 @@ namespace TMSBilling.Controllers
             var result = InsertOrderToJob(Details, newJobId, Header, CostRate);
 
             if (!result.ok)
-                return BadRequest(new { success = false, message = result.message });
+                //return BadRequest(new { success = false, message = result.message });
+                return (false, result.message);
 
             deliveryOrderIds = result.deliveryOrderIds;
 
@@ -542,12 +600,14 @@ namespace TMSBilling.Controllers
                 );
                 if (!ok)
                 {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Gagal kirim ke API Store Fleet Task",
-                        detail = json
-                    });
+                    //return BadRequest(new
+                    //{
+                    //    success = false,
+                    //    message = "Gagal kirim ke API Store Fleet Task",
+                    //    detail = json
+                    //});
+
+                    return (false, "Gagal kirim ke API Store Fleet Task");
                 }
 
                 mceasy_job_id = json.GetProperty("data").GetProperty("id").GetString();
@@ -568,12 +628,14 @@ namespace TMSBilling.Controllers
                 );
                 if (!ok2)
                 {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Gagal kirim ke API Patch Fleet Task",
-                        detail = json2
-                    });
+                    //return BadRequest(new
+                    //{
+                    //    success = false,
+                    //    message = "Gagal kirim ke API Patch Fleet Task",
+                    //    detail = json2
+                    //});
+
+                    return (false, "Gagal kirim ke API Patch Fleet Task");
                 }
 
                 var payload3 = new
@@ -588,12 +650,13 @@ namespace TMSBilling.Controllers
                 );
                 if (!ok3)
                 {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Gagal kirim ke API Do Transition Fleet Task",
-                        detail = json3
-                    });
+                    //return BadRequest(new
+                    //{
+                    //    success = false,
+                    //    message = "Gagal kirim ke API Do Transition Fleet Task",
+                    //    detail = json3
+                    //});
+                    return (false, "Gagal kirim ke API Do Transition Fleet Task!");
                 }
 
             }
@@ -606,12 +669,17 @@ namespace TMSBilling.Controllers
                 {
                     if (!string.IsNullOrEmpty(jobHeader.mceasy_job_id))
                     {
-                        foreach (var idDel in deliveryOrderIds) {
-                            var payloadDel = new { };
+                        foreach (var idDel in deliveryOrderIds)
+                        {
+
+                            var (okOpt, jsonOpt) = await _apiService.SendRequestAsync(
+                                HttpMethod.Options,
+                                $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/delivery-order/{idDel}"
+                            );
+
                             var (okDel, jsonDel) = await _apiService.SendRequestAsync(
                                 HttpMethod.Delete,
-                                $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/delivery-order/{idDel}",
-                                payloadDel
+                                $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/delivery-order/{idDel}"
                             );
                             //if (!okDel)
                             //{
@@ -642,20 +710,28 @@ namespace TMSBilling.Controllers
                         );
                         if (!ok)
                         {
-                            return BadRequest(new
-                            {
-                                success = false,
-                                message = "Gagal kirim ke API Patch Fleet Task [Edit Job]",
-                                detail = json
-                            });
+                            //return BadRequest(new
+                            //{
+                            //    success = false,
+                            //    message = "Gagal kirim ke API Patch Fleet Task [Edit Job]",
+                            //    detail = json
+                            //});
+                        }
+                        else
+                        {
+
+                            jobHeader.starting_point = Header.starting_point;
+
                         }
 
                         var newOrderIDs = new List<string>();
 
-                        foreach (var item in Details) { 
+                        foreach (var item in Details)
+                        {
                             Console.WriteLine("NEW ORDER ID : {0}", item.mceasy_order_id);
                             var orderExisting = _context.Orders.FirstOrDefault(or => or.inv_no == item.inv_no);
-                            if (orderExisting != null && orderExisting.mceasy_order_id != null) { 
+                            if (orderExisting != null && orderExisting.mceasy_order_id != null)
+                            {
                                 newOrderIDs.Add(orderExisting.mceasy_order_id);
                             }
                         }
@@ -672,55 +748,71 @@ namespace TMSBilling.Controllers
                         );
                         if (!okNew)
                         {
-                            return BadRequest(new
-                            {
-                                success = false,
-                                message = "Gagal kirim ke API Store Fleet Task",
-                                detail = jsonNew
-                            });
+                            //return BadRequest(new
+                            //{
+                            //    success = false,
+                            //    message = "Gagal kirim ke API Store Fleet Task [PUT]",
+                            //    detail = jsonNew
+                            //});
+
+                            var (inter1, jsonInter1) = await _apiService.SendRequestAsync(
+                                HttpMethod.Options,
+                                $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/intervention"
+                            );
+
+                            var (inter2, jsonInter2) = await _apiService.SendRequestAsync(
+                                HttpMethod.Post,
+                                $"fleet-planning/api/web/v1/fleet-task/{jobHeader.mceasy_job_id}/intervention",
+                                payloadNewOrder
+                            );
+
                         }
 
+
+                        jobHeader.cust_group = Header.cust_group;
+                        jobHeader.vendor_plan = Header.vendor_id;
+                        jobHeader.vendor_act = Header.vendor_act;
+                        jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                        jobHeader.pickup_date = Header.pickup_date;
+                        jobHeader.deliv_date = Header.dvdate;
+                        jobHeader.charge_uom = Header.charge_uom;
+                        jobHeader.dest = Header.dest_area;
+                        jobHeader.origin = Header.origin_id;
+                        jobHeader.driver_name = Header.driver_name;
+                        jobHeader.serv_moda = Header.serv_moda;
+                        jobHeader.serv_type = Header.serv_type;
+                        jobHeader.truck_size = Header.truck_size;
+                        jobHeader.truck_no = Header.truck_id;
+                        jobHeader.multidrop = Header.multidrop;
+                        jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
+                        jobHeader.update_date = DateTime.Now;
+
+                        if (!string.IsNullOrEmpty(mceasy_job_id))
+                        {
+                            jobHeader.mceasy_job_id = mceasy_job_id;
+                        }
+                        _context.JobHeaders.Update(jobHeader);
+
                     }
-                    jobHeader.cust_group = Header.cust_group;
-                    jobHeader.vendor_plan = Header.vendor_id;
-                    jobHeader.vendor_act = Header.vendor_act;
-                    jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
-                    jobHeader.pickup_date = Header.pickup_date;
-                    jobHeader.deliv_date = Header.dvdate;
-                    jobHeader.charge_uom = Header.charge_uom;
-                    jobHeader.dest = Header.dest_area;
-                    jobHeader.origin = Header.origin_id;
-                    jobHeader.driver_name = Header.driver_name;
-                    jobHeader.serv_moda = Header.serv_moda;
-                    jobHeader.serv_type = Header.serv_type;
-                    jobHeader.truck_size = Header.truck_size;
-                    jobHeader.truck_no = Header.truck_id;
-                    jobHeader.multidrop = Header.multidrop;
-                    jobHeader.starting_point = Header.starting_point;
-                    jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
-                    jobHeader.update_date = DateTime.Now;
-                    if (!string.IsNullOrEmpty(mceasy_job_id))
-                    {
-                        jobHeader.mceasy_job_id = mceasy_job_id;
-                    }
-                    _context.JobHeaders.Update(jobHeader);
+
 
                     // delete existing job first
                     var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
 
                     if (jobExistingList.Any())
                     {
-                        Console.WriteLine("DELETE JOB : {0}",jobid);
+                        Console.WriteLine("DELETE JOB : {0}", jobid);
                         var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_JOB WHERE jobid = {0}", jobid);
                         Console.WriteLine("Rows delete affected: " + rows);
                     }
 
-                    var rowUpd =  _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
+                    var rowUpd = _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
                     Console.WriteLine("Rows update affected: " + rowUpd);
                 }
                 else
                 {
-                    return BadRequest(new { success = false, message = "Data job not found!" });
+                    //return BadRequest(new { success = false, message = "Data job not found!" });
+                    return (false, "Data job not found!");
                 }
             }
             else
@@ -752,8 +844,10 @@ namespace TMSBilling.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Job saved successfully" });
+
+            return (true, "OK");
         }
+
 
         private (bool ok, string message, List<string> deliveryOrderIds) InsertOrderToJob(
             IEnumerable<OrderForJobForm> Details,

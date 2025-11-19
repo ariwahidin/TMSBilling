@@ -172,8 +172,8 @@ namespace TMSBilling.Controllers
                         SUM(item_qty) AS total_qty
                     FROM TRC_ORDER_DTL
                     GROUP BY id_seq_order
-                )
-                SELECT 
+                ),
+                ord AS (SELECT 
                     a.id_seq AS IdSeq, 
                     a.wh_code AS WhCode, 
                     a.sub_custid AS SubCustId,
@@ -190,8 +190,10 @@ namespace TMSBilling.Controllers
                     COALESCE(od.total_qty, 0) AS TotalQty
                 FROM TRC_ORDER a 
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
-                LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
-                ORDER BY a.id_seq DESC
+                LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id)
+				SELECT ord.*, b.jobid AS JobID
+				FROM ord LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
+				ORDER BY ord.IdSeq DESC
             ";
 
             return _context.OrderSummaryView.FromSqlRaw(sql);
@@ -1540,6 +1542,8 @@ namespace TMSBilling.Controllers
         public string? McEasyOrderId { get; set; }
         public int? TotalItem { get; set; }
         public int? TotalQty { get; set; }
+
+        public string? JobID { get; set; }
     }
 
 }

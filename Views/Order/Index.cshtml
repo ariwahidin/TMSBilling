@@ -33,6 +33,7 @@
             <th>Origin</th>
             <th>Destination</th>
             <th>Status</th>
+            <th>Job ID</th>
             <th>Item</th>
             <th>Qty</th>
             <th class="text-center">Action</th>
@@ -49,6 +50,7 @@
             <th><input type="text" class="form-control form-control-sm" placeholder="Origin" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Destination" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Status" /></th>
+            <th><input type="text" class="form-control form-control-sm" placeholder="Job ID" /></th>
             <th></th>
             <th></th>
             <th></th>
@@ -78,6 +80,7 @@
             <td>
                 @item.MCOrderStatus
             </td>
+            <td>@item.JobID</td>
             <td>@item.TotalItem</td>
             <td>@item.TotalQty</td>
             <td class="text-center">
