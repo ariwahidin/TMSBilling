@@ -28,219 +28,20 @@ namespace TMSBilling.Controllers
         private readonly SelectListService _selectList;
         private readonly ApiService _apiService;
         private readonly IConfiguration _configuration;
+        private readonly SyncronizeWithMcEasy _sync;
 
-        public JobController(AppDbContext context, SelectListService selectList, ApiService apiService, IConfiguration configuration)
+        public JobController(AppDbContext context, 
+            SelectListService selectList, 
+            ApiService apiService, 
+            IConfiguration configuration,
+            SyncronizeWithMcEasy sync
+            )
         {
             _context = context;
             _selectList = selectList;
             _apiService = apiService;
             _configuration = configuration;
-        }
-
-        private async Task<List<FleetOrderMcEasy>> FetchFO(int? limit = null)
-        {
-
-            //var sql = @"SELECT 
-            //    mceasy_job_id AS JobID
-            //    FROM
-            //    TRC_JOB_H
-            //    WHERE status_job IN ('DRAFT', 'STARTED', 'SCHEDULED')";
-            //var data = await _context.JobOrder
-            //    .FromSqlRaw(sql)
-            //    .ToListAsync();
-
-            // Base SQL, placeholder {0} untuk TOP
-            string sql = @"
-                SELECT {0}
-                    mceasy_job_id AS JobID
-                FROM
-                    TRC_JOB_H
-                WHERE 
-                    status_job IN ('DRAFT', 'STARTED', 'SCHEDULED')
-            ";
-
-            // Tentukan apakah perlu TOP
-            string topClause = "";
-            if (limit.HasValue && limit.Value > 0)
-            {
-                topClause = $"TOP {limit.Value}";
-            }
-
-            // Inject TOP / kosong ke query
-            sql = string.Format(sql, topClause);
-
-            var data = await _context.JobOrder
-                .FromSqlRaw(sql)
-                .ToListAsync();
-
-            var allFO = new List<FleetOrderMcEasy>();
-            bool ok;
-            JsonElement json = default;
-
-            for (int i = 0; i < data.Count; i++)
-            {
-                (ok, json) = await _apiService.SendRequestAsync(
-                    HttpMethod.Get,
-                    $"fleet-planning/api/web/v1/fleet-task/{data[i].OrderID}"
-                );
-
-                if (!ok)
-                    throw new Exception($"Gagal ambil halaman ke-{i} dari API get fo");
-
-                var orders = json
-                    .GetProperty("data")
-                    .Deserialize<FleetOrderMcEasy>() ?? new FleetOrderMcEasy();
-
-                allFO.Add(orders);
-            }
-
-            return allFO;
-        }
-
-        private async Task<int> SyncFOToDatabase(List<FleetOrderMcEasy> orders)
-        {
-            int insertedCount = 0;
-            int updatedCount = 0;
-
-            if (orders == null || !orders.Any())
-                return 0;
-
-            // Ambil ID yang sudah ada untuk mencegah duplikasi
-            var existingIds = _context.MCFleetOrders
-                .Select(p => p.id)
-                .ToHashSet();
-
-            var existingOrders = _context.MCFleetOrders.ToDictionary(p => p.id, p => p);
-            var newOrders = new List<MCFleetOrder>();
-
-
-            foreach (var p in orders)
-            {
-                if (string.IsNullOrEmpty(p.id))
-                    continue;
-
-                if (!existingOrders.TryGetValue(p.id, out var existing))
-                {
-                    // Data baru → insert
-                    var newOrder = new MCFleetOrder
-                    {
-                        id = p.id,
-                        number = p.number,
-                        shipment_reference = p.shipment_reference,
-                        status = p.status?.name,
-                        status_raw_type = p.status?.raw_type,
-                        entry_date = DateTime.Now
-                    };
-
-                    newOrders.Add(newOrder);
-                    insertedCount++;
-                }
-                else
-                {
-                    // Data sudah ada → update kalau ada perubahan
-                    bool updated = false;
-
-                    if (existing.status != p.status?.name)
-                    {
-                        existing.status = p.status?.name;
-                        updated = true;
-                    }
-
-                    if (existing.status_raw_type != p.status?.raw_type)
-                    {
-                        existing.status_raw_type = p.status?.raw_type;
-                        updated = true;
-                    }
-
-                    if (existing.shipment_reference != p.shipment_reference)
-                    {
-                        existing.shipment_reference = p.shipment_reference;
-                        updated = true;
-                    }
-
-                    if (updated)
-                    {
-                        existing.entry_date = DateTime.Now; // update timestamp
-                        //updatedCount++;
-                    }
-                }
-            }
-
-            // insert data baru dalam batch
-            if (newOrders.Any())
-            {
-                await _context.MCFleetOrders.AddRangeAsync(newOrders);
-            }
-
-            // simpan semua perubahan (insert + update)
-            await _context.SaveChangesAsync();
-
-
-            //foreach (var p in orders)
-            //{
-            //    if (!existingIds.Contains(p.id))
-            //    {
-            //        var newOrder = new MCFleetOrder
-            //        {
-            //            id = p.id,
-            //            number = p.number,
-            //            shipment_reference = p.shipment_reference,
-            //            status = p.status?.name,
-            //            status_raw_type = p.status?.raw_type,
-            //            entry_date = DateTime.Now
-            //        };
-
-            //        newOrders.Add(newOrder);
-            //    }
-
-            //    insertedCount++;
-            //}
-
-            // Insert semua data baru
-            if (newOrders.Any())
-            {
-                _context.MCFleetOrders.AddRange(newOrders);
-                await _context.SaveChangesAsync();
-            }
-
-            var filteredIds = orders
-                .Where(o => o.status?.raw_type != null)
-                .Select(o => o.id)
-                .Where(id => !string.IsNullOrEmpty(id))
-                .ToList();
-
-            if (filteredIds.Any())
-            {
-                // ambil rows yang ada di DB
-                var jobs = await _context.JobHeaders
-                    .Where(j => filteredIds.Contains(j.mceasy_job_id))
-                    .ToListAsync();
-
-                // buat lookup status berdasarkan id
-                var statusLookup = orders
-                    .Where(o => o.status?.raw_type != null && !string.IsNullOrEmpty(o.id))
-                    .ToDictionary(o => o.id, o => o.status.raw_type.Trim().ToUpperInvariant());
-
-                foreach (var job in jobs)
-                {
-                    if (statusLookup.TryGetValue(job.mceasy_job_id, out var raw))
-                    {
-                        // mapping kalau perlu
-                        job.status_job = raw switch
-                        {
-                            "ENDED" => "ENDED",
-                            "SCHEDULED" => "SCHEDULED",
-                            "STARTED" => "STARTED",
-                            _ => job.status_job // biarkan kalau unknown
-                        };
-                    }
-                }
-
-                updatedCount = await _context.SaveChangesAsync();
-            }
-
-
-            return updatedCount;
+            _sync = sync;
         }
 
         [HttpPost]
@@ -248,8 +49,8 @@ namespace TMSBilling.Controllers
         {
             try
             {
-                var ordersFromApi = await FetchFO();
-                var result = await SyncFOToDatabase(ordersFromApi);
+                var ordersFromApi = await _sync.FetchFO();
+                var result = await _sync.SyncFOToDatabase(ordersFromApi);
                 return Json(new
                 {
                     success = true,
@@ -268,16 +69,6 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> Index()
         {
-            try
-            {
-                var ordersFromApi = await FetchFO(10);
-                var result = await SyncFOToDatabase(ordersFromApi);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error sync data: {ex.Message}");
-            }
-
             var data = await GetJobSummaryQuery().ToListAsync();
             return View(data);
         }
@@ -285,11 +76,10 @@ namespace TMSBilling.Controllers
         public async Task<IActionResult> IndexSync()
         {
 
-
             try
             {
-                var ordersFromApi = await FetchFO();
-                var result = await SyncFOToDatabase(ordersFromApi);
+                var ordersFromApi = await _sync.FetchFO();
+                var result = await _sync.SyncFOToDatabase(ordersFromApi);
             }
             catch (Exception ex)
             {

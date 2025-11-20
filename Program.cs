@@ -31,7 +31,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-
+builder.Services.AddScoped<SyncronizeWithMcEasy>();
 builder.Services.AddScoped<SelectListService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 

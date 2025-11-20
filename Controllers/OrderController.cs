@@ -23,14 +23,21 @@ namespace TMSBilling.Controllers
         private readonly HttpClient _httpClient;
         private readonly ApiSettings _apiSettings;
         private readonly ApiService _apiService;
+        private readonly SyncronizeWithMcEasy _sync;
 
-        public OrderController(AppDbContext context, SelectListService selectList, HttpClient httpClient, IOptions<ApiSettings> apiSettings, ApiService apiService)
+        public OrderController(AppDbContext context, 
+            SelectListService selectList, 
+            HttpClient httpClient, 
+            IOptions<ApiSettings> apiSettings, 
+            ApiService apiService, 
+            SyncronizeWithMcEasy sync)
         {
             _context = context;
             _selectList = selectList;
             _httpClient = httpClient;
             _apiSettings = apiSettings.Value;
             _apiService = apiService;
+            _sync = sync;
         }
 
         private async Task<OrderMcEasy> GetOrderMcEasyByID(string id)
@@ -50,141 +57,131 @@ namespace TMSBilling.Controllers
             return order;
         }
 
-        private async Task<List<OrderMcEasy>> FetchOrderFromApi(int? limit = null)
-        {
-            //var sql = @"select mceasy_order_id AS OrderID,  
-            //order_status AS OrderStatus
-            //from TRC_ORDER
-            //where 
-            //mceasy_status != 'Terkirim'
-            //AND mceasy_order_id is not null";
-            //var data = await _context.ConfirmOrderID
-            //    .FromSqlRaw(sql)
-            //    .ToListAsync();
+        //private async Task<List<OrderMcEasy>> FetchOrderFromApi(int? limit = null)
+        //{
+        //    // Base SQL tanpa TOP
+        //    string sql = @"
+        //        SELECT {0} 
+        //            mceasy_order_id AS OrderID,
+        //            order_status AS OrderStatus
+        //        FROM TRC_ORDER
+        //        WHERE 
+        //            mceasy_status != 'Terkirim'
+        //            AND mceasy_order_id IS NOT NULL
+        //    ";
 
-            // Base SQL tanpa TOP
-            string sql = @"
-                SELECT {0} 
-                    mceasy_order_id AS OrderID,
-                    order_status AS OrderStatus
-                FROM TRC_ORDER
-                WHERE 
-                    mceasy_status != 'Terkirim'
-                    AND mceasy_order_id IS NOT NULL
-            ";
+        //    // Jika limit ada → tambahkan TOP
+        //    string topClause = "";
+        //    if (limit.HasValue && limit.Value > 0)
+        //    {
+        //        topClause = $"TOP {limit.Value}";
+        //    }
 
-            // Jika limit ada → tambahkan TOP
-            string topClause = "";
-            if (limit.HasValue && limit.Value > 0)
-            {
-                topClause = $"TOP {limit.Value}";
-            }
+        //    // Masukkan TOP / kosong ke query
+        //    sql = string.Format(sql, topClause);
 
-            // Masukkan TOP / kosong ke query
-            sql = string.Format(sql, topClause);
+        //    var data = await _context.ConfirmOrderID
+        //        .FromSqlRaw(sql)
+        //        .ToListAsync();
 
-            var data = await _context.ConfirmOrderID
-                .FromSqlRaw(sql)
-                .ToListAsync();
+        //    var allOrders = new List<OrderMcEasy>();
+        //    bool ok;
+        //    JsonElement json = default;
 
-            var allOrders = new List<OrderMcEasy>();
-            bool ok;
-            JsonElement json = default;
+        //    for (int i = 0; i < data.Count; i++)
+        //    {
+        //        (ok, json) = await _apiService.SendRequestAsync(
+        //            HttpMethod.Get,
+        //            $"order/api/web/v1/delivery-order/{data[i].OrderID}"
+        //        );
 
-            for (int i = 0; i < data.Count; i++)
-            {
-                (ok, json) = await _apiService.SendRequestAsync(
-                    HttpMethod.Get,
-                    $"order/api/web/v1/delivery-order/{data[i].OrderID}"
-                );
+        //        if (!ok)
+        //            throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
 
-                if (!ok)
-                    throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
+        //        var orders = json
+        //            .GetProperty("data")
+        //            .Deserialize<OrderMcEasy>() ?? new OrderMcEasy();
 
-                var orders = json
-                    .GetProperty("data")
-                    .Deserialize<OrderMcEasy>() ?? new OrderMcEasy();
+        //        allOrders.Add(orders);
+        //    }
 
-                allOrders.Add(orders);
-            }
+        //    return allOrders;
+        //}
 
-            return allOrders;
-        }
+        //private async Task<int> SyncOrderToDatabase(List<OrderMcEasy> orders)
+        //{
+        //    int insertedCount = 0;
+        //    int updatedCount = 0;
 
-        private async Task<int> SyncOrderToDatabase(List<OrderMcEasy> orders)
-        {
-            int insertedCount = 0;
-            int updatedCount = 0;
+        //    if (orders == null || !orders.Any())
+        //        return 0;
 
-            if (orders == null || !orders.Any())
-                return 0;
+        //    // Ambil ID existing dari MC_ORDER
+        //    var existingIds = _context.MCOrders
+        //        .Select(p => p.id)
+        //        .ToHashSet();
 
-            // Ambil ID existing dari MC_ORDER
-            var existingIds = _context.MCOrders
-                .Select(p => p.id)
-                .ToHashSet();
+        //    var newOrders = new List<MCOrder>();
 
-            var newOrders = new List<MCOrder>();
+        //    foreach (var p in orders)
+        //    {
+        //        if (!existingIds.Contains(p.id))
+        //        {
+        //            var newOrder = new MCOrder
+        //            {
+        //                id = p.id,
+        //                number = p.number,
+        //                reference_number = p.reference_number,
+        //                shipment_number = p.shipment_number,
+        //                shipment_type = p.shipment_type,
+        //                status = p.status?.name,
+        //                fleet_task_id = p.fleet_task?.id,
+        //                fleet_task_number = p.fleet_task?.number,
+        //                entry_date = DateTime.Now
+        //            };
 
-            foreach (var p in orders)
-            {
-                if (!existingIds.Contains(p.id))
-                {
-                    var newOrder = new MCOrder
-                    {
-                        id = p.id,
-                        number = p.number,
-                        reference_number = p.reference_number,
-                        shipment_number = p.shipment_number,
-                        shipment_type = p.shipment_type,
-                        status = p.status?.name,
-                        fleet_task_id = p.fleet_task?.id,
-                        fleet_task_number = p.fleet_task?.number,
-                        entry_date = DateTime.Now
-                    };
+        //            newOrders.Add(newOrder);
+        //        }
 
-                    newOrders.Add(newOrder);
-                }
+        //        insertedCount++;
+        //    }
 
-                insertedCount++;
-            }
+        //    // Simpan data baru
+        //    if (newOrders.Any())
+        //    {
+        //        _context.MCOrders.AddRange(newOrders);
+        //        await _context.SaveChangesAsync();
+        //    }
 
-            // Simpan data baru
-            if (newOrders.Any())
-            {
-                _context.MCOrders.AddRange(newOrders);
-                await _context.SaveChangesAsync();
-            }
+        //    // Filter hanya order dengan status
+        //    var allowedStatuses = new[] {"Draf", "Dijadwalkan", "Dijalankan", "Diambil", "Terkirim" };
+        //    var filteredOrders = orders
+        //        .Where(o => allowedStatuses.Contains(o.status?.name, StringComparer.OrdinalIgnoreCase))
+        //        .Select(o => new {
+        //            Id = o.id,
+        //            Status = o.status?.name
+        //        })
+        //        .Where(x => !string.IsNullOrEmpty(x.Id))
+        //        .ToList();
+        //    // Console.WriteLine("ORDER FILTEREDED : ", filteredOrders);
+        //    // Update TRC_ORDER status = 2 untuk order yang Dijadwalkan
+        //    if (filteredOrders.Any())
+        //    {
+        //        Console.WriteLine("ORDER FILTERED : ", filteredOrders);
 
-            // Filter hanya order dengan status
-            var allowedStatuses = new[] {"Draf", "Dijadwalkan", "Dijalankan", "Diambil", "Terkirim" };
-            var filteredOrders = orders
-                .Where(o => allowedStatuses.Contains(o.status?.name, StringComparer.OrdinalIgnoreCase))
-                .Select(o => new {
-                    Id = o.id,
-                    Status = o.status?.name
-                })
-                .Where(x => !string.IsNullOrEmpty(x.Id))
-                .ToList();
-            // Console.WriteLine("ORDER FILTEREDED : ", filteredOrders);
-            // Update TRC_ORDER status = 2 untuk order yang Dijadwalkan
-            if (filteredOrders.Any())
-            {
-                Console.WriteLine("ORDER FILTERED : ", filteredOrders);
+        //        foreach (var ford in filteredOrders) {
+        //            var updateSql = $@"
+        //                UPDATE TRC_ORDER 
+        //                SET order_status = 2 , mceasy_status = '{ford.Status}'
+        //                WHERE mceasy_order_id = '{ford.Id}'
+        //            ";
+        //            updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
+        //        }
+        //    }
 
-                foreach (var ford in filteredOrders) {
-                    var updateSql = $@"
-                        UPDATE TRC_ORDER 
-                        SET order_status = 2 , mceasy_status = '{ford.Status}'
-                        WHERE mceasy_order_id = '{ford.Id}'
-                    ";
-                    updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
-                }
-            }
-
-            // Kembalikan total affected (insert + update)
-            return updatedCount;
-        }
+        //    // Kembalikan total affected (insert + update)
+        //    return updatedCount;
+        //}
 
 
         private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
@@ -227,20 +224,6 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> Index()
         {
-            try
-            {
-                var orders = await FetchOrderFromApi(10);
-
-                if (orders != null && orders.Any())
-                {
-                    await SyncOrderToDatabase(orders);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error sync data: {ex.Message}");
-            }
-
             var data = await GetOrderSummaryQuery().ToListAsync();
             return View(data);
         }
@@ -250,11 +233,11 @@ namespace TMSBilling.Controllers
 
             try
             {
-                var orders = await FetchOrderFromApi();
+                var orders = await _sync.FetchOrderFromApi();
 
                 if (orders != null && orders.Any())
                 {
-                    await SyncOrderToDatabase(orders);
+                    await _sync.SyncOrderToDatabase(orders);
                 }
             }
             catch (Exception ex)
@@ -272,8 +255,8 @@ namespace TMSBilling.Controllers
         {
             try
             {
-                var ordersFromApi = await FetchOrderFromApi();
-                var result = await SyncOrderToDatabase(ordersFromApi);
+                var ordersFromApi = await _sync.FetchOrderFromApi();
+                var result = await _sync.SyncOrderToDatabase(ordersFromApi);
                 return Json(new
                 {
                     success = true,
