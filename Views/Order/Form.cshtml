@@ -992,11 +992,11 @@
             // Fill form fields berdasarkan type
             if (currentAddressType === 'origin') {
                 document.getElementById('origin_id').value = address.fenceName;
-                document.getElementById('city').value = address.areaGroup;
+                // document.getElementById('city').value = address.areaGroup;
                 document.getElementById('origin_address_id').value = address.geofenceId;
             } else if (currentAddressType === 'destination') {
                 document.getElementById('destination_id').value = address.fenceName;
-                document.getElementById('destination_city').value = address.areaGroup;
+                // document.getElementById('destination_city').value = address.areaGroup;
                 document.getElementById('destination_address_id').value = address.geofenceId;
             }
 

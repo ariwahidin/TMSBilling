@@ -142,8 +142,8 @@ public class SelectListService
     {
         return new List<SelectListItem>
         {
-            new SelectListItem { Value = "semi wooden", Text = "Semi Wooden" },
-            new SelectListItem { Value = "none", Text = "None" },
+            new SelectListItem { Value = "SEMI WOODEN", Text = "SEMI WOODEN" },
+            new SelectListItem { Value = "NONE", Text = "NONE" },
         };
     }
 

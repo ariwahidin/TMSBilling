@@ -16,17 +16,6 @@ namespace TMSBilling.Services
         private readonly HttpClient _httpClient;
         private readonly ApiSettings _apiSettings;
 
-        //public ApiService(HttpClient httpClient, ApiSettings apiSettings)
-        //{
-        //    _httpClient = httpClient;
-        //    _apiSettings = apiSettings;
-        //    _httpClient.BaseAddress = new Uri(_apiSettings.BaseUrl);
-        //    _httpClient.DefaultRequestHeaders.Authorization =
-        //        new System.Net.Http.Headers.AuthenticationHeaderValue(
-        //            "Bearer",
-        //            _apiSettings.Token.Replace("Bearer ", "")
-        //        );
-        //}
 
         public ApiService(HttpClient httpClient, AppDbContext context)
         {
@@ -250,6 +239,52 @@ namespace TMSBilling.Services
                 return (false,
                     JsonDocument.Parse($"{{\"error\":\"{ex.Message}\"}}").RootElement.Clone());
             }
+        }
+
+        public string ExtractErrorMessage(JsonElement root)
+        {
+            List<string> messages = new();
+
+            // 1. Ambil "errors"
+            if (root.TryGetProperty("errors", out var errorsObj))
+            {
+                foreach (var prop in errorsObj.EnumerateObject())
+                {
+                    foreach (var err in prop.Value.EnumerateArray())
+                    {
+                        messages.Add($"{prop.Name}: {err.GetString()}");
+                    }
+                }
+            }
+
+            // 2. Ambil "errors_v2.issues"
+            if (root.TryGetProperty("errors_v2", out var errorsV2)
+                && errorsV2.TryGetProperty("issues", out var issues))
+            {
+                foreach (var issue in issues.EnumerateArray())
+                {
+                    string field = issue.GetProperty("path")[0].GetString() ?? "";
+                    string msg = issue.GetProperty("message").GetString() ?? "";
+
+                    messages.Add($"{field}: {msg}");
+                }
+            }
+
+            // 3. Ambil "errors_v2.formatted"
+            if (errorsV2.ValueKind != JsonValueKind.Undefined
+                && errorsV2.TryGetProperty("formatted", out var formatted))
+            {
+                foreach (var prop in formatted.EnumerateObject())
+                {
+                    var arr = prop.Value.GetProperty("_errors").EnumerateArray();
+                    foreach (var err in arr)
+                    {
+                        messages.Add($"{prop.Name}: {err.GetString()}");
+                    }
+                }
+            }
+
+            return string.Join(" | ", messages.Distinct());
         }
 
     }

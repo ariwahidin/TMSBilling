@@ -357,6 +357,8 @@ namespace TMSBilling.Controllers
                   return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
             }
 
+            
+
             if (customer.API_FLAG == 1)
             {
                 var payload = new
@@ -411,10 +413,40 @@ namespace TMSBilling.Controllers
                         return NotFound(new {message = "Order not found", success = true});
                     }
 
+                    var payloadPatch = new Dictionary<string, object>
+                    {
+                        ["expected_pickup_on"] = pickupDateTime,
+                        ["expected_delivered_on"] = deliveryDateTime,
+                        ["shipment_number"] = header.inv_no
+                    };
+
+                    if (orderHeader.mceasy_origin_address_id != header.mceasy_origin_address_id ||
+                        orderHeader.mceasy_destination_address_id != header.mceasy_destination_address_id)
+                    {
+                        payloadPatch["origin_address_id"] = header.mceasy_origin_address_id;
+                        payloadPatch["destination_address_id"] = header.mceasy_destination_address_id;
+                    }
+
+
+                    var (okOpt, jsonOpt) = await _apiService.SendRequestAsync(
+                        HttpMethod.Options,
+                        $"order/api/web/v1/delivery-order/{orderHeader.mceasy_order_id}"
+                    );
+
+                    //if (!okOpt)
+                    //{
+                    //    return BadRequest(new
+                    //    {
+                    //        success = false,
+                    //        message = "Gagal kirim ke API [OPTIONS] Order",
+                    //        detail = jsonOpt
+                    //    });
+                    //}
+
                     (ok, json) = await _apiService.SendRequestAsync(
                         HttpMethod.Patch,
                         $"order/api/web/v1/delivery-order/{orderHeader.mceasy_order_id}",
-                        payload
+                        payloadPatch
                     );
                 }
 
@@ -423,7 +455,7 @@ namespace TMSBilling.Controllers
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Gagal kirim ke API Store Order",
+                        message = _apiService.ExtractErrorMessage(json),
                         detail = json
                     });
                 }
@@ -1269,7 +1301,8 @@ namespace TMSBilling.Controllers
             {
                 var payload = new
                 {
-                    product_id = orderLoad.mceasy_product_id,
+                    //product_id = orderLoad.mceasy_product_id,
+                    product_id = model.product_id,
                     quantity = model.quantity,
                     uom = model.uom,
                     note = model.note,
@@ -1325,6 +1358,7 @@ namespace TMSBilling.Controllers
 
             Console.WriteLine("DELETE ORDER : {0}", id);
             var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", id);
+            var rows2 = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER_DTL WHERE id_seq_order = {0}", id);
             Console.WriteLine("Rows delete affected: " + rows);
 
             if (rows < 1) {
@@ -1357,7 +1391,7 @@ namespace TMSBilling.Controllers
             {
                 var (ok, json) = await _apiService.SendRequestAsync(
                    HttpMethod.Delete,
-                   $"delivery-order/{orderLoad.mceasy_order_id}/load/{orderLoad.mceasy_order_dtl_id}",
+                   $"/order/api/web/v1/delivery-order/{orderLoad.mceasy_order_id}/load/{orderLoad.mceasy_order_dtl_id}",
                    new { }
                );
                 if (!ok)
@@ -1486,6 +1520,9 @@ namespace TMSBilling.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+
+        
 
 
     }

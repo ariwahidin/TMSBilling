@@ -115,15 +115,18 @@
                 <form id="productDetailsForm" asp-action="SaveProduct" asp-controller="Order" method="post">
                 <div class="modal-body">
                    
-                        <input type="hidden" name="id_seq" id="id_seq">
-                        <input type="hidden" name="order_h_id" value="@order.id_seq">
-                        <input type="hidden" name="product_id" id="selectedProductId">
-                        <input type="hidden" name="order_id" value="@ViewBag.OrderIDMcEasy">
-                        <input type="hidden" id="editItemIndex" value="-1">
+                        <input type="text" name="id_seq" id="id_seq">
+                        <input type="text" name="order_h_id" value="@order.id_seq">
+                        <input type="text" name="product_id" id="selectedProductId">
+                        <input type="text" name="order_id" value="@ViewBag.OrderIDMcEasy">
+                        <input type="text" id="editItemIndex" value="-1">
 
                         <div class="mb-3">
                             <label class="form-label">Product Name</label>
                             <input type="text" class="form-control" id="productName" name="name" readonly>
+                            <button type="button" class="btn btn-sm btn-success" onclick="openProductModalForEdit()">
+                                Search
+                            </button>
                         </div>
 
                        
@@ -204,15 +207,19 @@
 
     // console.log("@ViewBag.OrderLoad")
 
+    let editLoad = false;
+
     let orderLoad = @Html.Raw(Json.Serialize(ViewBag.OrderLoad))
             console.log(orderLoad);
     let tableItems = [];
+    loadProducts();
+
             if (orderLoad && orderLoad.length > 0) {
             orderLoad.forEach(item => {
                 // contoh ambil data dari setiap row
                 tableItems.push({
                     id: item.id_seq,
-                    productId: item.product_id,
+                    productId: item.mceasy_product_id,
                     name: item.item_name,
                     category : item.item_category,
                     quantity: item.item_qty,
@@ -230,8 +237,9 @@
 
     // Function untuk membuka modal pencarian product
     function openProductModal() {
+        editLoad = false;
         document.getElementById('editItemIndex').value = '-1'; // Reset edit index
-        loadProducts();
+        // loadProducts();
         const productModal = new bootstrap.Modal(document.getElementById('productModal'));
         productModal.show();
     }
@@ -289,30 +297,63 @@
     }
 
     // Function untuk select product
-    function selectProduct(product) {
-        // Close product modal
-        const productModal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
-        productModal.hide();
+    // function selectProduct(product) {
+    //     Close product modal
+    //     const productModal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+    //     productModal.hide();
 
-        // Fill product details modal
-        document.getElementById('id_seq').value = 0;
-        document.getElementById('selectedProductId').value = product.id;
-        document.getElementById('productName').value = product.name;
-        document.getElementById('productCategory').value = product.product_type.product_category.name;
-        document.getElementById('weight').value = product.weight;
-        document.getElementById('packageUnit').value = product.uom;
+    //     Fill product details modal
+    //     document.getElementById('id_seq').value = 0;
+    //     document.getElementById('selectedProductId').value = product.id;
+    //     document.getElementById('productName').value = product.name;
+    //     document.getElementById('productCategory').value = product.product_type.product_category.name;
+    //     document.getElementById('weight').value = product.weight;
+    //     document.getElementById('packageUnit').value = product.uom;
 
-        // Reset form fields
-        // document.getElementById('packageUnit').value = '';
-        document.getElementById('length').value = '';
-        document.getElementById('width').value = '';
-        document.getElementById('height').value = '';
-        document.getElementById('quantity').value = '1';
+    //     Reset form fields
+    //     document.getElementById('packageUnit').value = '';
+    //     document.getElementById('length').value = '';
+    //     document.getElementById('width').value = '';
+    //     document.getElementById('height').value = '';
+    //     document.getElementById('quantity').value = '1';
 
-        // Show product details modal
-        const detailsModal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
-        detailsModal.show();
-    }
+    //     Show product details modal
+    //     const detailsModal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
+    //     detailsModal.show();
+    // }
+
+        function selectProduct(product) {
+            const productModal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+            productModal.hide();
+
+            // Jika sedang edit (ganti produk)
+            if (window.isChangingProduct) {
+                window.isChangingProduct = false;  // reset flag
+                // jangan ubah id_seq!
+            } else {
+                // add new item
+                document.getElementById('id_seq').value = 0;
+                document.getElementById('editItemIndex').value = -1;
+            }
+
+            document.getElementById('selectedProductId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productCategory').value = product.product_type.product_category.name;
+            document.getElementById('weight').value = product.weight;
+            document.getElementById('packageUnit').value = product.uom;
+
+            // Reset ukuran hanya saat add, bukan saat edit
+            if (!editLoad) {
+                document.getElementById('length').value = '';
+                document.getElementById('width').value = '';
+                document.getElementById('height').value = '';
+                document.getElementById('quantity').value = 1;
+            }
+
+            const detailsModal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
+            detailsModal.show();
+        }
+
 
     // Function untuk save item
     function saveItem() {
@@ -454,6 +495,7 @@
     // Function untuk edit item
     function editItem(index) {
         const item = tableItems[index];
+        console.log("ITEM YANG DI AKAN DIEDIT : ", item);
 
         // Set edit index
         document.getElementById('editItemIndex').value = index;
@@ -497,7 +539,7 @@
                         console.log('Sukses:', response);
                         hideLoading()
                         Swal.fire({
-                            position: "top-end",
+                            position: "center",
                             icon: "success",
                             title: response.message,
                             showConfirmButton: false,
@@ -507,6 +549,7 @@
                         });
                     },
                     error: function (xhr) {
+                        hideLoading();
                         console.error('Error:', xhr.responseText);
                         Swal.fire({
                             icon: "error",
@@ -524,5 +567,31 @@
     document.addEventListener('DOMContentLoaded', function() {
         refreshTable();
     });
+
+
+        // function openProductModalForEdit() {
+        //     const productModal = new bootstrap.Modal(document.getElementById('productModal'));
+        //     productModal.show();
+
+        //     Set mode edit produk
+        //     window.isChangingProduct = true;
+        // }
+
+        function openProductModalForEdit() {
+            // Tutup modal edit
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('productDetailsModal'));
+            editModal.hide();
+
+            // Tunda sedikit agar modal benar-benar tertutup
+            setTimeout(() => {
+                const productModal = new bootstrap.Modal(document.getElementById('productModal'));
+                productModal.show();
+                // window.isChangingProduct = true;
+                editLoad = true;
+            }, 300);
+        }
+
+
+
 </script>
 }
