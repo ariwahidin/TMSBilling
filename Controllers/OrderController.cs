@@ -50,14 +50,39 @@ namespace TMSBilling.Controllers
             return order;
         }
 
-        private async Task<List<OrderMcEasy>> FetchOrderFromApi()
+        private async Task<List<OrderMcEasy>> FetchOrderFromApi(int? limit = null)
         {
-            var sql = @"select mceasy_order_id AS OrderID,  
-            order_status AS OrderStatus
-            from TRC_ORDER
-            where 
-            mceasy_status != 'Terkirim'
-            AND mceasy_order_id is not null";
+            //var sql = @"select mceasy_order_id AS OrderID,  
+            //order_status AS OrderStatus
+            //from TRC_ORDER
+            //where 
+            //mceasy_status != 'Terkirim'
+            //AND mceasy_order_id is not null";
+            //var data = await _context.ConfirmOrderID
+            //    .FromSqlRaw(sql)
+            //    .ToListAsync();
+
+            // Base SQL tanpa TOP
+            string sql = @"
+                SELECT {0} 
+                    mceasy_order_id AS OrderID,
+                    order_status AS OrderStatus
+                FROM TRC_ORDER
+                WHERE 
+                    mceasy_status != 'Terkirim'
+                    AND mceasy_order_id IS NOT NULL
+            ";
+
+            // Jika limit ada → tambahkan TOP
+            string topClause = "";
+            if (limit.HasValue && limit.Value > 0)
+            {
+                topClause = $"TOP {limit.Value}";
+            }
+
+            // Masukkan TOP / kosong ke query
+            sql = string.Format(sql, topClause);
+
             var data = await _context.ConfirmOrderID
                 .FromSqlRaw(sql)
                 .ToListAsync();
@@ -202,6 +227,20 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> Index()
         {
+            try
+            {
+                var orders = await FetchOrderFromApi(10);
+
+                if (orders != null && orders.Any())
+                {
+                    await SyncOrderToDatabase(orders);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sync data: {ex.Message}");
+            }
+
             var data = await GetOrderSummaryQuery().ToListAsync();
             return View(data);
         }

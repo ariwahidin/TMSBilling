@@ -115,19 +115,30 @@
                 <form id="productDetailsForm" asp-action="SaveProduct" asp-controller="Order" method="post">
                 <div class="modal-body">
                    
-                        <input type="text" name="id_seq" id="id_seq">
-                        <input type="text" name="order_h_id" value="@order.id_seq">
-                        <input type="text" name="product_id" id="selectedProductId">
-                        <input type="text" name="order_id" value="@ViewBag.OrderIDMcEasy">
-                        <input type="text" id="editItemIndex" value="-1">
+                        <input type="hidden" name="id_seq" id="id_seq">
+                        <input type="hidden" name="order_h_id" value="@order.id_seq">
+                        <input type="hidden" name="product_id" id="selectedProductId">
+                        <input type="hidden" name="order_id" value="@ViewBag.OrderIDMcEasy">
+                        <input type="hidden" id="editItemIndex" value="-1">
 
-                        <div class="mb-3">
+                        @* <div class="mb-3">
                             <label class="form-label">Product Name</label>
                             <input type="text" class="form-control" id="productName" name="name" readonly>
                             <button type="button" class="btn btn-sm btn-success" onclick="openProductModalForEdit()">
                                 Search
                             </button>
+                        </div> *@
+
+                        <div class="mb-3">
+                            <label class="form-label">Product Name</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="productName" name="name" readonly>
+                                <button type="button" class="btn btn-success" onclick="openProductModalForEdit()">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
                         </div>
+
 
                        
 
@@ -327,8 +338,8 @@
             productModal.hide();
 
             // Jika sedang edit (ganti produk)
-            if (window.isChangingProduct) {
-                window.isChangingProduct = false;  // reset flag
+            if (editLoad) {
+                // window.isChangingProduct = false;  // reset flag
                 // jangan ubah id_seq!
             } else {
                 // add new item
@@ -431,6 +442,7 @@
                     });
                 },
                 error: function (xhr) {
+                    hideLoading()
                     console.error('Error:', xhr.responseText);
                 }
             });
@@ -441,6 +453,7 @@
                 contentType: 'application/json',   // kirim sebagai JSON
                 data: JSON.stringify(formData),   // ubah objek ke JSON
                 success: function (response) {
+                    hideLoading()
                     Swal.fire({
                         position: "center",
                         icon: "success",
@@ -454,6 +467,7 @@
                     });
                 },
                 error: function (xhr) {
+                        hideLoading()
                     console.error('Error:', xhr.responseText);
                 }
             });

@@ -1,4 +1,5 @@
 ﻿
+using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -36,14 +37,38 @@ namespace TMSBilling.Controllers
             _configuration = configuration;
         }
 
-        private async Task<List<FleetOrderMcEasy>> FetchFO()
+        private async Task<List<FleetOrderMcEasy>> FetchFO(int? limit = null)
         {
 
-            var sql = @"SELECT 
-                mceasy_job_id AS JobID
+            //var sql = @"SELECT 
+            //    mceasy_job_id AS JobID
+            //    FROM
+            //    TRC_JOB_H
+            //    WHERE status_job IN ('DRAFT', 'STARTED', 'SCHEDULED')";
+            //var data = await _context.JobOrder
+            //    .FromSqlRaw(sql)
+            //    .ToListAsync();
+
+            // Base SQL, placeholder {0} untuk TOP
+            string sql = @"
+                SELECT {0}
+                    mceasy_job_id AS JobID
                 FROM
-                TRC_JOB_H
-                WHERE status_job IN ('DRAFT', 'STARTED', 'SCHEDULED')";
+                    TRC_JOB_H
+                WHERE 
+                    status_job IN ('DRAFT', 'STARTED', 'SCHEDULED')
+            ";
+
+            // Tentukan apakah perlu TOP
+            string topClause = "";
+            if (limit.HasValue && limit.Value > 0)
+            {
+                topClause = $"TOP {limit.Value}";
+            }
+
+            // Inject TOP / kosong ke query
+            sql = string.Format(sql, topClause);
+
             var data = await _context.JobOrder
                 .FromSqlRaw(sql)
                 .ToListAsync();
@@ -243,6 +268,16 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> Index()
         {
+            try
+            {
+                var ordersFromApi = await FetchFO(10);
+                var result = await SyncFOToDatabase(ordersFromApi);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sync data: {ex.Message}");
+            }
+
             var data = await GetJobSummaryQuery().ToListAsync();
             return View(data);
         }
