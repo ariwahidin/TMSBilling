@@ -31,9 +31,12 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-builder.Services.AddScoped<SyncronizeWithMcEasy>();
 builder.Services.AddScoped<SelectListService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<SyncronizeWithMcEasy>();
+
+// Daftarkan background worker
+builder.Services.AddHostedService<SyncWorker>();
 
 
 // 🔧 SET DEFAULT CULTURE

@@ -26,24 +26,78 @@ namespace TMSBilling.Services
         }
 
         // Entry point utama (ini dipanggil dari controller atau console app)
-        //public async Task Run()
-        //{
-        //    try
-        //    {
-        //        var orders = await FetchOrderFromApi(10);
+        public async Task Run()
+        {
+            var totalStart = DateTime.UtcNow;
+            _logger.LogInformation("=== Mulai sync data McEasy === {time}", DateTime.UtcNow);
 
-        //        if (orders != null && orders.Any())
-        //        {
-        //            await SyncOrderToDatabase(orders);
-        //        }
+            try
+            {
+                // --------------------- ORDER ------------------------
+                var orderStart = DateTime.UtcNow;
+                _logger.LogInformation("Mulai sync ORDER...");
 
-        //        _logger.LogInformation("Sync selesai");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error ketika sync");
-        //    }
-        //}
+                var orders = await FetchOrderFromApi(1000);
+                var orderCount = orders?.Count ?? 0;
+
+                _logger.LogInformation("Order API mengembalikan {count} data", orderCount);
+
+                if (orderCount > 0)
+                {
+                    await SyncOrderToDatabase(orders);
+                    var orderDuration = DateTime.UtcNow - orderStart;
+
+                    _logger.LogInformation(
+                        "Sync ORDER selesai. Total: {count} | Durasi: {duration} detik",
+                        orderCount,
+                        orderDuration.TotalSeconds.ToString("0.000")
+                    );
+                }
+                else
+                {
+                    _logger.LogWarning("Tidak ada data ORDER yang perlu disinkronkan.");
+                }
+
+
+                // --------------------- JOB ------------------------
+                var jobStart = DateTime.UtcNow;
+                _logger.LogInformation("Mulai sync JOB...");
+
+                var jobs = await FetchFO(1000);
+                var jobCount = jobs?.Count ?? 0;
+
+                _logger.LogInformation("Job API mengembalikan {count} data", jobCount);
+
+                if (jobCount > 0)
+                {
+                    await SyncFOToDatabase(jobs);
+                    var jobDuration = DateTime.UtcNow - jobStart;
+
+                    _logger.LogInformation(
+                        "Sync JOB selesai. Total: {count} | Durasi: {duration} detik",
+                        jobCount,
+                        jobDuration.TotalSeconds.ToString("0.000")
+                    );
+                }
+                else
+                {
+                    _logger.LogWarning("Tidak ada data JOB yang perlu disinkronkan.");
+                }
+
+
+                // --------------------- TOTAL ------------------------
+                var totalDuration = DateTime.UtcNow - totalStart;
+                _logger.LogInformation(
+                    "=== Sync selesai. Total durasi: {duration} detik ===",
+                    totalDuration.TotalSeconds.ToString("0.000")
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Terjadi error saat sync");
+            }
+        }
+
 
         // ================================
         // FETCH ORDER
