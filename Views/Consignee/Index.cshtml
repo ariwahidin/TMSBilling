@@ -67,9 +67,10 @@
         <tr>
             <th>Consignee Name</th>
             <th>Customer Group</th>
-            <th>Customer</th>
             <th>Main Customer</th>
-            <th>Action</th>
+            <th>Address</th>
+            <th>City</th>
+            <th style="width:100px; text-align:center;">Action</th>
         </tr>
     </thead>
     <tbody>
@@ -78,9 +79,10 @@
             <tr>
                 <td>@item.FenceName</td>
                 <td>@item.CustomerGroup</td>
-                <td>@item.Customer</td>
                 <td>@item.MainCustomer</td>
-                <td>
+                <td>@item.Address</td>
+                <td>@item.City</td>
+                <td style="text-align:center;">
                     <button class="btn btn-sm btn-warning btnEdit d-none" data-id="@item.GeofenceID" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </button>

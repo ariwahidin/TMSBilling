@@ -301,7 +301,9 @@ namespace TMSBilling.Controllers
         tg.FENCE_NAME AS FenceName,
         tg.CUSTOMER_NAME AS CustomerGroup,
         tcg.CUST_CODE AS Customer,
-        tcg.MAIN_CUST AS MainCustomer
+        tcg.MAIN_CUST AS MainCustomer,
+		tg.[ADDRESS] AS [Address],
+		tg.[CITY] AS [City]
         FROM 
         TRC_GEOFENCE tg
         INNER JOIN TRC_CUST_GROUP tcg ON tg.CUSTOMER_NAME = tcg.SUB_CODE
@@ -413,6 +415,10 @@ namespace TMSBilling.Controllers
         public string? Customer { get; set; }
 
         public string? MainCustomer { get; set; }
+
+        public string? Address {  get; set; }
+
+        public string? City { get; set; }
     }
 }
 
