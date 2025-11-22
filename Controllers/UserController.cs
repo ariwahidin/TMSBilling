@@ -33,6 +33,10 @@ namespace TMSBilling.Controllers
         [HttpGet]
         public IActionResult GetUsers()
         {
+            var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+            if (!isAdmin)
+                return Unauthorized("Not allowed");
+
             var users = _context.Users
                 .OrderByDescending(u => u.Id)
                 .Select(u => new {
@@ -54,6 +58,10 @@ namespace TMSBilling.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Delete(int id)
         {
+            var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+            if (!isAdmin)
+                return Unauthorized("Not allowed");
+
             var user = _context.Users.Find(id);
             if (user == null)
                 return NotFound();
@@ -77,7 +85,7 @@ namespace TMSBilling.Controllers
 
             if (_context.Users.Any(u => u.Username == user.Username))
             {
-                ModelState.AddModelError("Username", "Username sudah digunakan.");
+                ModelState.AddModelError("Username", "Username already in use.");
             }
 
 
@@ -110,6 +118,10 @@ namespace TMSBilling.Controllers
 
         public IActionResult Edit(int id)
         {
+            var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+            if (!isAdmin)
+                return Unauthorized("Not allowed");
+
             if (!HttpContext.Session.Keys.Contains("username"))
                 return RedirectToAction("Login", "Account");
 
@@ -123,6 +135,10 @@ namespace TMSBilling.Controllers
         [HttpPost]
         public IActionResult EditAjax([FromBody] User model)
         {
+            // cek admin
+            var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+            if (!isAdmin)
+                return Unauthorized("Not allowed");
 
             if (!HttpContext.Session.Keys.Contains("username"))
                 return RedirectToAction("Login", "Account");
@@ -131,7 +147,7 @@ namespace TMSBilling.Controllers
             var user = _context.Users.Find(model.Id);
             if (user == null)
             {
-                return NotFound(new { success = false, message = "User tidak ditemukan." });
+                return NotFound(new { success = false, message = "User not founc." });
             }
 
             // Validasi: apakah username sudah dipakai oleh user lain
@@ -141,11 +157,11 @@ namespace TMSBilling.Controllers
 
             if (existingUser != null)
             {
-                ModelState.AddModelError("Username", "Username sudah digunakan oleh user lain.");
+                ModelState.AddModelError("Username", "Username is already used by another user.");
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Validasi gagal.",
+                    message = "Validation failed.",
                     errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
                 });
             }
@@ -158,7 +174,7 @@ namespace TMSBilling.Controllers
                 var hasher = new PasswordHasher<User>();
                 user.Password = hasher.HashPassword(user, model.Password);
             }
-
+            user.IsAdmin = model.IsAdmin;
             user.UpdatedBy = HttpContext.Session.GetString("username") ?? "system";
             user.UpdatedAt = DateTime.Now;
 
@@ -167,7 +183,7 @@ namespace TMSBilling.Controllers
             return Ok(new
             {
                 success = true,
-                message = "User berhasil diedit.",
+                message = "User successfully edited.",
                 data = user
             });
         }
@@ -177,6 +193,9 @@ namespace TMSBilling.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult DeleteBulk([FromBody] BulkDeleteModel model)
         {
+            var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+            if (!isAdmin)
+                return Unauthorized("Not allowed");
 
             if (!HttpContext.Session.Keys.Contains("username"))
                 return RedirectToAction("Login", "Account");

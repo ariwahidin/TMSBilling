@@ -516,3 +516,36 @@ body {
 }
 
 
+.toast-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    color: #fff; /* default text color */
+    display: flex;
+    align-items: center;
+}
+
+    /* ERROR */
+    .toast-alert.error {
+        background-color: #d9534f;
+    }
+
+    /* SUCCESS */
+    .toast-alert.success {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        border: 1px solid #c3e6cb !important;
+    }
+
+    /* INFO */
+    .toast-alert.info {
+        background-color: #5bc0de;
+    }
+
+
+

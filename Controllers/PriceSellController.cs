@@ -115,7 +115,6 @@ public class PriceSellController : Controller
     {
         using var workbook = new XLWorkbook();
 
-        // 1. Sheet Template
         var worksheet = workbook.Worksheets.Add("Template");
         var headers = new[]
         {
@@ -161,29 +160,6 @@ public class PriceSellController : Controller
         worksheet.Cell(2, 25).Value = "IDR";
         worksheet.Cell(2, 26).Value = 1;
 
-        // 2. Sheet Master
-        //CreateMasterSheet(workbook, "CustCode",
-        //    _context.Customers.Select(c => c.CUST_CODE).Distinct().ToArray());
-
-        //CreateMasterSheet(workbook, "Origin",
-        //    _context.Origins.Select(o => o.origin_code).Distinct().ToArray());
-
-        //CreateMasterSheet(workbook, "Dest",
-        //    _context.Destinations.Select(d => d.destination_code).Distinct().ToArray());
-
-        //CreateMasterSheet(workbook, "ServType",
-        //    _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
-
-        //CreateMasterSheet(workbook, "ServModa",
-        //    _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
-
-        //CreateMasterSheet(workbook, "TruckSize",
-        //    _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
-
-        //CreateMasterSheet(workbook, "ChargeUom",
-        //    _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
-
-        // 3. Output
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
         stream.Position = 0;
@@ -193,7 +169,6 @@ public class PriceSellController : Controller
             "Template_Upload_PriceSell.xlsx");
     }
 
-    // Fungsi bantu tetap sama
     private void CreateMasterSheet(XLWorkbook workbook, string sheetName, string[] values)
     {
         var sheet = workbook.Worksheets.Add(sheetName);
@@ -207,8 +182,6 @@ public class PriceSellController : Controller
 
         sheet.Columns().AdjustToContents();
     }
-
-
 
     private async Task<(bool isValid, string? errorMessage)> ValidatePriceSellItemAsync(PriceSellDto item)
     {
@@ -386,6 +359,93 @@ public class PriceSellController : Controller
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "PriceSell data processed successfully." });
+    }
+
+    [HttpGet]
+    public IActionResult DownloadExcel(string cust)
+    {
+        // cek admin
+        var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+        if (!isAdmin)
+            return Unauthorized("Not allowed");
+
+        // ambil list customer
+        var selected = new List<string>();
+        if (!string.IsNullOrEmpty(cust))
+            selected = System.Text.Json.JsonSerializer.Deserialize<List<string>>(cust);
+
+        bool isAll = selected.Count == 0;
+
+        // ambil data dari DB
+        var data = isAll
+            ? _context.PriceSells.ToList()
+            : _context.PriceSells.Where(x => selected.Contains(x.cust_code)).ToList();
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("PriceSell");
+
+        // header sama persis
+        var headers = new[]
+        {
+        "cust_code", "origin", "dest", "serv_type", "serv_moda",
+        "truck_size", "charge_uom", "flag_min", "charge_min",
+        "flag_range", "min_range", "max_range",
+        "sell1", "sell2", "sell3", "sell_ret_empty", "sell_ret_cargo",
+        "sell_ovnight", "sell_cancel", "selltrip2", "selltrip3", "sell_diff_area",
+        "valid_date", "active_flag", "curr", "rate_value"
+    };
+
+        for (int i = 0; i < headers.Length; i++)
+        {
+            ws.Cell(1, i + 1).Value = headers[i];
+            ws.Cell(1, i + 1).Style.Font.Bold = true;
+        }
+
+        int row = 2;
+
+        foreach (var item in data)
+        {
+            ws.Cell(row, 1).Value = item.cust_code;
+            ws.Cell(row, 2).Value = item.origin;
+            ws.Cell(row, 3).Value = item.dest;
+            ws.Cell(row, 4).Value = item.serv_type;
+            ws.Cell(row, 5).Value = item.serv_moda;
+            ws.Cell(row, 6).Value = item.truck_size;
+            ws.Cell(row, 7).Value = item.charge_uom;
+            ws.Cell(row, 8).Value = item.flag_min;
+            ws.Cell(row, 9).Value = item.charge_min;
+            ws.Cell(row, 10).Value = item.flag_range;
+            ws.Cell(row, 11).Value = item.min_range;
+            ws.Cell(row, 12).Value = item.max_range;
+            ws.Cell(row, 13).Value = item.sell1;
+            ws.Cell(row, 14).Value = item.sell2;
+            ws.Cell(row, 15).Value = item.sell3;
+            ws.Cell(row, 16).Value = item.sell_ret_empty;
+            ws.Cell(row, 17).Value = item.sell_ret_cargo;
+            ws.Cell(row, 18).Value = item.sell_ovnight;
+            ws.Cell(row, 19).Value = item.sell_cancel;
+            ws.Cell(row, 20).Value = item.selltrip2;
+            ws.Cell(row, 21).Value = item.selltrip3;
+            ws.Cell(row, 22).Value = item.sell_diff_area;
+            ws.Cell(row, 23).Value = item.valid_date;
+            ws.Cell(row, 24).Value = item.active_flag;
+            ws.Cell(row, 25).Value = item.curr;
+            ws.Cell(row, 26).Value = item.rate_value;
+
+            row++;
+        }
+
+        ws.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        string label = isAll ? "ALL" : string.Join("-", selected);
+
+        return File(stream,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"PriceSell_{label}.xlsx");
     }
 
 

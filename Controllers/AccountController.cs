@@ -51,7 +51,7 @@ namespace TMSBilling.Controllers
                 }
             }
 
-            return Json(new { success = false, message = "Username atau password salah!" });
+            return Json(new { success = false, message = "Invalid username or password" });
         }
 
 

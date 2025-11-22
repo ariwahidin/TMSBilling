@@ -119,7 +119,6 @@ namespace TMSBilling.Controllers
         {
             using var workbook = new XLWorkbook();
 
-            // 1. Sheet Template
             var worksheet = workbook.Worksheets.Add("Template");
             var headers = new[]
             {
@@ -165,30 +164,7 @@ namespace TMSBilling.Controllers
             worksheet.Cell(2, 25).Value = "IDR";
             worksheet.Cell(2, 26).Value = 1;
 
-            // 2. Sheet Master - 1 sheet 1 field
-            //CreateMasterSheet(workbook, "SupCode",
-            //    _context.Vendors.Select(v => v.SUP_CODE).Distinct().ToArray());
 
-            //CreateMasterSheet(workbook, "Origin",
-            //    _context.Origins.Select(l => l.origin_code).Distinct().ToArray());
-
-            //CreateMasterSheet(workbook, "Dest",
-            //    _context.Destinations.Select(l => l.destination_code).Distinct().ToArray());
-
-            //CreateMasterSheet(workbook, "ServType",
-            //    _context.ServiceTypes.Select(s => s.serv_name).Distinct().ToArray());
-
-            //CreateMasterSheet(workbook, "ServModa",
-            //    _context.ServiceModas.Select(s => s.moda_name).Distinct().ToArray());
-
-            //CreateMasterSheet(workbook, "TruckSize",
-            //    _context.TruckSizes.Select(t => t.trucksize_code).Distinct().ToArray());
-
-            //CreateMasterSheet(workbook, "ChargeUom",
-            //    _context.ChargeUoms.Select(u => u.charge_name).Distinct().ToArray());
-
-
-            // 3. Output file
             var stream = new MemoryStream();
             workbook.SaveAs(stream);
             stream.Position = 0;
@@ -238,7 +214,7 @@ namespace TMSBilling.Controllers
             return (true, null);
         }
 
-        [HttpPost]
+        [HttpPost]  
         public async Task<IActionResult> UploadExcel([FromBody] UploadPriceBuyRequest request)
         {
 
@@ -415,6 +391,95 @@ namespace TMSBilling.Controllers
 
             return Ok(new { message = "Data berhasil diproses." });
         }
+
+        [HttpGet]
+        public IActionResult Download([FromQuery] List<string> vendor)
+        {
+            var isAdmin = HttpContext.Session.GetString("is_admin") == "true";
+            if (!isAdmin)
+            {
+                return Unauthorized("Only admin can download this file.");
+            }
+
+            var dataQuery = _context.PriceBuys.AsQueryable();
+
+            // jika vendor list ada maka filter
+            if (vendor != null && vendor.Count > 0)
+            {
+                dataQuery = dataQuery.Where(x => vendor.Contains(x.sup_code));
+            }
+
+            var list = dataQuery.ToList();
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("PriceBuy");
+
+            // header
+            var headers = new[]
+            {
+                "sup_code", "origin", "dest", "serv_type", "serv_moda",
+                "truck_size", "charge_uom", "flag_min", "charge_min",
+                "flag_range", "min_range", "max_range",
+                "buy1", "buy2", "buy3", "buy_ret_empt", "buy_ret_cargo",
+                "buy_ovnight", "buy_cancel", "buytrip2", "buytrip3", "buy_diff_area",
+                "valid_date", "active_flag", "curr", "rate_value"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                ws.Cell(1, i + 1).Value = headers[i];
+                ws.Cell(1, i + 1).Style.Font.Bold = true;
+            }
+
+            // isi data
+            int row = 2;
+            foreach (var item in list)
+            {
+                ws.Cell(row, 1).Value = item.sup_code;
+                ws.Cell(row, 2).Value = item.origin;
+                ws.Cell(row, 3).Value = item.dest;
+                ws.Cell(row, 4).Value = item.serv_type;
+                ws.Cell(row, 5).Value = item.serv_moda;
+                ws.Cell(row, 6).Value = item.truck_size;
+                ws.Cell(row, 7).Value = item.charge_uom;
+                ws.Cell(row, 8).Value = item.flag_min;
+                ws.Cell(row, 9).Value = item.charge_min;
+                ws.Cell(row, 10).Value = item.flag_range;
+                ws.Cell(row, 11).Value = item.min_range;
+                ws.Cell(row, 12).Value = item.max_range;
+                ws.Cell(row, 13).Value = item.buy1;
+                ws.Cell(row, 14).Value = item.buy2;
+                ws.Cell(row, 15).Value = item.buy3;
+                ws.Cell(row, 16).Value = item.buy_ret_empt;
+                ws.Cell(row, 17).Value = item.buy_ret_cargo;
+                ws.Cell(row, 18).Value = item.buy_ovnight;
+                ws.Cell(row, 19).Value = item.buy_cancel;
+                ws.Cell(row, 20).Value = item.buytrip2;
+                ws.Cell(row, 21).Value = item.buytrip3;
+                ws.Cell(row, 22).Value = item.buy_diff_area;
+                ws.Cell(row, 23).Value = item.valid_date;
+                ws.Cell(row, 24).Value = item.active_flag;
+                ws.Cell(row, 25).Value = item.curr;
+                ws.Cell(row, 26).Value = item.rate_value;
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+
+            var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var vendorLabel = (vendor == null || vendor.Count == 0)
+                ? "ALL"
+                : string.Join("-", vendor);
+
+
+            return File(stream,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"PriceBuy_{vendorLabel}.xlsx");
+        }
+
 
     }
 }

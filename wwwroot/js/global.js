@@ -37,38 +37,12 @@ $(function () {
         } else if (res && res.message) {
             showToast(res.message, 'error');
         } else {
-            showToast('Terjadi kesalahan. Silakan coba lagi.', 'error');
+            showToast('An error occurred. Please try again.', 'error');
         }
     });
 
 
 });
 
-
-
-
-//$(function () {
-//    $(document).ajaxError(function (event, jqxhr) {
-//        const res = jqxhr.responseJSON;
-//        if (res && res.errors) {
-//            showToast(res.errors.join(', '), 'error');
-//        } else if (res && res.message) {
-//            showToast(res.message, 'error');
-//        } else {
-//            showToast('Terjadi kesalahan. Silakan coba lagi.', 'error');
-//        }
-//    });
-
-//    // global.js
-//    $(document).ready(function () {
-//        // semua elemen select
-//        $('select').select2({
-//            placeholder: "Pilih data",
-//            allowClear: true,
-//            width: '100%'   // biar full lebar
-//        });
-//    });
-
-//});
 
 

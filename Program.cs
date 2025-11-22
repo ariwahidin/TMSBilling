@@ -39,6 +39,9 @@ builder.Services.AddScoped<SyncronizeWithMcEasy>();
 builder.Services.AddHostedService<SyncWorker>();
 
 
+
+
+
 // 🔧 SET DEFAULT CULTURE
 var cultureInfo = new CultureInfo("en-US");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
