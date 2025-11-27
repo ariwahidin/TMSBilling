@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMSBilling.Controllers;
 using TMSBilling.Models;
+using TMSBilling.Services;
 
 namespace TMSBilling.Data
 {
@@ -77,7 +78,10 @@ namespace TMSBilling.Data
         public DbSet<JobOrder> JobOrder { get; set; }
 
         public DbSet<OrderForJob> OrderForJob { get; set; }
- 
+
+        public DbSet<OrderNotInJob> OrderNotInJob { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<OrderSummaryViewModel>().HasNoKey().ToView(null);
@@ -86,6 +90,7 @@ namespace TMSBilling.Data
             modelBuilder.Entity<ConfirmOrderID>().HasNoKey().ToView(null);
             modelBuilder.Entity<JobOrder>().HasNoKey().ToView(null);
             modelBuilder.Entity<OrderForJob>().HasNoKey().ToView(null);
+            modelBuilder.Entity<OrderNotInJob>().HasNoKey().ToView(null);
         }
 
 

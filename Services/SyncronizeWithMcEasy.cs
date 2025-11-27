@@ -84,6 +84,14 @@ namespace TMSBilling.Services
                     _logger.LogWarning("Tidak ada data JOB yang perlu disinkronkan.");
                 }
 
+                //---------------------- ORDER IN JOB -----------------
+                var jobOrderStart = DateTime.UtcNow;
+                _logger.LogInformation("Mulai sync ORDER IN JOB...");
+
+                var resultCount = await SyncOrderInJob();
+
+                _logger.LogInformation("ORDER IN JOB mengembalikan data : {count}", resultCount);
+
 
                 // --------------------- TOTAL ------------------------
                 var totalDuration = DateTime.UtcNow - totalStart;
@@ -188,6 +196,23 @@ namespace TMSBilling.Services
                     });
 
                     insertedCount++;
+                }
+                else {
+                    var existing = _context.MCOrders.FirstOrDefault(x => x.id == p.id);
+
+                    if (existing != null)
+                    {
+                        existing.shipment_type = p.shipment_type;
+                        existing.status = p.status?.name;
+                        existing.fleet_task_id = p.fleet_task?.id;
+                        existing.fleet_task_number = p.fleet_task?.number;
+                        existing.updated_date = DateTime.Now;
+
+                        _context.MCOrders.Update(existing);  // opsional, tapi aman
+                        _context.SaveChanges();              // WAJIB agar tersimpan ke DB
+                        updatedCount++;
+                    }
+
                 }
             }
 
@@ -376,6 +401,144 @@ namespace TMSBilling.Services
             return updatedCount;
         }
 
+        // ================================
+        // SYNC ORDER NOT FOUN IN JOB
+        // ================================
+
+        public async Task<int> SyncOrderInJob(int? limit = null) {
+            string sql = @"
+                WITH fo_job AS
+                (SELECT
+                a.number as fo,
+                a.shipment_reference as jobid,
+                b.shipment_number as inv_no,
+                a.[status] as fo_status
+                FROM MC_FO a
+                INNER JOIN MC_ORDER b ON a.number = b.fleet_task_number )
+                select 
+                a.fo AS FoNumber,
+                a.jobid AS JobId,
+                a.inv_no AS InvNo,
+                a.fo_status AS FoStatus,
+                isnull(b.inv_no, 0) AS IsJob
+                from fo_job a
+                inner join TRC_ORDER tor ON a.inv_no = tor.inv_no
+                left join TRC_JOB b ON a.inv_no = b.inv_no
+                WHERE 
+                fo_status <> 'Draf'
+                AND a.inv_no is not null
+                AND b.inv_no is null";
+
+            var orders = await _context.OrderNotInJob
+                .FromSqlRaw(sql)
+                .ToListAsync();
+
+            int count = 0;
+
+            foreach (var item in orders)
+            {
+                var order = await _context.Orders.FirstOrDefaultAsync(i => i.inv_no == item.InvNo);
+                var job = await _context.Jobs
+                                .Where(o => o.jobid == item.JobId)
+                                .OrderByDescending(o => o.drop_seq)
+                                .FirstOrDefaultAsync();
+                var customerGroup = await _context.CustomerGroups.FirstOrDefaultAsync(g => g.SUB_CODE == order.sub_custid);
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.CUST_CODE == customerGroup.CUST_CODE);
+                var SellRate = await _context.PriceSells.FirstOrDefaultAsync(sr =>
+                                    sr.cust_code == customer.MAIN_CUST
+                                    && sr.origin == order.origin_id
+                                    && sr.dest == order.dest_area
+                                    && sr.truck_size == order.truck_size
+                                    && sr.serv_type == order.serv_req
+                                    && sr.serv_moda == order.moda_req
+                                    && sr.charge_uom == order.uom
+                                    );
+
+                if (job != null) {
+
+                    order.jobid = job.jobid;
+                    order.update_user = "System";
+                    order.update_date = DateTime.Now;
+                    _context.Orders.Update(order);
+
+
+                    var newJob = new Job
+                    {
+                        jobid = job.jobid,
+                        vendorid = job.vendorid,
+                        truckid = job.truckid,
+                        drivername = job.drivername,
+                        moda_req = order.moda_req,
+                        serv_req = order.serv_req,
+                        truck_size = order.truck_size,
+                        flag_ep = job.flag_ep,
+                        flag_rc = job.flag_rc,
+                        flag_ov = job.flag_ov,
+                        flag_cc = job.flag_cc,
+                        flag_diffa = job.flag_diffa,
+                        charge_uom_v = job.charge_uom,
+                        charge_uom_c = order.uom,
+                        drop_seq = job.drop_seq + 1,
+                        multidrop = job.multidrop,
+                        flag_charge = job.flag_charge,
+
+                        charge_uom = job.charge_uom,
+                        inv_no = order.inv_no,
+                        origin_id = order.origin_id,
+                        dest_id = order.dest_area,
+                        dvdate = job.dvdate,
+
+                        buy1 = job.buy1,
+                        buy2 = job.buy2,
+                        buy3 = job.buy3,
+                        buy_ov = job.buy_ov,
+                        buy_cc = job.buy_cc,
+                        buy_rc = job.buy_rc,
+                        buy_ep = job.buy_ep,
+                        buy_diffa = job.buy_diffa,
+                        buy_trip2 = job.buy_trip2,
+                        buy_trip3 = job.buy_trip3,
+
+                        sell1 = SellRate.sell1,
+                        sell2 = SellRate.sell2,
+                        sell3 = SellRate.sell3,
+                        sell_trip2 = SellRate.selltrip2,
+                        sell_trip3 = SellRate.selltrip3,
+                        sell_diffa = SellRate.sell_diff_area,
+                        sell_ep = SellRate.sell_ret_empty,
+                        sell_rc = SellRate.sell_ret_cargo,
+                        sell_ov = SellRate.sell_ovnight,
+                        sell_cc = SellRate.sell_cancel,
+
+                        entry_user = "System",
+                        entry_date = DateTime.Now,
+                        update_user = "System",
+                        update_date = DateTime.Now
+                    };
+
+                    _context.Jobs.Add(newJob);
+                    await _context.SaveChangesAsync();
+
+                    count++;
+
+                }
+            }
+
+            return count;
+        }
+    }
+
+
+    public class OrderNotInJob
+    {
+        public string? FoNumber { get; set; }
+        public string? JobId { get; set; }
+
+        public string? InvNo { get; set; }
+
+        public string? FoStatus { get; set; }
+
+        public string? IsJob { get; set; }
     }
 }
 

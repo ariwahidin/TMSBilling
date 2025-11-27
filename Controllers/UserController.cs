@@ -27,7 +27,7 @@ namespace TMSBilling.Controllers
 
         public IActionResult Create()
         {
-            return View("Form", new User()); // kosong
+            return View("Form", new User());
         }
 
         [HttpGet]
