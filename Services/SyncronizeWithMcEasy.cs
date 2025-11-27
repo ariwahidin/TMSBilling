@@ -208,9 +208,22 @@ namespace TMSBilling.Services
                         existing.fleet_task_number = p.fleet_task?.number;
                         existing.updated_date = DateTime.Now;
 
-                        _context.MCOrders.Update(existing);  // opsional, tapi aman
                         _context.SaveChanges();              // WAJIB agar tersimpan ke DB
                         updatedCount++;
+                    }
+
+                    var trcOrder = _context.Orders.FirstOrDefault(f => f.mceasy_order_id == p.id);
+                    if (trcOrder != null)
+                    {
+
+                        Console.WriteLine("ppp {0}", existing?.fleet_task_id);
+
+                        if (existing?.fleet_task_id == null)
+                        {
+                            trcOrder.jobid = null;
+                        }
+                        trcOrder.mceasy_status = p.status?.name;
+                        _context.SaveChanges();
                     }
 
                 }
