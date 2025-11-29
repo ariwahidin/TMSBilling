@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -57,133 +58,6 @@ namespace TMSBilling.Controllers
             return order;
         }
 
-        //private async Task<List<OrderMcEasy>> FetchOrderFromApi(int? limit = null)
-        //{
-        //    // Base SQL tanpa TOP
-        //    string sql = @"
-        //        SELECT {0} 
-        //            mceasy_order_id AS OrderID,
-        //            order_status AS OrderStatus
-        //        FROM TRC_ORDER
-        //        WHERE 
-        //            mceasy_status != 'Terkirim'
-        //            AND mceasy_order_id IS NOT NULL
-        //    ";
-
-        //    // Jika limit ada → tambahkan TOP
-        //    string topClause = "";
-        //    if (limit.HasValue && limit.Value > 0)
-        //    {
-        //        topClause = $"TOP {limit.Value}";
-        //    }
-
-        //    // Masukkan TOP / kosong ke query
-        //    sql = string.Format(sql, topClause);
-
-        //    var data = await _context.ConfirmOrderID
-        //        .FromSqlRaw(sql)
-        //        .ToListAsync();
-
-        //    var allOrders = new List<OrderMcEasy>();
-        //    bool ok;
-        //    JsonElement json = default;
-
-        //    for (int i = 0; i < data.Count; i++)
-        //    {
-        //        (ok, json) = await _apiService.SendRequestAsync(
-        //            HttpMethod.Get,
-        //            $"order/api/web/v1/delivery-order/{data[i].OrderID}"
-        //        );
-
-        //        if (!ok)
-        //            throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
-
-        //        var orders = json
-        //            .GetProperty("data")
-        //            .Deserialize<OrderMcEasy>() ?? new OrderMcEasy();
-
-        //        allOrders.Add(orders);
-        //    }
-
-        //    return allOrders;
-        //}
-
-        //private async Task<int> SyncOrderToDatabase(List<OrderMcEasy> orders)
-        //{
-        //    int insertedCount = 0;
-        //    int updatedCount = 0;
-
-        //    if (orders == null || !orders.Any())
-        //        return 0;
-
-        //    // Ambil ID existing dari MC_ORDER
-        //    var existingIds = _context.MCOrders
-        //        .Select(p => p.id)
-        //        .ToHashSet();
-
-        //    var newOrders = new List<MCOrder>();
-
-        //    foreach (var p in orders)
-        //    {
-        //        if (!existingIds.Contains(p.id))
-        //        {
-        //            var newOrder = new MCOrder
-        //            {
-        //                id = p.id,
-        //                number = p.number,
-        //                reference_number = p.reference_number,
-        //                shipment_number = p.shipment_number,
-        //                shipment_type = p.shipment_type,
-        //                status = p.status?.name,
-        //                fleet_task_id = p.fleet_task?.id,
-        //                fleet_task_number = p.fleet_task?.number,
-        //                entry_date = DateTime.Now
-        //            };
-
-        //            newOrders.Add(newOrder);
-        //        }
-
-        //        insertedCount++;
-        //    }
-
-        //    // Simpan data baru
-        //    if (newOrders.Any())
-        //    {
-        //        _context.MCOrders.AddRange(newOrders);
-        //        await _context.SaveChangesAsync();
-        //    }
-
-        //    // Filter hanya order dengan status
-        //    var allowedStatuses = new[] {"Draf", "Dijadwalkan", "Dijalankan", "Diambil", "Terkirim" };
-        //    var filteredOrders = orders
-        //        .Where(o => allowedStatuses.Contains(o.status?.name, StringComparer.OrdinalIgnoreCase))
-        //        .Select(o => new {
-        //            Id = o.id,
-        //            Status = o.status?.name
-        //        })
-        //        .Where(x => !string.IsNullOrEmpty(x.Id))
-        //        .ToList();
-        //    // Console.WriteLine("ORDER FILTEREDED : ", filteredOrders);
-        //    // Update TRC_ORDER status = 2 untuk order yang Dijadwalkan
-        //    if (filteredOrders.Any())
-        //    {
-        //        Console.WriteLine("ORDER FILTERED : ", filteredOrders);
-
-        //        foreach (var ford in filteredOrders) {
-        //            var updateSql = $@"
-        //                UPDATE TRC_ORDER 
-        //                SET order_status = 2 , mceasy_status = '{ford.Status}'
-        //                WHERE mceasy_order_id = '{ford.Id}'
-        //            ";
-        //            updatedCount = await _context.Database.ExecuteSqlRawAsync(updateSql);
-        //        }
-        //    }
-
-        //    // Kembalikan total affected (insert + update)
-        //    return updatedCount;
-        //}
-
-
         private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
         {
             var sql = @"
@@ -220,7 +94,6 @@ namespace TMSBilling.Controllers
 
             return _context.OrderSummaryView.FromSqlRaw(sql);
         }
-
 
         public async Task<IActionResult> Index()
         {
@@ -306,10 +179,6 @@ namespace TMSBilling.Controllers
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] OrderViewModel model)
         {
-            //if (model == null || model.Header == null || model.Details == null || model.Details.Count == 0)
-            //{
-            //    return BadRequest(new { success = false, message = "Incomplete data!" });
-            //}
 
             var header = model.Header;
             var errors = new List<string>();
@@ -323,6 +192,28 @@ namespace TMSBilling.Controllers
             if (header.id_seq == 0)
                 if (_context.Orders.Any(o => o.inv_no == header.inv_no))
                     errors.Add($"Inv No '{header.inv_no}' already exists!");
+
+
+            if (header.id_seq > 0)
+            {
+                var existingOrder = _context.Orders.FirstOrDefault(e => e.inv_no == header.inv_no);
+                if (existingOrder != null && existingOrder.mceasy_status == "Dijalankan" && existingOrder.inv_no != null) {
+                    (bool ok, string message) = UpdateOrder(existingOrder.inv_no, header);
+
+                    if (!ok)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = message,
+                        });
+                    }
+                    else
+                    {
+                        return Json(new { success = true, message = "Order updated successfully", data = header });
+                    }
+                }  
+            }
 
             var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == header.sub_custid);
             if (customerGroup == null)
@@ -381,7 +272,9 @@ namespace TMSBilling.Controllers
 
             
 
-            if (customer.API_FLAG == 1)
+            
+
+            if (customerGroup.API_FLAG == 1)
             {
                 var payload = new
                 {
@@ -534,6 +427,7 @@ namespace TMSBilling.Controllers
                     existingHeader.packing_type = header.packing_type;
 
                     _context.Orders.Update(existingHeader);
+
                 }
 
                 await _context.SaveChangesAsync();
@@ -547,6 +441,86 @@ namespace TMSBilling.Controllers
                 var msg = ex.InnerException?.Message ?? ex.Message;
                 return StatusCode(500, new { success = false, message = "Terjadi kesalahan: " + msg });
             }
+        }
+
+
+        private (bool ok, string message) UpdateOrder(string inv_no, Order header) {
+
+            var order = _context.Orders.FirstOrDefault(j => j.inv_no == inv_no);
+            if (order == null) return (false, $"Order not found for DO {inv_no}");
+
+            var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == order.sub_custid);
+
+            if (customerGroup == null) return (false, "Customer group not found");
+
+            var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+            if (customer == null)return (false, "Customer not found");
+
+            var SellRate = _context.PriceSells.FirstOrDefault(sr =>
+                                sr.cust_code == customer.MAIN_CUST
+                                && sr.origin == header.origin_id
+                                && sr.dest == header.dest_area
+                                && sr.truck_size == header.truck_size
+                                && sr.serv_type == header.serv_req
+                                && sr.serv_moda == header.moda_req
+                                && sr.charge_uom == header.uom);
+
+            if (SellRate == null) return (false, $"Sell rate not found for INV {order.inv_no}");
+
+            order.wh_code = header.wh_code;
+            order.sub_custid = header.sub_custid;
+            order.cnee_code = header.mceasy_dest_name;
+            order.inv_no = header.inv_no;
+            order.delivery_date = header.delivery_date;
+            order.pickup_date = header.pickup_date;
+            order.origin_id = header.origin_id;
+            order.dest_area = header.dest_area;
+            order.truck_size = header.truck_size;
+            order.moda_req = header.moda_req;
+            order.serv_req = header.serv_req;
+            order.tot_pkgs = header.tot_pkgs;
+            order.pallet_delivery = header.pallet_delivery;
+            order.pallet_consume = header.pallet_consume;
+            order.do_rcv_time = header.do_rcv_time;
+            order.remark = header.remark;
+            order.order_status = header.order_status ?? 0;
+            order.uom = header.uom;
+            order.update_date = DateTime.Now;
+            order.update_user = HttpContext.Session.GetString("username") ?? "System";
+            order.packing_type = header.packing_type;
+
+            var job = _context.Jobs.FirstOrDefault(d => d.inv_no == inv_no);
+
+            if (job != null) {
+
+                job.moda_req = order.moda_req;
+                job.serv_req = order.serv_req;
+                job.truck_size = order.truck_size;
+                job.charge_uom_c = order.uom;
+                job.inv_no = inv_no;
+                job.origin_id = order.origin_id;
+                job.dest_id = order.dest_area;
+                job.cust_ori = order.sub_custid;
+                job.sell1 = SellRate.sell1;
+                job.sell2 = SellRate.sell2;
+                job.sell3 = SellRate.sell3;
+                job.sell_trip2 = SellRate.selltrip2;
+                job.sell_trip3 = SellRate.selltrip3;
+                job.sell_diffa = SellRate.sell_diff_area;
+                job.sell_ep = SellRate.sell_ret_empty;
+                job.sell_rc = SellRate.sell_ret_cargo;
+                job.sell_ov = SellRate.sell_ovnight;
+                job.sell_cc = SellRate.sell_cancel;
+                job.update_user = HttpContext.Session.GetString("username") ?? "System";
+                job.update_date = DateTime.Now;
+
+            }  
+
+            _context.SaveChanges();
+
+            return (true, "OK");
+
         }
 
         [HttpGet]
@@ -942,11 +916,8 @@ namespace TMSBilling.Controllers
                     return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
                 }
 
-                
-
-                if (customer.API_FLAG == 1)
+                if (customerGroup.API_FLAG == 1)
                 {
-
                     if (header == null) {
                         return NotFound(new { success = false, message = $"Header tidak ditemukan." });
                     }
@@ -972,8 +943,7 @@ namespace TMSBilling.Controllers
                         expected_pickup_on = pickupDateTime,
                         expected_delivered_on = deliveryDateTime,
                         shipment_number = header.inv_no,
-                    }
-                ;
+                    };
 
                     bool ok;
                     JsonElement json = default;
@@ -993,8 +963,7 @@ namespace TMSBilling.Controllers
                             detail = json
                         });
                     }
-
-                    
+                  
                     var orderId = json.GetProperty("data").GetProperty("id").GetString();
 
                     if (orderId == null) {
@@ -1115,6 +1084,7 @@ namespace TMSBilling.Controllers
 
                     // Simpan Header
                     header.order_status = 0;
+                    header.mceasy_status = "Draf";
                     header.entry_user = HttpContext.Session.GetString("username") ?? "System";
                     header.entry_date = DateTime.Now;
                     _context.Orders.Add(header);
@@ -1395,7 +1365,6 @@ namespace TMSBilling.Controllers
             return Ok(new { success = true, message = "Order deleted successfully" });
         }
 
-
         [HttpGet]
         public async Task<IActionResult> DeleteLoad(int? id)
         {
@@ -1542,10 +1511,6 @@ namespace TMSBilling.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
-
-
-        
-
 
     }
 

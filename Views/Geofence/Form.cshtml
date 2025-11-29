@@ -117,13 +117,6 @@
                                 <div class="mb-4">
                                     <h5 class="text-black mb-3">Address Information</h5>
 
-                                    @* <div class="mb-3 position-relative">
-                                        <label class="form-label">ID <span class="required">*</span></label>
-                                        <input type="hidden" asp-for="ID" id="iD" />
-                                        <input type="text" class="form-control" asp-for="FenceID" id="fenceID" name="FenceID" required>
-                                        <span asp-validation-for="FenceID" class="text-danger"></span>
-                                    </div> *@
-
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Name <span class="required">*</span></label>
                                         <input type="text" class="form-control" asp-for="FenceName" id="fenceName" name="FenceName" required>
@@ -142,33 +135,6 @@
                                         </select>
                                         <span asp-validation-for="CUST_GROUP_CODE" class="text-danger"></span>
                                     </div>
-
-                                    @* <div class="mb-3">
-                                        <label class="form-label">Category <span class="required">*</span></label>
-                                        <select 
-                                            id="category" 
-                                            name="Category" 
-                                            asp-for="Category" 
-                                            asp-items="ViewBag.ListCategory" 
-                                            class="form-select select2" 
-                                            required>
-                                            <option value="">Select an Option</option>
-                                        </select>
-                                        <span asp-validation-for="Category" class="text-danger"></span>
-                                    </div> *@
-
-                                    @* <div class="mb-3">
-                                        <label class="form-label">Area <span class="required">*</span></label>
-                                        <select id="areaGroup"
-                                                name="AreaGroup"
-                                                asp-for="AreaGroup"
-                                                asp-items="ViewBag.ListArea"
-                                                class="form-select select2"
-                                                required>
-                                            <option value="">Select an Option</option>
-                                        </select>
-                                        <span asp-validation-for="AreaGroup" class="text-danger"></span>
-                                    </div> *@
 
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Address <span class="required">*</span></label>
@@ -214,11 +180,6 @@
                                         <span asp-validation-for="Radius" class="text-danger"></span>
                                     </div>
 
-                                    @* <div class="mb-3">
-                                        <label class="form-label">Address Details</label>
-                                        <textarea class="form-control" id="addressDetail" name="AddressDetail" rows="2" placeholder="Detail tambahan (Cth: Blok/Unit No, Patokan)"></textarea>
-                                        <span asp-validation-for="AddressDetail" class="text-danger"></span>
-                                    </div> *@
                                 </div>
 
                                 <!-- Informasi Kontak -->
@@ -305,11 +266,6 @@
                                     <!-- Checkboxes -->
                                     <div class="row">
                                         <div class="col-md-6">
-                                            @* <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" id="isGarage" name="IsGarage" value="true">
-                                                <input name="IsGarage" type="hidden" value="false" />
-                                                <label class="form-check-label" for="isGarage">Is Garage</label>
-                                            </div> *@
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox" id="isServiceLoc" name="IsServiceLoc" value="true">
                                                 <input name="IsServiceLoc" type="hidden" value="false" />
@@ -338,6 +294,8 @@
 
                                 <!-- Hidden Fields -->
                                 <input type="hidden" asp-for="ID" id="id" name="ID">
+                                <input type="hidden" asp-for="Lat" id="Lat" name="Lat">
+                                <input type="hidden" asp-for="Lng" id="Lng" name="Lng">
                                 <input type="hidden" asp-for="GeofenceId" id="geofenceId" name="GeofenceId">
                                 <input type="hidden" id="companyId" name="CompanyId">
                                 <input type="hidden" id="type" name="Type" value="circle">
@@ -641,12 +599,7 @@
             document.getElementById('polyData').value = '';
         }
 
-
-
-        map.on('click', async function(e) {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-
+        async function tandainMapnya(lat, lng){
             // Update coordinates field
             updateCoordinatesField(lat, lng);
 
@@ -662,13 +615,16 @@
                 console.log("Data : ", data)
                 let address = data.display_name || "Alamat tidak ditemukan";
 
+                // Center map on selected location
+                map.setView([lat, lng], 16);
+
                 // Bisa tampilkan di popup marker
                 if (window.currentMarker) {
                     map.removeLayer(window.currentMarker);
                 }
                 window.currentMarker = L.marker([lat, lng])
                     .addTo(map)
-                    .bindPopup(`<strong>Lokasi Terpilih</strong><br>Lat: ${lat}<br>Lng: ${lng}<br>${address}`)
+                    .bindPopup(`<strong>${getShortName(address)}</strong><br>Lat: ${lat}<br>Lng: ${lng}<br>${address}`)
                     .openPopup();
 
                 // Kalau mau juga simpan ke form field
@@ -682,6 +638,49 @@
             } catch (err) {
                 console.error("Gagal ambil alamat:", err);
             }
+        }
+
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            await tandainMapnya(lat, lng);
+
+            // Update coordinates field
+            // updateCoordinatesField(lat, lng);
+
+            // === REVERSE GEOCODING ke Nominatim ===
+            // try {
+            //     const url = `https:nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+            //     const response = await fetch(url, {
+            //         headers: {
+            //             "Accept-Language": "id" coba pakai bahasa Indonesia
+            //         }
+            //     });
+            //     const data = await response.json();
+            //     console.log("Data : ", data)
+            //     let address = data.display_name || "Alamat tidak ditemukan";
+
+            //     Bisa tampilkan di popup marker
+            //     if (window.currentMarker) {
+            //         map.removeLayer(window.currentMarker);
+            //     }
+            //     window.currentMarker = L.marker([lat, lng])
+            //         .addTo(map)
+            //         .bindPopup(`<strong>Lokasi Terpilih</strong><br>Lat: ${lat}<br>Lng: ${lng}<br>${address}`)
+            //         .openPopup();
+
+            //     Kalau mau juga simpan ke form field
+            //     document.getElementById('address').value = address;
+            //     document.getElementById('province').value = getProvinceFromAddress(data.address);
+            //     document.getElementById('city').value = getCityFromAddress(data.address);
+            //     if (data.address.postcode) {
+            //         document.getElementById('postalCode').value = data.address.postcode;
+            //     }
+
+            // } catch (err) {
+            //     console.error("Gagal ambil alamat:", err);
+            // }
 
             // ====== kode geofence kamu tetap jalan di sini ======
             // if (drawingMode === 'circle') {
@@ -784,7 +783,7 @@
             showLoading();
 
             $.ajax({
-                url: '/Geofence/CreateGeofence',
+                url: '/Geofence/SaveGeofence',
                 type: 'POST',
                 contentType: 'application/json',   // kirim sebagai JSON
                 data: JSON.stringify(formData),   // ubah objek ke JSON
@@ -909,6 +908,16 @@
         //     },1000)
         // }
 
+        let id = $('#id').val();
+        let lat = $('#Lat').val();
+        let lng = $('#Lng').val();
+        console.log('ID : ', id);
+        console.log('Lat : ', lat);
+        console.log('Lng : ', lng);
+        if(id > 0){
+           tandainMapnya(lat, lng);
+        }
+        
         
 
     </script>

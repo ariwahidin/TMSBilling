@@ -74,7 +74,7 @@ public class CustomerGroupController : Controller
                 });
             }
 
-            if (customer?.API_FLAG == 1) {
+            if (model?.API_FLAG == 1) {
                 var payload = new
                 {
                     name = model.SUB_CODE,
@@ -119,6 +119,7 @@ public class CustomerGroupController : Controller
             data.MAIN_CUST = model.MAIN_CUST;
             data.SUB_CODE = model.SUB_CODE;
             data.CUST_CODE = model.CUST_CODE;
+            data.API_FLAG = model.API_FLAG;
             data.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";
             data.UPDATE_DATE = DateTime.Now;
         }

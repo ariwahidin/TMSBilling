@@ -46,6 +46,12 @@ namespace TMSBilling.Models.ViewModels
 
             public bool? multidrop { get; set; } = false;
 
+            public bool? multitrip { get; set; } = false;
+
+            public int? ritase_seq { get; set; }
+
+            public string? job_type { get; set; }
+
             public int? starting_point { get; set; }
 
         }

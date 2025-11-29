@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128071813_AddApiFlagInCustomerGroup")]
+    partial class AddApiFlagInCustomerGroup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1117,9 +1120,6 @@ namespace TMSBilling.Migrations
                     b.Property<int?>("job_status")
                         .HasColumnType("int");
 
-                    b.Property<string>("job_type")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("jobid")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -1265,9 +1265,6 @@ namespace TMSBilling.Migrations
                     b.Property<bool?>("is_vendor")
                         .HasColumnType("bit");
 
-                    b.Property<string>("job_type")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("jobid")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -1278,18 +1275,12 @@ namespace TMSBilling.Migrations
                     b.Property<bool?>("multidrop")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("multitrip")
-                        .HasColumnType("bit");
-
                     b.Property<string>("origin")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("pickup_date")
                         .HasColumnType("datetime2");
-
-                    b.Property<int?>("ritase_seq")
-                        .HasColumnType("int");
 
                     b.Property<string>("serv_moda")
                         .HasMaxLength(10)

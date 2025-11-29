@@ -45,6 +45,8 @@ namespace TMSBilling.Models
 
         public byte? multitrip { get; set; }
 
+        public string? job_type { get; set; }
+
         public int? drop_seq { get; set; } = 0;
 
         //public int? total_pkgs { get; set; }
@@ -230,6 +232,10 @@ namespace TMSBilling.Models
         public string? charge_uom { get; set; }
 
         public bool? multidrop { get; set; } = false;
+        public bool? multitrip { get; set; } = false;
+        public string? job_type { get; set; }
+
+        public int? ritase_seq { get; set; }
 
         public int? starting_point { get; set; }
 

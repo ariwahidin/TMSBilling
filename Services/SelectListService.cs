@@ -201,4 +201,15 @@ public class SelectListService
             .ToList();
     }
 
+
+    public List<SelectListItem> JobTypeOption()
+    {
+        return new List<SelectListItem>
+        {
+            new SelectListItem { Value = "NORMAL", Text = "NORMAL" },
+            new SelectListItem { Value = "RETURN", Text = "RETURN" },
+            new SelectListItem { Value = "STOCK", Text = "STOCK" },
+        };
+    }
+
 }

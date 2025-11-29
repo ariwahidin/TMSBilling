@@ -342,12 +342,37 @@
                                 </div>
                             </div>
                             
-                             <div class="mb-2 row">
+                            <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Start/Finish Point:</label>
                                 <div class="col-sm-8">
                                 <select asp-for="Header.starting_point" class="form-select form-select-sm select2" id="starting_point" asp-items="ViewBag.ListStartingPoint" required>
                                     <option value="">Select an Option</option>
                                 </select>
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Multi Trip:</label>
+                                <div class="col-sm-8">
+                                    <select id="multitrip" asp-for="Header.multitrip" class="form-select form-select-sm">
+                                        <option value="false" selected>No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Ritase:</label>
+                                <div class="col-sm-8">
+                                    <input style="font-size:12px" id="ritase_seq" asp-for="Header.ritase_seq" class="form-control" type="number" min="1" max="3" required value="1" readonly/>
+                                </div>
+                            </div>
+
+                            <div class="mb-2 row">
+                                <label class="col-sm-4 col-form-label text-end">Job Type:</label>
+                                <div class="col-sm-8">
+                                    <select asp-for="Header.job_type" class="form-select form-select-sm select2" id="job_type" asp-items="ViewBag.ListJobType" required>
+                                        <option value="">Select an Option</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -583,6 +608,26 @@
                 // minute: "2-digit"
             });
         }
+
+        $('#multitrip').on('change', function () {
+            if ($(this).val() === 'true') {
+                $('#ritase_seq').prop('readonly', false);
+                $('#ritase_seq').val(2);
+
+                $('#multidrop').val('false').trigger('change');
+            }
+        });
+
+        $('#multidrop').on('change', function () {
+            if ($(this).val() === 'true') {
+                $('#ritase_seq').prop('readonly', true);
+                $('#ritase_seq').val(1);
+
+                $('#multitrip').val('false').trigger('change');
+            }
+        });
+
+
         $(document).ready(function() {
             // Initialize Select2
             $('.form-select').select2({
@@ -823,6 +868,9 @@
                     serv_type : $('#servtype_ori').val(),
                     charge_uom: $('#charge_uom').val(),
                     multidrop: $('#multidrop').val() === "true",
+                    multitrip: $('#multitrip').val() === "true",
+                    ritase_seq: $('#ritase_seq').val(),
+                    job_type: $('#job_type').val(),
                     cust_group : $('#cust_ori').val(),
                     starting_point : $('#starting_point').val()
                 };

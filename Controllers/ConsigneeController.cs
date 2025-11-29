@@ -297,6 +297,7 @@ namespace TMSBilling.Controllers
         public IActionResult Index()
         {
             var sql = @"SELECT 
+        tg.Id AS ID,
         tg.GEOFENCE_ID AS GeofenceID,
         tg.FENCE_NAME AS FenceName,
         tg.CUSTOMER_NAME AS CustomerGroup,
@@ -407,6 +408,7 @@ namespace TMSBilling.Controllers
 
     public class ConsigneeViewModel
     {
+        public int ID { get; set; }
         public int? GeofenceID { get; set; }
         public string? FenceName { get; set; }
 

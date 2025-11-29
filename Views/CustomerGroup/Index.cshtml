@@ -12,6 +12,7 @@
         <tr>
             <th>Customer ID</th>
             <th>WMS Code</th>
+            <th>With API</th>
             <th>Action</th>
         </tr>
     </thead>
@@ -21,6 +22,7 @@
             <tr>
                 <td>@item.CUST_CODE</td>
                 <td>@item.SUB_CODE</td>
+                <td>@(item.API_FLAG == 1 ? "Yes" : "No")</td>
                 <td>
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID" title="Edit">
                         <i class="bi bi-pencil-square"></i>

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Security.Cryptography;
@@ -142,6 +143,10 @@ namespace TMSBilling.Controllers
             ViewBag.ListMultitrip = _selectList.GetYesNo();
             ViewBag.ListVendor = _selectList.GetVendors();
             ViewBag.ListStartingPoint = _selectList.GetStartingPoint();
+            ViewBag.ListJobType = _selectList.JobTypeOption();
+
+            // ✅ Default selalu diset dulu
+            vm.Header.job_type = "NORMAL";
 
             if (!string.IsNullOrEmpty(jobid))
             {
@@ -567,6 +572,9 @@ namespace TMSBilling.Controllers
                         jobHeader.truck_size = Header.truck_size;
                         jobHeader.truck_no = Header.truck_id;
                         jobHeader.multidrop = Header.multidrop;
+                        jobHeader.multitrip = Header.multitrip;
+                        jobHeader.ritase_seq = Header.ritase_seq;
+                        jobHeader.job_type = Header.job_type;
                         jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
                         jobHeader.update_date = DateTime.Now;
 
@@ -637,11 +645,15 @@ namespace TMSBilling.Controllers
                 jobHeader.truck_size = Header.truck_size;
                 jobHeader.truck_no = Header.truck_id;
                 jobHeader.multidrop = Header.multidrop;
+                jobHeader.multitrip = Header.multitrip;
+                jobHeader.ritase_seq = Header.ritase_seq;
+                jobHeader.job_type = Header.job_type;
                 jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 jobHeader.entry_date = DateTime.Now;
                 jobHeader.mceasy_job_id = mceasy_job_id;
                 jobHeader.starting_point = Header.starting_point;
                 jobHeader.status_job = "DRAFT";
+
                 _context.JobHeaders.Add(jobHeader);
             }
 
@@ -649,7 +661,6 @@ namespace TMSBilling.Controllers
 
             return (true, "OK");
         }
-
 
         private (bool ok, string message, List<string> deliveryOrderIds) InsertOrderToJob(
             IEnumerable<OrderForJobForm> Details,
@@ -664,6 +675,11 @@ namespace TMSBilling.Controllers
                     var order = _context.Orders.FirstOrDefault(j => j.inv_no == ordx.inv_no);
                     if (order == null)
                         return (false, $"Order not found for INV {ordx.inv_no}", deliveryOrderIds);
+
+                    if (order.mceasy_status == "Dikonfirmasi")
+                    {
+                        order.mceasy_status = "Dijadwalkan";
+                    }
 
                     order.order_status = 1;
                     order.mceasy_is_upload = true;
@@ -718,6 +734,9 @@ namespace TMSBilling.Controllers
                         drop_seq = ordx.drop_seq,
                         multidrop = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0),
                         flag_charge = (byte)(Header.multidrop == true && ordx.drop_seq == 1 ? 1 : 0),
+                        multitrip = (byte)(Header.multitrip == true ? 1 : 0),
+                        ritase_seq = Header.ritase_seq,
+                        job_type = Header.job_type,
 
                         charge_uom = CostRate.charge_uom,
                         inv_no = order.inv_no,
@@ -735,6 +754,8 @@ namespace TMSBilling.Controllers
                         buy_diffa = CostRate.buy_diff_area,
                         buy_trip2 = CostRate.buytrip2,
                         buy_trip3 = CostRate.buytrip3,
+
+                        cust_ori = order.sub_custid,
 
                         sell1 = SellRate.sell1,
                         sell2 = SellRate.sell2,
@@ -861,7 +882,6 @@ namespace TMSBilling.Controllers
 
             return Json(new { success = true, data = details });
         }
-
 
         public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime pickupDate, DateTime deliveryDate, bool multidrop)
         {

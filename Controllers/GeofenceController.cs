@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,8 +11,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Encodings.Web;
-using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
@@ -226,29 +228,30 @@ namespace TMSBilling.Controllers
             model.ID = 0;
             model.GeofenceId = "0";
 
-            if (!String.IsNullOrEmpty(category) && id != null) {
-                if (category == "consignee") {
-                    var consignee = _context.Geofences.FirstOrDefault(o=> o.GeofenceId == id);
-                    if (consignee == null)
-                    {
-                        return View("Form", model);
-                    }
-                    else {
-                        model.ID = consignee.GeofenceId;
-                        model.GeofenceId = consignee.GeofenceId.ToString();
-                        model.FenceID = consignee.FenceName;
-                        model.FenceName = consignee.FenceName;
-                        model.CUST_GROUP_CODE = consignee.CustomerName;
-                        model.Address = consignee.Address;
-                        model.PostalCode = consignee.PostalCode;
-                        model.Coordinates = consignee.Cordinates;
-                        model.Radius = consignee.Radius;
-                        model.ContactName = consignee.ContactName;
-                        model.Province = consignee.Province;
-                        model.PhoneNo = consignee.PhoneNo;
-                        model.City = consignee.City;
-                        model.IsGarage = consignee.IsGarage;
-                    }
+            if (id != null) {
+                var consignee = _context.Geofences.FirstOrDefault(o => o.Id == id);
+                if (consignee == null)
+                {
+                    return View("Form", model);
+                }
+                else
+                {
+                    model.ID = consignee.Id;
+                    model.GeofenceId = consignee.GeofenceId.ToString();
+                    model.FenceID = consignee.FenceName;
+                    model.FenceName = consignee.FenceName;
+                    model.CUST_GROUP_CODE = consignee.CustomerName;
+                    model.Address = consignee.Address;
+                    model.PostalCode = consignee.PostalCode;
+                    model.Coordinates = consignee.Cordinates;
+                    model.Radius = consignee.Radius;
+                    model.ContactName = consignee.ContactName;
+                    model.Province = consignee.Province;
+                    model.PhoneNo = consignee.PhoneNo;
+                    model.City = consignee.City;
+                    model.IsGarage = consignee.IsGarage;
+                    model.Lat = consignee.Lat;
+                    model.Lng = consignee.Long;
                 }
             }
 
@@ -257,7 +260,7 @@ namespace TMSBilling.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateGeofence([FromBody] GeofenceViewModel model)
+        public async Task<IActionResult> SaveGeofence([FromBody] GeofenceViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -292,17 +295,17 @@ namespace TMSBilling.Controllers
             {
                 // EDIT
                 var ng = await _context.Geofences
-                    .FirstOrDefaultAsync(c => c.GeofenceId == model.ID);
+                    .FirstOrDefaultAsync(c => c.Id == model.ID);
 
                 if (ng == null)
                 {
                     return NotFound(new { message = "Consignee not found" });
                 }
 
-               
+
 
                 // Kalau pakai API external juga update
-                if (customer.API_FLAG == 1 && ng.GeofenceId > 0)
+                if (customerGroup.API_FLAG == 1 && ng.GeofenceId > 0)
                 {
 
                     var graphqlVariables = new
@@ -338,7 +341,6 @@ namespace TMSBilling.Controllers
                             }
                         }
                     };
-
 
                     var (ok, result) = await _apiService.ExecuteGraphQLAsync(
                         @"mutation UpdateGeofence($input: UpdateGeofenceInput!) {
@@ -396,7 +398,6 @@ namespace TMSBilling.Controllers
                             detail = result.ToString()
                         });
                     }
-
 
                     var updateGeofence = result.GetProperty("data").GetProperty("updateGeofence");
 
@@ -460,6 +461,39 @@ namespace TMSBilling.Controllers
                     ng.HasRelation = p.hasRelation;
                     ng.UpdatedAt = DateTime.Now;
                 }
+                else {
+
+                   
+                    
+
+                    ng.FenceName = model.FenceName;
+                    ng.City = model.City;
+                    ng.Address = model.Address;
+                    ng.PostalCode = model.PostalCode;
+                    ng.Province = model.Province;
+                    ng.Category = model.Category;
+                    ng.ContactName = model.ContactName;
+                    ng.PhoneNo = model.PhoneNo;
+                    ng.CircData = $"<{model.Coordinates},{model.Radius}>";
+                    ng.IsGarage = model.IsGarage;
+
+
+
+                    var match = Regex.Match(ng.CircData, @"<\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\)\s*,\s*(\d+)\s*>");
+
+                    if (match.Success)
+                    {
+                        ng.Lat = $"{match.Groups[1].Value}";
+                        ng.Long = $"{match.Groups[2].Value}";
+                        ng.Cordinates = $"({ng.Lat},{ng.Long})";
+                        ng.Radius = $"{match.Groups[3].Value}";
+                    }
+                    ng.CustomerName = customerGroup.SUB_CODE;
+
+                    ng.CreatedAt = DateTime.Now;
+                    ng.UpdatedAt = DateTime.Now;
+
+                }
             }
             else
             {
@@ -467,36 +501,49 @@ namespace TMSBilling.Controllers
                 // CREATE
                 var ng = new Models.GeofenceTable{};
 
-                if (customer.API_FLAG == 1)
+                var graphqlVariables = new
                 {
-                    var graphqlVariables = new
+                    input = new
                     {
-                        input = new
-                        {
-                            circData = $"<{model.Coordinates},{model.Radius}>",
-                            polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
-                            fenceName = model.FenceName,
-                            type = model.Type,
-                            address = model.Address,
-                            addressDetail = model.AddressDetail,
-                            province = model.Province,
-                            city = model.City,
-                            postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
-                            category = model.Category,
-                            contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
-                            phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
-                            serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
-                            serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
-                            breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
-                            breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
-                            isDepot = model.IsDepot == "true",
-                            isBillingAddr = model.IsBillingAddr == "true",
-                            customerName = customerGroup.SUB_CODE,
-                            customerId = customerGroup.MCEASY_CUST_ID,
-                            isGarage = model.IsGarage,
-                        }
-                    };
+                        circData = $"<{model.Coordinates},{model.Radius}>",
+                        polyData = string.IsNullOrEmpty(model.PolyData) ? null : model.PolyData,
+                        fenceName = model.FenceName,
+                        type = model.Type,
+                        address = model.Address,
+                        addressDetail = model.AddressDetail,
+                        province = model.Province,
+                        city = model.City,
+                        postalCode = string.IsNullOrEmpty(model.PostalCode) ? null : model.PostalCode,
+                        category = model.Category,
+                        contactName = string.IsNullOrEmpty(model.ContactName) ? null : model.ContactName,
+                        phoneNo = string.IsNullOrEmpty(model.PhoneNo) ? null : model.PhoneNo,
+                        serviceStart = string.IsNullOrEmpty(model.ServiceStart) ? null : DateTime.Parse(model.ServiceStart).ToString("HH:mm:ss"),
+                        serviceEnd = string.IsNullOrEmpty(model.ServiceEnd) ? null : DateTime.Parse(model.ServiceEnd).ToString("HH:mm:ss"),
+                        breakStart = string.IsNullOrEmpty(model.BreakStart) ? null : model.BreakStart,
+                        breakEnd = string.IsNullOrEmpty(model.BreakEnd) ? null : model.BreakEnd,
+                        isDepot = model.IsDepot == "true",
+                        isBillingAddr = model.IsBillingAddr == "true",
+                        customerName = customerGroup.SUB_CODE,
+                        customerId = customerGroup.MCEASY_CUST_ID,
+                        isGarage = model.IsGarage,
+                    }
+                };
 
+                if (graphqlVariables.input.circData != null)
+                {
+                    var match = Regex.Match(graphqlVariables.input.circData, @"<\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\)\s*,\s*(\d+)\s*>");
+
+                    if (match.Success)
+                    {
+                        ng.Lat = $"{match.Groups[1].Value}";
+                        ng.Long = $"{match.Groups[2].Value}";
+                        ng.Cordinates = $"({ng.Lat},{ng.Long})";
+                        ng.Radius = $"{match.Groups[3].Value}";
+                    }
+                }
+
+                if (customerGroup.API_FLAG == 1)
+                {
                     var (ok, result) = await _apiService.ExecuteGraphQLAsync(
                         @"mutation CreateGeofence($input: CreateGeofenceInput!) {
                             createGeofence(input: $input) {
@@ -571,20 +618,7 @@ namespace TMSBilling.Controllers
 
                     var p = createGeofence
                          .GetProperty("geofence")
-                         .Deserialize<Geofence>() ?? new  Geofence();
-
-                    if (p.circData != null)
-                    {
-                        var match = Regex.Match(p.circData, @"<\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\)\s*,\s*(\d+)\s*>");
-
-                        if (match.Success)
-                        {
-                            ng.Lat = $"{match.Groups[1].Value}";
-                            ng.Long = $"{match.Groups[2].Value}";
-                            ng.Cordinates = $"({ng.Lat},{ng.Long})";
-                            ng.Radius = $"{match.Groups[3].Value}";
-                        }
-                    }
+                         .Deserialize<Geofence>() ?? new Geofence();
 
                     ng.GeofenceId = p.geofenceId;
                     ng.CompanyId = p.companyId;
@@ -613,6 +647,41 @@ namespace TMSBilling.Controllers
                     ng.ServiceLocType = p.serviceLocType;
                     ng.CustomerName = p.customerName;
                     ng.HasRelation = p.hasRelation;
+                    ng.CreatedAt = DateTime.Now;
+                    ng.UpdatedAt = DateTime.Now;
+
+                }
+                else {
+
+                    var p = graphqlVariables.input;
+
+                    //ng.GeofenceId = p.geofenceId;
+                    //ng.CompanyId = p.companyId;
+                    //ng.CustomerId = p.customerId;
+                    ng.FenceName = p.fenceName;
+                    ng.Type = p.type;
+                    ng.PolyData = p.polyData;
+                    ng.CircData = p.circData;
+                    ng.Address = p.address;
+                    ng.AddressDetail = p.addressDetail;
+                    ng.Province = p.province;
+                    ng.City = p.city;
+                    ng.PostalCode = p.postalCode;
+                    ng.Category = p.category;
+                    ng.ContactName = p.contactName;
+                    ng.PhoneNo = p.phoneNo;
+                    ng.IsGarage = p.isGarage;
+                    //ng.IsServiceLoc = p.isServiceLoc;
+                    ng.IsBillingAddr = p.isBillingAddr;
+                    ng.IsDepot = p.isDepot;
+                    //ng.IsAlert = p.isAlert;
+                    ng.ServiceStart = p.serviceStart;
+                    ng.ServiceEnd = p.serviceEnd;
+                    ng.BreakStart = p.breakStart;
+                    ng.BreakEnd = p.breakEnd;
+                    //ng.ServiceLocType = p.serviceLocType;
+                    ng.CustomerName = p.customerName;
+                    //ng.HasRelation = p.hasRelation;
                     ng.CreatedAt = DateTime.Now;
                     ng.UpdatedAt = DateTime.Now;
 
@@ -675,6 +744,9 @@ namespace TMSBilling.Controllers
         [Required]
         public string? CUST_GROUP_CODE { get; set; }
         public string? AreaGroup {  get; set; }
+
+        public string? Lat {  get; set; }
+        public string? Lng { get; set; }
 
     }
 

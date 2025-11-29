@@ -112,6 +112,8 @@ namespace TMSBilling.Models
         [MaxLength(50)]
         public string? MCEASY_CUST_ID { get; set; }
 
+        public int API_FLAG { get; set; } = 0;
+
         [MaxLength(50)]
         public string? ENTRY_USER { get; set; }
 
