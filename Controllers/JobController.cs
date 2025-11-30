@@ -909,34 +909,17 @@ namespace TMSBilling.Controllers
         public async Task<IActionResult> GetVendor(string? originId, string? destArea, DateTime? deliveryDate)
         {
 
-            //var nextDay = deliveryDate.AddDays(1);
-            //Console.WriteLine($"deliveryDate: {deliveryDate:yyyy-MM-dd HH:mm:ss}");
-            //Console.WriteLine($"nextDay: {nextDay:yyyy-MM-dd HH:mm:ss}");
-
-            //var result = await _context.Orders
-            //    .Where(o => o.origin_id == originId
-            //     && o.dest_area == destArea
-            //     && o.delivery_date >= deliveryDate
-            //     && o.delivery_date < nextDay
-            //     && o.order_status == 1)
-
             var result = await _context.Vendors
-            //.Where(o => o.origin_id == originId
-            //    && o.dest_area == destArea
-            //    && EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0
-            //    && o.mceasy_status == "CONFIRMED"
-            //    && o.mceasy_is_upload == false)
             .Select(v => new VendorViewModel
             {
                 VendorCode = v.SUP_CODE,
                 VendorName = v.SUP_NAME
             })
             .ToListAsync();
-            return Ok(new { success = true, data = result }); // hasilnya JSON
+            return Ok(new { success = true, data = result });
         }
 
     }
-
     public class OrderForJob {
         public int id_seq { get; set; }
 

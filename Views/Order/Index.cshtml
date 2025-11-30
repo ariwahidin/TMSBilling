@@ -13,6 +13,9 @@
     <button id="btnBulkConfirm" class="btn btn-warning btn-sm" style="display:none;">
         <i class="bi bi-check-circle"></i> Confirm Selected (<span id="selectedCount">0</span>)
     </button>
+    <button id="btnBulkDownload" class="btn btn-success btn-sm" style="display:none;">
+        <i class="bi bi-check-circle"></i> Download Selected (<span id="selectedCount">0</span>)
+    </button>
     <button id="btnSyncOrder" class="btn btn-info btn-sm">
         <i class="bi bi-check-circle"></i> Sync Order
     </button>
@@ -65,7 +68,7 @@
                     <td>
                         @if (item.MCOrderStatus == "Draf")
                         {
-                            <input type="checkbox" class="order-checkbox" data-order-id="@item.McEasyOrderId">
+                            <input type="checkbox" class="order-checkbox" data-order-id="@item.IdSeq">
                         }
             </td>
             <td>@i</td>
@@ -247,6 +250,7 @@
             const count = selectedOrders.size;
             $('#selectedCount').text(count);
             $('#btnBulkConfirm').toggle(count > 0);
+            $('#btnBulkDownload').toggle(count > 0);
         }
 
         function syncCheckboxes() {
@@ -340,6 +344,42 @@
                 }
             });
         }
+
+
+
+
+        function bulkDownloadOrder() {
+            if (selectedOrders.size === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Selection',
+                    text: 'Please select at least one order to download.'
+                });
+                return;
+            }
+
+            const orderIds = Array.from(selectedOrders);
+
+            fetch('/Order/DownloadOrder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderIds })
+            })
+            .then(res => res.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "data_order.xlsx";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            });
+        }
+
+
+
+
 
         $(document).ready(() => {
 
@@ -453,6 +493,9 @@
 
             // Bulk confirm button handler
             $('#btnBulkConfirm').on('click', bulkConfirmOrders);
+
+            // Bulk Download button handler'
+            $('#btnBulkDownload').on('click', bulkDownloadOrder);
 
             // Initial sync
             syncCheckboxes();

@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Math;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.AspNetCore.Mvc;
@@ -550,6 +551,7 @@ namespace TMSBilling.Controllers
             headerSheet.Cell("R1").Value = "Rcv DO Time*";
             headerSheet.Cell("S1").Value = "Origin Area*";
             headerSheet.Cell("T1").Value = "Destination Area*";
+            headerSheet.Cell("U1").Value = "Packing Type*";
 
             // Format header (bold + background biru muda)
             var headerRange = headerSheet.Range("A1:T1");
@@ -582,6 +584,7 @@ namespace TMSBilling.Controllers
             headerSheet.Cell("R2").Value = DateTime.Now.ToString("HH:mm:ss");
             headerSheet.Cell("S2").Value = "JAKARTA";
             headerSheet.Cell("T2").Value = "MAKASSAR";
+            headerSheet.Cell("U2").Value = "SEMI WOODEN";
 
             // DETAIL
             var detailSheet = workbook.Worksheets.Add("Details");
@@ -622,8 +625,135 @@ namespace TMSBilling.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "sample_import_order.xlsx");
         }
 
+
         [HttpPost]
-        public IActionResult Preview(IFormFile file)
+        public IActionResult DownloadOrder([FromBody] BulkDownloadRequest request)
+        {
+            var orders = _context.Orders
+                .Where(o => request.OrderIds.Contains(o.id_seq))
+                .ToList();
+
+            var orderDetails = _context.OrderDetails
+                .Where(d => request.OrderIds.Contains(d.id_seq_order))
+                .ToList();
+
+            using var workbook = new XLWorkbook();
+
+            // HEADER
+            var headerSheet = workbook.Worksheets.Add("Header");
+            headerSheet.Cell("A1").Value = "No.";
+            headerSheet.Cell("B1").Value = "Nama Pelanggan*";
+            headerSheet.Cell("C1").Value = "Karyawan Pemasaran";
+            headerSheet.Cell("D1").Value = "Target Diambil*";
+            headerSheet.Cell("E1").Value = "Target Dikirim*";
+            headerSheet.Cell("F1").Value = "No. AJU";
+            headerSheet.Cell("G1").Value = "No. DO*";
+            headerSheet.Cell("H1").Value = "No. Referensi";
+            headerSheet.Cell("I1").Value = "Catatan Lainya";
+            headerSheet.Cell("J1").Value = "Alamat Asal*";
+            headerSheet.Cell("K1").Value = "Alamat Tujuan*";
+            headerSheet.Cell("L1").Value = "Truck Size*";
+            headerSheet.Cell("M1").Value = "Service Type*";
+            headerSheet.Cell("N1").Value = "Moda*";
+            headerSheet.Cell("O1").Value = "UOM*";
+            headerSheet.Cell("P1").Value = "Whs Code*";
+            headerSheet.Cell("Q1").Value = "Rcv DO Date*";
+            headerSheet.Cell("R1").Value = "Rcv DO Time*";
+            headerSheet.Cell("S1").Value = "Origin Area*";
+            headerSheet.Cell("T1").Value = "Destination Area*";
+            headerSheet.Cell("U1").Value = "Packing Type*";
+
+            // Format header (bold + background biru muda)
+            var headerRange = headerSheet.Range("A1:T1");
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightBlue;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            headerSheet.Columns().AdjustToContents();
+
+            int row = 2;
+            int no = 1;
+
+            foreach (var order in orders)
+            {
+                headerSheet.Cell(row, 1).Value = no++;
+                headerSheet.Cell(row, 2).Value = order.sub_custid;
+                headerSheet.Cell(row, 3).Value = "";
+                headerSheet.Cell(row, 4).Value = order.pickup_date;
+                headerSheet.Cell(row, 5).Value = order.delivery_date;
+                headerSheet.Cell(row, 6).Value = "";
+                headerSheet.Cell(row, 7).Value = order.inv_no;
+                headerSheet.Cell(row, 8).Value = "";
+                headerSheet.Cell(row, 9).Value = "";
+                headerSheet.Cell(row, 10).Value = order.mceasy_origin_name;
+                headerSheet.Cell(row, 11).Value = order.mceasy_dest_name;
+                headerSheet.Cell(row, 12).Value = order.truck_size;
+                headerSheet.Cell(row, 13).Value = order.serv_req;
+                headerSheet.Cell(row, 14).Value = order.moda_req;
+                headerSheet.Cell(row, 15).Value = order.uom;
+                headerSheet.Cell(row, 16).Value = order.wh_code;
+                headerSheet.Cell(row, 17).Value = order.do_rcv_date;
+                headerSheet.Cell(row, 18).Value = order.do_rcv_time;
+                headerSheet.Cell(row, 19).Value = order.origin_id;
+                headerSheet.Cell(row, 20).Value = order.dest_area;
+                headerSheet.Cell(row, 21).Value = order.packing_type;
+
+                row++;
+            }
+
+            // DETAIL
+            var detailSheet = workbook.Worksheets.Add("Details");
+            detailSheet.Cell("A1").Value = "No. DO*";
+            detailSheet.Cell("B1").Value = "Nama Produk*";
+            detailSheet.Cell("C1").Value = "Kuantitas*";
+            detailSheet.Cell("D1").Value = "Satuan Kuantitas*";
+            detailSheet.Cell("E1").Value = "Catatan";
+            detailSheet.Cell("F1").Value = "Panjang";
+            detailSheet.Cell("G1").Value = "Lebar";
+            detailSheet.Cell("H1").Value = "Tinggi";
+            detailSheet.Cell("I1").Value = "Berat";
+
+            // Format header details
+            var detailHeader = detailSheet.Range("A1:I1");
+            detailHeader.Style.Font.Bold = true;
+            detailHeader.Style.Fill.BackgroundColor = XLColor.LightGreen;
+            detailHeader.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            detailHeader.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            detailHeader.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            detailSheet.Columns().AdjustToContents();
+
+
+            int dRow = 2;
+
+            foreach (var detail in orderDetails)
+            {
+                var order = orders.FirstOrDefault(o => o.id_seq == detail.id_seq_order);
+
+                detailSheet.Cell(dRow, 1).Value = order?.inv_no;
+                detailSheet.Cell(dRow, 2).Value = detail.item_name;
+                detailSheet.Cell(dRow, 3).Value = detail.item_qty;
+                detailSheet.Cell(dRow, 4).Value = detail.pkg_unit;
+                detailSheet.Cell(dRow, 5).Value = "";
+                detailSheet.Cell(dRow, 6).Value = detail.item_length;
+                detailSheet.Cell(dRow, 7).Value = detail.item_width;
+                detailSheet.Cell(dRow, 8).Value = detail.item_height;
+                detailSheet.Cell(dRow, 9).Value = detail.item_wgt;
+
+                dRow++;
+            }
+
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data_order.xlsx");
+        }
+
+        [HttpPost]
+        public IActionResult Preview(IFormFile file, string operationType)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("File kosong");
@@ -669,6 +799,7 @@ namespace TMSBilling.Controllers
                     string? serviceHeader = headerSheet.Cell(row, 13).GetString();
                     string? truckSizeHeader = headerSheet.Cell(row, 12).GetString();
                     string? remarkHeader = headerSheet.Cell(row, 9).GetString();
+                    string? packingType = headerSheet.Cell(row, 21).GetString();
 
 
                     if (pickupDate == null || pickupDate <= DateTime.Now)
@@ -753,36 +884,13 @@ namespace TMSBilling.Controllers
                         }
 
 
-
-                        //var priceSell = _context.PriceSells.FirstOrDefault(ps =>
-                        //ps.cust_code == customerGroup.MAIN_CUST
-                        //&& ps.origin == originArea
-                        //&& ps.dest == destArea
-                        //&& ps.serv_type == serviceHeader
-                        //&& ps.serv_moda == modaHeader
-                        //&& ps.truck_size == truckSizeHeader
-                        //&& ps.charge_uom == uomHeader);
-
-                        //if (priceSell == null) {
-                        //    errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Price sell tidak ditemukan untuk order ini" });
-                        //}
-
-
-                        //var priceBuy = _context.PriceBuys.FirstOrDefault( pb =>
-                        //pb.origin == originArea
-                        //&& pb.dest == destArea
-                        //&& pb.serv_type == serviceHeader
-                        //&& pb.serv_moda == modaHeader
-                        //&& pb.truck_size == truckSizeHeader);
-
-                        //if (priceBuy == null) {
-                        //    errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Price buy tidak ditemukan untuk order ini" });
-                        //}
-
-
                         var orderExist = _context.Orders.FirstOrDefault(or => or.inv_no == invoiceNo);
-                        if (orderExist != null) {
+                        if (orderExist != null && operationType == "add")
+                        {
                             errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $" Already exists" });
+                        }
+                        else if (orderExist == null && operationType == "edit") {
+                            errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Not found for edit" });
                         }
                     }
                     else
@@ -813,6 +921,7 @@ namespace TMSBilling.Controllers
                         mceasy_destination_address_id = geofenceDestination?.GeofenceId,
                         mceasy_origin_name = originName,
                         mceasy_dest_name = destName,
+                        packing_type = packingType,
                     };
                 }
                 catch (Exception ex)
@@ -866,7 +975,8 @@ namespace TMSBilling.Controllers
                 }
 
                 result.Add(new OrderViewModel
-                {
+                {   
+                    OperationType = operationType,
                     Header = header,
                     Details = details
                 });
@@ -887,24 +997,25 @@ namespace TMSBilling.Controllers
         public async Task<IActionResult> SaveExcel([FromBody] List<OrderViewModel> data)
         {
             if (data == null || data.Count == 0)
-                return BadRequest(new { success = false, message = "Data tidak ditemukan." });
+                return NotFound(new { success = false, message = "Payload data not found." });
 
             foreach (var item in data)
             {
                 var header = item.Header;
                 var details = item.Details;
+                var operationType = item.OperationType;
 
                 if (header == null || details == null)
                     continue;
 
 
                 var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == header.sub_custid);
-                if (customerGroup == null || string.IsNullOrEmpty(customerGroup.MCEASY_CUST_ID))
+                if (customerGroup == null)
                 {
-                    return BadRequest(new
+                    return NotFound(new
                     {
                         success = false,
-                        message = $"Customer Group '{header.sub_custid}' tidak memiliki MCEASY_CUST_ID yang valid."
+                        message = $"Customer group not found"
                     });
                 }
                 var deliveryDateTime = header.delivery_date.HasValue ? header.delivery_date.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : null;
@@ -913,27 +1024,73 @@ namespace TMSBilling.Controllers
 
                 if (customer == null)
                 {
-                    return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' tidak ditemukan." });
+                    return NotFound(new { success = false, message = $"Customer '{customerGroup.CUST_CODE}' not found." });
                 }
+
+                if (header == null)
+                {
+                    return NotFound(new { success = false, message = $"Header not found." });
+                }
+
+                var origin = _context.Geofences.FirstOrDefault(o => o.FenceName == header.mceasy_origin_name);
+                if (origin == null)
+                {
+                    return NotFound(new { success = false, message = $"Origin '{header.mceasy_origin_name}' not found." });
+                }
+
+                var dest = _context.Geofences.FirstOrDefault(d => d.FenceName == header.mceasy_dest_name);
+                if (dest == null)
+                {
+                    return NotFound(new { success = false, message = $"Destination '{header.mceasy_dest_name}' not found." });
+                }
+
+
+                // Check Order jika ingin edit
+                var orderExisting = _context.Orders.FirstOrDefault(o => o.inv_no == header.inv_no);
+
+                if (operationType == "edit") {
+
+                    if (orderExisting != null) {
+                        // disini di hapus semua aja dulu tapi yang statusnya draf aja
+                        if (orderExisting.mceasy_status != "Draf") {
+                            return BadRequest(new { success = false, message = $"Order with status Draf not found." });
+                        }
+
+
+                        var (okDelete, jsonDelete) = await _apiService.SendRequestAsync(
+                            HttpMethod.Delete,
+                            $"/order/api/web/v1/delivery-order/{orderExisting.mceasy_order_id}"
+                        );
+                        //if (!okDelete)
+                        //{
+                        //    return BadRequest(new
+                        //    {
+                        //        success = false,
+                        //        message = "Failed deleting order",
+                        //        detail = jsonDelete
+                        //    });
+                        //}
+                        var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", orderExisting.id_seq);
+                        var rows2 = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER_DTL WHERE id_seq_order = {0}", orderExisting.id_seq);
+                        var rows3 = _context.Database.ExecuteSqlRaw("DELETE FROM MC_ORDER WHERE id = {0}", orderExisting.mceasy_order_id);
+
+                        if (rows < 1)
+                        {
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = "Failed deleting order from database",
+                            });
+                        }
+
+
+                    }
+                }
+
 
                 if (customerGroup.API_FLAG == 1)
                 {
-                    if (header == null) {
-                        return NotFound(new { success = false, message = $"Header tidak ditemukan." });
-                    }
-
-                    var origin = _context.Geofences.FirstOrDefault(o => o.FenceName == header.mceasy_origin_name);
-                    if (origin == null)
-                    {
-                        return NotFound(new { success = false, message = $"Origin '{header.mceasy_origin_name}' tidak ditemukan." });
-                    }
-
-                    var dest = _context.Geofences.FirstOrDefault(d => d.FenceName == header.mceasy_dest_name);
-                    if (dest == null)
-                    {
-                        return NotFound(new { success = false, message = $"Destination '{header.mceasy_dest_name}' tidak ditemukan." });
-                    }
-
+                   
                     var payload = new
                     {
                         customer_id = customerGroup.MCEASY_CUST_ID,
@@ -959,7 +1116,7 @@ namespace TMSBilling.Controllers
                         return BadRequest(new
                         {
                             success = false,
-                            message = "Failed Add Order to API : "+json,
+                            message = "Failed add order to API : "+json,
                             detail = json
                         });
                     }
@@ -983,7 +1140,7 @@ namespace TMSBilling.Controllers
                             return BadRequest(new
                             {
                                 success = false,
-                                message = "Status dari API tidak ditemukan.",
+                                message = "Status order from API not found.",
                             });
                         }
 
@@ -1075,11 +1232,13 @@ namespace TMSBilling.Controllers
                             message = ex.Message,
                         });
                     }
-                } else {
+                } 
+                else 
+                {
 
                     if (header == null)
                     {
-                        return NotFound(new { success = false, message = $"Header tidak ditemukan." });
+                        return NotFound(new { success = false, message = $"Header not found." });
                     }
 
                     // Simpan Header
@@ -1331,7 +1490,7 @@ namespace TMSBilling.Controllers
             }
 
             if (order.mceasy_status != "Draf") {
-                return NotFound(new { success = false, message = "Order cannot be deleted" });
+                return NotFound(new { success = false, message = "Order cannot be delete" });
             }
 
             var (ok, json) = await _apiService.SendRequestAsync(
@@ -1462,9 +1621,9 @@ namespace TMSBilling.Controllers
 
                         if (orderId == null)
                             return BadRequest("ID not valid");
-                        var order = _context.Orders.FirstOrDefault(o => o.mceasy_order_id == orderId.ToString());
+                        var order = _context.Orders.FirstOrDefault(o => o.id_seq == orderId);
 
-                        if (order == null)
+                        if (order == null || order.mceasy_order_id == null)
                             return NotFound("Order not found");
                         //if (order.order_status != 0)
                         //    return BadRequest("Order already confirm.");
@@ -1478,7 +1637,7 @@ namespace TMSBilling.Controllers
 
                         var (ok, json) = await _apiService.SendRequestAsync(
                             HttpMethod.Post,
-                            $"/order/api/web/v1/delivery-order/{orderId}/transition",
+                            $"/order/api/web/v1/delivery-order/{order.mceasy_order_id}/transition",
                             payload
                         );
                         if (!ok)
@@ -1514,13 +1673,20 @@ namespace TMSBilling.Controllers
 
     }
 
-    public class ConfirmOrderID {
+    public class ConfirmOrderID
+    {
         public string? OrderID { get; set; }
     }
 
+    public class BulkDownloadRequest
+    {
+        public List<int> OrderIds { get; set; }
+    }
+
+
     public class BulkConfirmRequest
     {
-        public List<string>? OrderIds { get; set; }
+        public List<int>? OrderIds { get; set; }
     }
 
     public class ProductViewModel
