@@ -20,4 +20,49 @@ namespace TMSBilling.Models
 
         public DateTime? entry_date { get; set; }
     }
+
+
+    [Table("TRC_ROUTE_TYPE")]
+    public class RouteType
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int id_seq { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public required string route_name { get; set; }
+
+        [StringLength(50)]
+        public string? entry_user { get; set; }
+
+        public DateTime? entry_date { get; set; }
+    }
+
+
+
+    [Table("TRC_ROUTE_GROUP")]
+    public class RouteGroup
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int id_seq { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public required string origin { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public required string dest { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public required string route { get; set; }
+
+        [StringLength(50)]
+        public string? entry_user { get; set; }
+
+        public DateTime? entry_date { get; set; }
+    }
 }

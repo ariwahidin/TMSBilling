@@ -68,6 +68,12 @@ namespace TMSBilling.Data
 
         public DbSet<MCFleetOrder> MCFleetOrders { get; set; }
 
+        public DbSet<RouteType> RouteTypes { get; set; }
+
+        public DbSet<RouteGroup> RouteGroups { get; set; }
+
+
+
 
         public DbSet<OrderSummaryViewModel> OrderSummaryView { get; set; }
         public DbSet<JobSummaryViewModel> JobSummaryView { get; set; }
