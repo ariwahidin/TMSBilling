@@ -72,6 +72,8 @@ namespace TMSBilling.Data
 
         public DbSet<RouteGroup> RouteGroups { get; set; }
 
+        public DbSet<UserXCustomer> UserXCustomers { get; set; }
+
 
 
 

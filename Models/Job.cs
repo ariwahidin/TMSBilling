@@ -252,7 +252,6 @@ namespace TMSBilling.Models
         public DateTime? update_date { get; set; }
     }
 
-
     [Table("MC_FO")]
     public class MCFleetOrder
     {

@@ -1,0 +1,61 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Assign User to Customer";
+}
+
+<form asp-action="Create" method="post">
+
+    <div class="mb-3">
+        <label>User</label>
+        <select name="Username" id="userSelect" class="form-control" required>
+            <option value="">-- Choose User --</option>
+            @foreach (var u in ViewBag.Users)
+            {
+                <option value="@u.Username">@u.Username</option>
+            }
+        </select>
+
+    </div>
+
+    <div class="mb-3">
+        <label>Customer</label>
+        <div>
+            @foreach (var c in ViewBag.Customers)
+            {
+                <div>
+                    <input type="checkbox"
+                           name="CustomerMains"
+                           class="cust-check"
+                           value="@c.MAIN_CUST" />
+                    <span>@c.MAIN_CUST</span>
+                </div>
+            }
+
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-success btn-sm">Save</button>
+    <a href="/UserCustomer/Index" class="btn btn-secondary btn-sm">Back</a>
+
+</form>
+
+@section Scripts{
+    <script>
+        $("#userSelect").on("change", function () {
+            var username = $(this).val();
+
+            // Bersihkan semua checkbox dulu
+            $(".cust-check").prop("checked", false);
+
+            if (username === "") return;
+
+            $.get("/UserCustomer/GetCustomersByUser", { username: username }, function (res) {
+
+                res.forEach(function (cust) {
+                    $(".cust-check[value='" + cust + "']").prop("checked", true);
+                });
+
+            });
+        });
+    </script>
+}

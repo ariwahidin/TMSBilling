@@ -74,11 +74,30 @@ namespace TMSBilling.Controllers
                 return NotFound(new { message = "Customer not found" });
             }
 
+
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
+            var customerGroups = _context.UserXCustomers
+                                .Where(x => x.UserName == username)
+                                .Select(x => x.CustomerMain)
+                                .Distinct()
+                                .Join(_context.CustomerGroups,
+                                      custMain => custMain,
+                                      cg => cg.MAIN_CUST,
+                                      (custMain, cg) => cg)
+                                .ToList();
+
+            var customerGroupAllowed = customerGroups
+                .Select(x => x.SUB_CODE)
+                .Distinct()
+                .ToList();
+
+
             if (customer.API_FLAG == 1)
             {
 
                 var consignees = await _context.Geofences
-                .Where(c => c.CustomerName == id)
+                .Where(c => c.CustomerName == id && customerGroupAllowed.Contains(c.CustomerName))
                 .ToListAsync();
 
                 var geofenceList = consignees.Select(c => new GeofenceViewModel
@@ -102,8 +121,6 @@ namespace TMSBilling.Controllers
                     
 
 
-                    // sisanya default / null (karena ga ada di table Consignee)
-                    //PostalCode = null,
                     Coordinates = null,
                     Radius = null,
                     ServiceStart = null,
@@ -111,7 +128,6 @@ namespace TMSBilling.Controllers
                     BreakStart = null,
                     BreakEnd = null,
                     ServiceLocType = null,
-                    //IsGarage = null,
                     IsServiceLoc = null,
                     IsBillingAddr = null,
                     IsDepot = null,
@@ -131,53 +147,16 @@ namespace TMSBilling.Controllers
 
             }
             else {
-                var consignees = await _context.Consignees.ToListAsync();
 
-                var geofenceList = consignees.Select(c => new GeofenceViewModel
-                {
-                    FenceID = c.CNEE_CODE,     
-                    FenceName = c.CNEE_NAME, 
-                    Category = c.SUB_CODE,
-                    Address = c.ADDRESS,  
-                    City = c.CITY,
-                    AddressDetail = $"{c.CNEE_ADDR2} {c.CNEE_ADDR3} {c.CNEE_ADDR4}",
-                    PhoneNo = c.CNEE_TEL,
-                    ContactName = c.CNEE_PIC,
-                    CustomerName = c.CNEE_NAME,
-                    MCEasyCustId = c.MCEASY_CUST_ID,
-                    GeofenceId = c.MCEASY_GEOFENCE_ID?.ToString(),
-                    CreatedOn = c.ENTRY_DATE?.ToString("yyyy-MM-dd HH:mm:ss"),
-                    CompanyId = c.SUB_CODE,
-                    CUST_GROUP_CODE = c.SUB_CODE,
-                    AreaGroup = c.AREA,
-                    
-
-                    // sisanya default / null (karena ga ada di table Consignee)
-                    Province = null,
-                    PostalCode = null,
-                    Coordinates = null,
-                    Radius = null,
-                    ServiceStart = null,
-                    ServiceEnd = null,
-                    BreakStart = null,
-                    BreakEnd = null,
-                    ServiceLocType = null,
-                    //IsGarage = null,
-                    IsServiceLoc = null,
-                    IsBillingAddr = null,
-                    IsDepot = null,
-                    IsAlert = null,
-                    Type = null,
-                    PolyData = null,
-                    CircData = null,
-                    HasRelation = null
-                }).ToList();
+                var consignees = await _context.Geofences
+                    .Where(a => customerGroupAllowed.Contains(a.CustomerName))
+                    .ToListAsync();
 
                 return Ok(new
                 {
                     success = true,
                     message = "Data dari Consignee",
-                    data = geofenceList
+                    data = consignees
                 });
             }
         }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TMSBilling.Models
 {
@@ -26,5 +27,21 @@ namespace TMSBilling.Models
 
         public string? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
+    }
+
+    public class UserXCustomer
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int? UserId { get; set; }
+        public string? UserName { get; set; }
+
+        public string? CustomerMain { get; set; }
+
+        public string? CreatedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public string? UpdatedBy { get;set; }
+        public DateTime? UpdatedAt { get;set; }
     }
 }

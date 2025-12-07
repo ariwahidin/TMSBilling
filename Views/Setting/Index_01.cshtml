@@ -1,0 +1,450 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Settings";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="row mb-2">
+            <div class="col-md-1">
+                <label>Pickup From</label><br/>
+                <input type="date" id="pickFrom" class="form-control-sm">
+            </div>
+
+            <div class="col-md-1 ms-2">
+                <label>Pickup To</label><br />
+                <input type="date" id="pickTo" class="form-control-sm">
+            </div>
+
+            <div class="col-md-6 ms-2">
+                <label>Job ID</label><br />
+                <select id="jobSelect" class="form-control-sm" style="width:250px; height:20px;"></select>
+
+            </div>
+        </div>
+
+    </div>
+    <div class="col-md-12">
+        <button id="btnSave" class="mb-1">Save</button>
+        <button class="mb-1">Reset</button>
+        <div id="example-table"></div>
+    </div>
+</div>
+
+
+@section Styles {
+    <link href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
+}
+
+@section Scripts {
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+    <script>
+        //Create Date Editor
+        var dateEditor = function(cell, onRendered, success, cancel){
+            //cell - the cell component for the editable cell
+            //onRendered - function to call when the editor has been rendered
+            //success - function to call to pass thesuccessfully updated value to Tabulator
+            //cancel - function to call to abort the edit and return to a normal cell
+
+            //create and style input
+            var cellValue = luxon.DateTime.fromFormat(cell.getValue(), "dd/MM/yyyy").toFormat("yyyy-MM-dd"),
+            input = document.createElement("input");
+
+            input.setAttribute("type", "date");
+
+            input.style.padding = "4px";
+            input.style.width = "100%";
+            input.style.boxSizing = "border-box";
+
+            input.value = cellValue;
+
+            onRendered(function(){
+                input.focus();
+                input.style.height = "100%";
+            });
+
+            function onChange(){
+                if(input.value != cellValue){
+                    success(luxon.DateTime.fromFormat(input.value, "yyyy-MM-dd").toFormat("dd/MM/yyyy"));
+                }else{
+                    cancel();
+                }
+            }
+
+            //submit new value on blur or change
+            input.addEventListener("blur", onChange);
+
+            //submit new value on enter
+            input.addEventListener("keydown", function(e){
+                if(e.keyCode == 13){
+                    onChange();
+                }
+
+                if(e.keyCode == 27){
+                    cancel();
+                }
+            });
+
+            return input;
+        };
+
+        //define data
+        var tabledata = [
+            {
+                invoice_no: "INV00123YY",
+                out_wh_date: "",
+                out_wh_time: "",
+                arrival_dest_date: "",
+                arrival_dest_time: "",
+                arrival_received_by: "",
+                pod_rcv_by: "",
+                spd_no: "",
+                pod_send_date: "",
+                pod_send_time: "",
+                pod_rcv_send: "",
+                pallet_delivery: "",
+                status_remark: ""
+            },
+            {
+                invoice_no: "INV00124YY",
+                out_wh_date: "",
+                out_wh_time: "",
+                arrival_dest_date: "",
+                arrival_dest_time: "",
+                arrival_received_by: "",
+                pod_rcv_by: "",
+                spd_no: "",
+                pod_send_date: "",
+                pod_send_time: "",
+                pod_rcv_send: "",
+                pallet_delivery: "",
+                status_remark: ""
+            },
+            {
+                invoice_no: "INV00125YY",
+                out_wh_date: "",
+                out_wh_time: "",
+                arrival_dest_date: "",
+                arrival_dest_time: "",
+                arrival_received_by: "",
+                pod_rcv_by: "",
+                spd_no: "",
+                pod_send_date: "",
+                pod_send_time: "",
+                pod_rcv_send: "",
+                pallet_delivery: "",
+                status_remark: ""
+            }
+        ];
+
+        function dateAutoFormatEditor(cell, onRendered, success, cancel){
+            var input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = "YYYY-MM-DD";
+            input.value = cell.getValue() || "";
+
+            // === AUTO FORMAT SAAT MENGETIK ===
+            input.addEventListener("input", function(e){
+                let v = this.value.replace(/[^0-9]/g, ""); // hanya angka
+
+                // auto sisipkan dash
+                if (v.length >= 5) v = v.slice(0,4) + "-" + v.slice(4);
+                if (v.length >= 8) v = v.slice(0,7) + "-" + v.slice(7,10);
+
+                this.value = v.slice(0, 10);
+            });
+
+            // === NORMALIZE SAAT PASTE ===
+            input.addEventListener("paste", function(e){
+                e.preventDefault();
+                let text = (e.clipboardData || window.clipboardData).getData("text").trim();
+
+                let result = normalizeDate(text);
+                input.value = result ?? "";
+            });
+
+            input.addEventListener("keydown", function(e){
+                if(e.key === "Enter") success(input.value);
+                if(e.key === "Escape") cancel();
+            });
+
+            input.addEventListener("blur", function(){
+                success(input.value);
+            });
+
+            return input;
+        }
+
+        function normalizeDate(value){
+            if (!value) return null;
+
+            value = value.trim();
+
+            // YYYYMMDD
+            if (/^\d{8}$/.test(value)) {
+                return value.slice(0,4) + "-" + value.slice(4,6) + "-" + value.slice(6,8);
+            }
+
+            // DD/MM/YYYY atau MM/DD/YYYY
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+                const parts = value.split("/");
+                let a = parseInt(parts[0], 10);
+                let b = parseInt(parts[1], 10);
+                let y = parts[2];
+
+                // Heuristik:
+                // kalau a > 12 → pasti DD/MM/YYYY
+                // kalau b > 12 → pasti MM/DD/YYYY
+                // kalau dua-duanya <=12 → anggap DD/MM/YYYY (default Indonesia)
+                let day, month;
+
+                if (a > 12) {
+                    day = a; month = b;
+                } else if (b > 12) {
+                    month = a; day = b;
+                } else {
+                    day = a; month = b;
+                }
+
+                return (
+                    y + "-" +
+                    String(month).padStart(2,"0") + "-" +
+                    String(day).padStart(2,"0")
+                );
+            }
+
+            // YYYY-MM-DD (biarkan)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return value;
+            }
+
+            return null; // format tidak dikenali
+        }
+
+        function validateDateISO(cell, value){
+            if (!value) return true; // ubah ke false kalau wajib isi
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return false;
+
+            return d.toISOString().slice(0,10) === value;
+        }
+
+        function timeAutoFormatEditor(cell, onRendered, success, cancel){
+            var input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = "HH:mm";
+            input.value = cell.getValue() || "";
+
+            // === AUTO FORMAT SAAT MENGETIK ===
+            input.addEventListener("input", function(){
+                let v = this.value.replace(/[^0-9]/g, ""); // hanya angka
+
+                if (v.length >= 3) {
+                    v = v.slice(0,2) + ":" + v.slice(2,4);
+                }
+
+                this.value = v.slice(0, 5);
+            });
+
+            // === NORMALIZE SAAT PASTE ===
+            input.addEventListener("paste", function(e){
+                e.preventDefault();
+                let text = (e.clipboardData || window.clipboardData)
+                            .getData("text").trim();
+
+                let result = normalizeTime(text);
+                input.value = result ?? "";
+            });
+
+            input.addEventListener("keydown", function(e){
+                if(e.key === "Enter") success(input.value);
+                if(e.key === "Escape") cancel();
+            });
+
+            input.addEventListener("blur", function(){
+                success(input.value);
+            });
+
+            return input;
+        }
+
+        function normalizeTime(value){
+            if (!value) return null;
+
+            value = value.trim();
+
+            // 2359
+            if (/^\d{4}$/.test(value)) {
+                return value.slice(0,2) + ":" + value.slice(2,4);
+            }
+
+            // 23.59 → 23:59
+            if (/^\d{2}\.\d{2}$/.test(value)) {
+                return value.replace(".", ":");
+            }
+
+            // 23:59 (biarkan)
+            if (/^\d{2}:\d{2}$/.test(value)) {
+                return value;
+            }
+
+            return null;
+        }
+
+        function validateTimeHHmm(cell, value){
+            if (!value) return true; // ubah ke false kalau wajib isi
+
+            if (!/^\d{2}:\d{2}$/.test(value)) return false;
+
+            const [h, m] = value.split(":").map(Number);
+
+            if (h < 0 || h > 23) return false;
+            if (m < 0 || m > 59) return false;
+
+            return true;
+        }
+
+        var table = new Tabulator("#example-table", {
+            height: "311px",
+            data: tabledata,
+            // layout: "fitColumns",
+
+            columns: [
+                // INVOICE - TIDAK EDITABLE
+                {
+                    title: "Invoice No",
+                    field: "invoice_no",
+                    width: 150,
+                    editor: false, // tidak bisa diedit
+                },
+
+                // LEFT SIDE
+                {
+                    title: "Out Date",
+                    field: "out_wh_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO
+                },
+                {
+                    title: "Out Time",
+                    field: "out_wh_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm
+                },
+                {
+                    title: "Arriv Date",
+                    field: "arrival_dest_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO
+                },
+                {
+                    title: "Arriv Time",
+                    field: "arrival_dest_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm
+                },
+                {
+                    title: "Rcv By",
+                    field: "arrival_received_by",
+                    editor: "input"
+                },
+                {
+                    title: "Return Date",
+                    field: "pod_return_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO
+                },
+                {
+                    title: "Return Time",
+                    field: "pod_return_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm
+                },
+
+                // RIGHT SIDE
+                {
+                    title: "POD Rcv By",
+                    field: "pod_rcv_by",
+                    editor: "input"
+                },
+                {
+                    title: "SPD No",
+                    field: "spd_no",
+                    editor: "input"
+                },
+                {
+                    title: "POD Send Date",
+                    field: "pod_send_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO
+                },
+                {
+                    title: "POD Send Time",
+                    field: "pod_send_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm
+                },
+                {
+                    title: "POD Rcv Send",
+                    field: "pod_rcv_send",
+                    editor: "input"
+                },
+                {
+                    title: "Pallet Deliv",
+                    field: "pallet_delivery",
+                    editor: "list",
+                    editorParams: {
+                        values: ["YES", "NO"]
+                    }
+                },
+                {
+                    title: "Remark",
+                    field: "status_remark",
+                    editor: "textarea"
+                },
+            ],
+        });
+
+        document.getElementById("btnSave").addEventListener("click", function () {
+            var data = table.getData(); // Ambil semua data dari tabulator
+
+            console.log(data); // cek di console dulu
+
+            return;
+
+            fetch("/Settings/Save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    alert("Data berhasil disimpan");
+                } else {
+                    alert("Gagal menyimpan");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error saat menyimpan");
+            });
+        });
+
+    </script>
+    <script>
+        $("#jobSelect").select2({
+            placeholder: "-- Pilih Job --",
+            allowClear: true
+        });
+    </script>
+}

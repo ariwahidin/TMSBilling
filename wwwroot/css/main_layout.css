@@ -490,8 +490,8 @@ body {
 
 /* Biar tinggi input sama dengan input bootstrap */
 .select2-container .select2-selection--single {
-    height: 38px !important;
-    padding: 0.375rem 0.75rem;
+    height: 32px !important;
+    padding: 0.275rem 0.75rem;
     border: 1px solid #ced4da;
     border-radius: 0.375rem;
 }
@@ -508,7 +508,7 @@ body {
 
 .arrow {
     transition: transform 0.3s ease;
-    font-size: 0.8rem;
+    font-size: 0.8rem; 
 }
 
 .rotate {

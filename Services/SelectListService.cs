@@ -188,7 +188,7 @@ public class SelectListService
             .Where(c =>  c.IsGarage == true)
             .Select(c => new SelectListItem
             {
-                Value = c.GeofenceId.ToString(),
+                Value = c.Id.ToString(),
                 Text = c.FenceName,
             }).ToList();
     }
@@ -210,6 +210,17 @@ public class SelectListService
             new SelectListItem { Value = "RETURN", Text = "RETURN" },
             new SelectListItem { Value = "STOCK", Text = "STOCK" },
         };
+    }
+
+    public List<SelectListItem> getArea()
+    {
+        return _context.AreaGroups
+            //.Where(c => c.MCEASY_CUST_ID != null)
+            .Select(c => new SelectListItem
+            {
+                Value = c.area_name,
+                Text = c.area_name,
+            }).ToList();
     }
 
 }

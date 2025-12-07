@@ -70,30 +70,30 @@
                         {
                             <input type="checkbox" class="order-checkbox" data-order-id="@item.IdSeq">
                         }
-            </td>
-            <td>@i</td>
-            <td>@item.WhCode</td>
-            <td>@item.SubCustId</td>
-            <td>@item.CneeCode</td>
-            <td>@item.InvNo</td>
-            <td>@item.PickupDate.ToString("yyyy-MM-dd")</td>
-            <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
-            <td>@item.OriginId</td>
-            <td>@item.DestArea</td>
-            <td>
-                @item.MCOrderStatus
-            </td>
-            <td>@item.JobID</td>
-            <td>@item.TotalItem</td>
-            <td>@item.TotalQty</td>
-            <td class="text-center">
-                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-three-dots-vertical"></i>
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a href="/Order/Form/@item.IdSeq" class="dropdown-item"><i class="bi bi-pencil-square"></i> Edit</a></li>
-                    <li><a href="/Order/FormLoad/@item.IdSeq" class="dropdown-item"><i class="bi bi-box"></i> View Load</a></li>
-                    @if (item.McEasyOrderId != null && item.OrderStatus != 1)
+                    </td>
+                    <td>@i</td>
+                    <td>@item.WhCode</td>
+                    <td>@item.SubCustId</td>
+                    <td>@item.CneeCode</td>
+                    <td>@item.InvNo</td>
+                    <td>@item.PickupDate.ToString("yyyy-MM-dd")</td>
+                    <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
+                    <td>@item.OriginId</td>
+                    <td>@item.DestArea</td>
+                    <td>
+                        @item.MCOrderStatus
+                    </td>
+                    <td>@item.JobID</td>
+                    <td>@item.TotalItem</td>
+                    <td>@item.TotalQty</td>
+                    <td class="text-center">
+                        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="/Order/Form/@item.IdSeq" class="dropdown-item"><i class="bi bi-pencil-square"></i> Edit</a></li>
+                            <li><a href="/Order/FormLoad/@item.IdSeq" class="dropdown-item"><i class="bi bi-box"></i> View Load</a></li>
+                            @if (item.McEasyOrderId != null && item.OrderStatus != 1)
                             {
                                 <li><a href="#" class="dropdown-item d-none" onclick="confirmOrder(`@item.McEasyOrderId`)"><i class="bi bi-check-square"></i> Confirm</a></li>
                             }
@@ -345,9 +345,6 @@
                 }
             });
         }
-
-
-
 
         function bulkDownloadOrder() {
             if (selectedOrders.size === 0) {

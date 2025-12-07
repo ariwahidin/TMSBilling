@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text;
@@ -61,6 +62,8 @@ namespace TMSBilling.Controllers
 
         private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
         {
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
             var sql = @"
                 WITH od AS (
                     SELECT 
@@ -88,12 +91,16 @@ namespace TMSBilling.Controllers
                 FROM TRC_ORDER a 
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
                 LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id)
-				SELECT ord.*, b.jobid AS JobID
-				FROM ord LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
+				SELECT ord.*, b.jobid AS JobID, c.MAIN_CUST
+				FROM ord 
+				LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
+				INNER JOIN TRC_CUST_GROUP c ON ord.SubCustId = c.SUB_CODE
+				INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+				WHERE d.Username = {0}
 				ORDER BY ord.IdSeq DESC
             ";
 
-            return _context.OrderSummaryView.FromSqlRaw(sql);
+            return _context.OrderSummaryView.FromSqlRaw(sql,username);
         }
 
         public async Task<IActionResult> Index()
@@ -155,7 +162,28 @@ namespace TMSBilling.Controllers
         public IActionResult Form(int? id)
         {
             var vm = new OrderViewModel();
-            ViewBag.ListCustomer = _selectList.getCustomerGroup();
+            var username = HttpContext.Session.GetString("username") ?? "System";
+            var customerGroups = _context.UserXCustomers
+                .Where(x => x.UserName == username)
+                .Select(x => x.CustomerMain)
+                .Distinct()
+                .Join(_context.CustomerGroups,
+                      custMain => custMain,
+                      cg => cg.MAIN_CUST,
+                      (custMain, cg) => cg)
+                .ToList();
+
+            var customerGroupAllowed = customerGroups
+                .Select(x => x.SUB_CODE)
+                .Distinct()
+                .ToList();
+            ViewBag.ListCustomer = _context.CustomerGroups
+            .Where(o => customerGroupAllowed.Contains(o.SUB_CODE))
+            .Select(c => new SelectListItem
+            {
+                Value = c.SUB_CODE,
+                Text = c.SUB_CODE,
+            }).ToList();
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
             ViewBag.ListOrigin = _selectList.GetOrigins();
@@ -1625,30 +1653,36 @@ namespace TMSBilling.Controllers
 
                         if (order == null || order.mceasy_order_id == null)
                             return NotFound("Order not found");
-                        //if (order.order_status != 0)
-                        //    return BadRequest("Order already confirm.");
                         if (order.mceasy_status != "Draf")
                             return BadRequest("Status order not in Draf");
 
-                        var payload = new
-                        {
-                            status = "CONFIRMED"
-                        };
+                        var customerGroup = _context.CustomerGroups.FirstOrDefault(v => v.SUB_CODE == order.sub_custid);
 
-                        var (ok, json) = await _apiService.SendRequestAsync(
-                            HttpMethod.Post,
-                            $"/order/api/web/v1/delivery-order/{order.mceasy_order_id}/transition",
-                            payload
-                        );
-                        if (!ok)
-                        {
-                            return BadRequest(new
+                        if (customerGroup != null && customerGroup.API_FLAG == 1) {
+
+                            var payload = new
                             {
-                                success = false,
-                                message = "Failed confirm order",
-                                detail = json
-                            });
+                                status = "CONFIRMED"
+                            };
+
+                            var (ok, json) = await _apiService.SendRequestAsync(
+                                HttpMethod.Post,
+                                $"/order/api/web/v1/delivery-order/{order.mceasy_order_id}/transition",
+                                payload
+                            );
+                            if (!ok)
+                            {
+                                return BadRequest(new
+                                {
+                                    success = false,
+                                    message = "Failed confirm order",
+                                    detail = json
+                                });
+                            }
+
                         }
+
+
 
                         order.mceasy_status = "Dikonfirmasi";
                         order.order_status = 1;

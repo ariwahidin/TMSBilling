@@ -1,0 +1,71 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "User For Customer";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
+}
+
+@model List<UserXCustomer>
+
+
+@* <h4>User For Customer</h4> *@
+
+<a href="/UserCustomer/Create" class="btn btn-primary btn-sm mb-2">Add</a>
+
+<table id="tableUser" class="table table-bordered">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>Customer</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            var i = 1;
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>@i</td>
+                    <td>@item.UserName</td>
+                    <td>@item.CustomerMain</td>
+                    <td>
+                        <a href="/UserCustomer/Delete/@item.Id"
+                           class="btn btn-danger btn-sm"
+                           onclick="return confirm('Delete data?')">
+                            Delete
+                        </a>
+                    </td>
+                </tr>
+                i++;
+            }
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(() => {
+
+            dataTable = $('#tableUser').DataTable({
+                orderCellsTop: true,
+                fixedHeader: true,
+                pageLength: 25,
+                // ordering: false,
+                // dom: 'lrtip',
+                // drawCallback: function() {
+                //     syncCheckboxes();
+                // }
+            });
+
+            // Tambahkan filter per kolom
+            // $('#tableUser thead tr.filter-row th').each(function (i) {
+            //     $('input', this).on('keyup change', function () {
+            //         if (dataTable.column(i).search() !== this.value) {
+            //             dataTable.column(i).search(this.value).draw();
+            //         }
+            //     });
+            // });
+         })
+    </script>
+}

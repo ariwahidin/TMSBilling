@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -95,6 +96,9 @@ namespace TMSBilling.Controllers
         }
 
         private IQueryable<JobSummaryViewModel> GetJobSummaryQuery() {
+
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
             var sql = @"
                 WITH tj AS (
                     SELECT 
@@ -110,16 +114,19 @@ namespace TMSBilling.Controllers
                     a.deliv_date AS DelivDate,
                     a.origin AS Origin,
                     a.dest AS Dest,
-					mc_fo.status AS MCStatus,
+				                mc_fo.status AS MCStatus,
                     a.vendor_plan AS VendorPlan,
                     COALESCE(tj.total_do, 0) AS TotalDo
                 FROM TRC_JOB_H a
                 LEFT JOIN tj ON a.jobid = tj.jobid
-				LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
+                LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
+                INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
+                INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+                WHERE d.Username = {0}
                 ORDER BY a.id_seq DESC
             ";
 
-            return _context.JobSummaryView.FromSqlRaw(sql);
+            return _context.JobSummaryView.FromSqlRaw(sql,username);
         }
 
         [Route("Job/Form/{jobid?}")]
@@ -128,8 +135,34 @@ namespace TMSBilling.Controllers
             var vm = new JobViewModel();
 
             // ViewBag dropdown
-            ViewBag.ListCustomer = _selectList.getCustomers();
-            ViewBag.ListCustomerGroup = _selectList.getCustomerGroup();
+
+
+            var username = HttpContext.Session.GetString("username") ?? "System";
+            var customerGroups = _context.UserXCustomers
+                .Where(x => x.UserName == username)
+                .Select(x => x.CustomerMain)
+                .Distinct()
+                .Join(_context.CustomerGroups,
+                      custMain => custMain,
+                      cg => cg.MAIN_CUST,
+                      (custMain, cg) => cg)
+                .ToList();
+
+            var customerGroupAllowed = customerGroups
+                .Select(x => x.SUB_CODE)
+                .Distinct()
+                .ToList();
+            ViewBag.ListCustomerGroup = _context.CustomerGroups
+            .Where(o => customerGroupAllowed.Contains(o.SUB_CODE))
+            .Select(c => new SelectListItem
+            {
+                Value = c.SUB_CODE,
+                Text = c.SUB_CODE,
+            }).ToList();
+
+
+            //ViewBag.ListCustomer = _selectList.getCustomers();
+            //ViewBag.ListCustomerGroup = _selectList.getCustomerGroup();
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
             ViewBag.ListOrigin = _selectList.GetOrigins();
@@ -253,14 +286,21 @@ namespace TMSBilling.Controllers
 
             var customerApi = await _context.Customers.AnyAsync(cs => cs.MAIN_CUST == customerGroup.MAIN_CUST && cs.API_FLAG == 1);
 
+            var GeofenceStartingPoint = await _context.Geofences.FirstOrDefaultAsync(f => f.Id == Header.starting_point);
+
+            if (GeofenceStartingPoint != null) {
+                Header.starting_point = GeofenceStartingPoint.GeofenceId;
+            }
+
             if (customerApi)
             {
                 var run = await RunSaveWithApi(Header, Details, jobid);
-                if (!run.ok)
-                    return BadRequest(new { success = false, message = run.message });
+                if (!run.ok) return BadRequest(new { success = false, message = run.message });
             }
             else {
-                    return BadRequest(new { success = false, message = "Customer not using API" });
+                    //return BadRequest(new { success = false, message = "Customer not using API" });
+                var run = await RunSaveWithOutApi(Header, Details, jobid);
+                if (!run.ok) return BadRequest( new { success = false, message = run.message });
             }
 
             return Json(new { success = true, message = "Job saved successfully" });
@@ -662,6 +702,221 @@ namespace TMSBilling.Controllers
             return (true, "OK");
         }
 
+
+        private async Task<(bool ok, string message)> RunSaveWithOutApi(
+            HeaderFormJob Header,
+            List<OrderForJobForm> Details,
+            string? jobid
+        )
+        {
+
+            if (Details == null || Details.Count == 0)
+            {
+                return (false, "Order detail not found.");
+            }
+
+            var CostRate = _context.PriceBuys.FirstOrDefault(hm =>
+            hm.sup_code == Header.vendor_id
+            && hm.origin == Header.origin_id
+            && hm.dest == Header.dest_area
+            && hm.serv_moda == Header.serv_moda
+            && hm.truck_size == Header.truck_size);
+
+            if (CostRate == null)
+            {
+                return (false, "Header, price buy not found");
+            }
+
+            var OriginIsMatch = false;
+            var DestinationMatch = false;
+
+            // check origin order min 1 is match
+            foreach (var oro in Details)
+            {
+                if (CostRate.origin == oro.origin_id)
+                {
+                    OriginIsMatch = true;
+                    break;
+                }
+            }
+
+            if (!OriginIsMatch)
+            {
+                return (false, $"Origin not found in order. Required origin: {CostRate.origin}");
+            }
+
+            // check destination order min 1 is match
+            foreach (var ordes in Details)
+            {
+                if (CostRate.dest == ordes.dest_area)
+                {
+                    DestinationMatch = true;
+                    break;
+                }
+            }
+
+            if (!DestinationMatch)
+            {
+                return (false, $"Destination not found in order. Required destination : {CostRate.dest}");
+            }
+
+
+            foreach (var ord in Details)
+            {
+                var orderExisting = _context.Orders.FirstOrDefault(or => or.inv_no == ord.inv_no);
+                if (orderExisting == null)
+                {
+                    return (false, "Order not found");
+                }
+
+                var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == orderExisting.sub_custid);
+
+                if (customerGroup == null)
+                {
+                    return (false, "Customer group not found");
+                }
+
+                var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
+
+                if (customer == null)
+                {
+                    return (false, "Customer not found");
+                }
+
+
+                var SellRateCheck = _context.PriceSells.FirstOrDefault(sr =>
+                                    sr.cust_code == customer.MAIN_CUST
+                                    && sr.origin == orderExisting.origin_id
+                                    && sr.dest == orderExisting.dest_area
+                                    && sr.truck_size == orderExisting.truck_size
+                                    && sr.serv_type == orderExisting.serv_req
+                                    && sr.serv_moda == orderExisting.moda_req
+                                    && sr.charge_uom == orderExisting.uom
+                                    );
+                if (SellRateCheck == null)
+                {
+                    return (false, "Sell rate not found for INV " + orderExisting.inv_no);
+
+                }
+            }
+
+            var jobPrefix = _context.Configs
+                .Where(x => x.key == "job-prefix")
+                .Select(x => x.value)
+                .FirstOrDefault();
+            string monthPrefix = jobPrefix + DateTime.Now.ToString("yyMM");
+
+            // Hitung jumlah jobid yang sudah ada untuk bulan ini
+            int existingCount = _context.JobHeaders
+                .Where(j => j.jobid != null && j.jobid.StartsWith(monthPrefix))
+                .Count();
+
+            // Buat jobid baru
+
+            string newJobId = jobid ?? GenerateJobId(existingCount + 1);
+
+            //return Json(new { success = true, message = "BOLEH LANJUT, JOB ID : "+jobid });
+
+            // awal kosong
+            var deliveryOrderIds = new List<string>();
+            var mceasy_job_id = string.Empty;
+
+
+            // BAGIAN INSERT NEW JOB ADA DISINI
+            var result = InsertOrderToJob(Details, newJobId, Header, CostRate);
+
+            if (!result.ok)
+                return (false, result.message);
+
+            deliveryOrderIds = result.deliveryOrderIds;
+
+
+
+            if (!string.IsNullOrEmpty(jobid))
+            {
+
+                var jobHeader = _context.JobHeaders.FirstOrDefault(jo => jo.jobid == jobid);
+                if (jobHeader != null)
+                {
+                    jobHeader.cust_group = Header.cust_group;
+                    jobHeader.vendor_plan = Header.vendor_id;
+                    jobHeader.vendor_act = Header.vendor_act;
+                    jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                    jobHeader.pickup_date = Header.pickup_date;
+                    jobHeader.deliv_date = Header.dvdate;
+                    jobHeader.charge_uom = Header.charge_uom;
+                    jobHeader.dest = Header.dest_area;
+                    jobHeader.origin = Header.origin_id;
+                    jobHeader.driver_name = Header.driver_name;
+                    jobHeader.serv_moda = Header.serv_moda;
+                    jobHeader.serv_type = Header.serv_type;
+                    jobHeader.truck_size = Header.truck_size;
+                    jobHeader.truck_no = Header.truck_id;
+                    jobHeader.multidrop = Header.multidrop;
+                    jobHeader.multitrip = Header.multitrip;
+                    jobHeader.ritase_seq = Header.ritase_seq;
+                    jobHeader.job_type = Header.job_type;
+                    jobHeader.update_user = HttpContext.Session.GetString("username") ?? "System";
+                    jobHeader.update_date = DateTime.Now;
+
+                    
+                    _context.JobHeaders.Update(jobHeader);
+
+
+                    // delete existing job first
+                    var jobExistingList = _context.Jobs.Where(j => j.jobid == jobid).ToList();
+
+                    if (jobExistingList.Any())
+                    {
+                        Console.WriteLine("DELETE JOB : {0}", jobid);
+                        var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_JOB WHERE jobid = {0}", jobid);
+                        Console.WriteLine("Rows delete affected: " + rows);
+                    }
+
+                    var rowUpd = _context.Database.ExecuteSqlRaw("UPDATE TRC_ORDER SET order_status = 0, jobid = NULL WHERE jobid = {0}", jobid);
+                    Console.WriteLine("Rows update affected: " + rowUpd);
+                }
+                else
+                {
+                    return (false, "Data job not found!");
+                }
+            }
+            else
+            {
+                var jobHeader = new JobHeader();
+                jobHeader.jobid = newJobId;
+                jobHeader.cust_group = Header.cust_group;
+                jobHeader.vendor_plan = Header.vendor_id;
+                jobHeader.vendor_act = Header.vendor_act;
+                jobHeader.is_vendor = Header.vendor_id == Header.vendor_act ? true : false;
+                jobHeader.pickup_date = Header.pickup_date;
+                jobHeader.deliv_date = Header.dvdate;
+                jobHeader.charge_uom = Header.charge_uom;
+                jobHeader.dest = Header.dest_area;
+                jobHeader.origin = Header.origin_id;
+                jobHeader.driver_name = Header.driver_name;
+                jobHeader.serv_moda = Header.serv_moda;
+                jobHeader.serv_type = Header.serv_type;
+                jobHeader.truck_size = Header.truck_size;
+                jobHeader.truck_no = Header.truck_id;
+                jobHeader.multidrop = Header.multidrop;
+                jobHeader.multitrip = Header.multitrip;
+                jobHeader.ritase_seq = Header.ritase_seq;
+                jobHeader.job_type = Header.job_type;
+                jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
+                jobHeader.entry_date = DateTime.Now;
+                //jobHeader.starting_point = Header.starting_point;
+                jobHeader.status_job = "DRAFT";
+
+                _context.JobHeaders.Add(jobHeader);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return (true, "OK");
+        }
+
+
         private (bool ok, string message, List<string> deliveryOrderIds) InsertOrderToJob(
             IEnumerable<OrderForJobForm> Details,
             String newJobId,
@@ -778,7 +1033,7 @@ namespace TMSBilling.Controllers
                 }
 
                 return (true, "OK", deliveryOrderIds);
-            }
+        }
 
 
         private string GenerateJobId(int sequence)
@@ -885,15 +1140,33 @@ namespace TMSBilling.Controllers
 
         public async Task<IActionResult> GetOrders(string originId, string destArea, DateTime pickupDate, DateTime deliveryDate, bool multidrop)
         {
+
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
+            var customerGroups = _context.UserXCustomers
+                .Where(x => x.UserName == username)
+                .Select(x => x.CustomerMain)
+                .Distinct()
+                .Join(_context.CustomerGroups,
+                      custMain => custMain,
+                      cg => cg.MAIN_CUST,
+                      (custMain, cg) => cg)
+                .ToList();
+
+            var customerGroupAllowed = customerGroups
+                .Select(x => x.SUB_CODE)
+                .Distinct()
+                .ToList();
+
             var allowedStatus = new[] { "Dikonfirmasi", "Dijadwalkan" };
 
             var query = _context.Orders
                 .Where(o =>
                     o.origin_id == originId &&
                     EF.Functions.DateDiffDay(o.pickup_date, pickupDate) == 0 &&
-                    //EF.Functions.DateDiffDay(o.delivery_date, deliveryDate) == 0 &&
                     allowedStatus.Contains(o.mceasy_status) &&
-                    o.jobid == null
+                    o.jobid == null &&
+                    customerGroupAllowed.Contains(o.sub_custid)
                 );
 
             if (!multidrop)
@@ -918,6 +1191,171 @@ namespace TMSBilling.Controllers
             .ToListAsync();
             return Ok(new { success = true, data = result });
         }
+
+
+        [HttpPost]
+        [Route("Job/BulkJobPod")]
+        public IActionResult BulkJobPod([FromBody] List<int> orderIds)
+        {
+            if (orderIds == null || !orderIds.Any())
+            {
+                return Json(new { success = false, message = "No data received" });
+            }
+
+            // Simpan ke TempData / Session untuk halaman edit
+            HttpContext.Session.SetString(
+                "BulkOrderIds",
+                string.Join(",", orderIds)
+            );
+
+            return Json(new
+            {
+                success = true,
+                redirectUrl = Url.Action("JobPod", "Job")
+            });
+        }
+
+        public IActionResult JobPod()
+        {
+            var ids = HttpContext.Session.GetString("BulkOrderIds");
+
+            if (string.IsNullOrEmpty(ids))
+                return Content("SESSION KOSONG");
+
+            var orderIdList = ids.Split(',').Select(int.Parse).ToList();
+
+            // ===== HEADER =====
+            var headers = _context.JobHeaders
+                .Where(h => orderIdList.Contains(h.id_seq))
+                .Select(h => new {
+                    h.jobid,
+                    h.deliv_date,
+                    h.origin,
+                    h.dest,
+                    h.vendor_act,
+                    h.status_job
+                })
+                .ToList();
+
+            var jobIds = headers.Select(x => x.jobid).ToList();
+
+            // ===== DETAIL =====
+            var details =
+            (from j in _context.Jobs
+             join p in _context.JobPODs
+                 on j.inv_no equals p.inv_no into podGroup
+             from pod in podGroup.DefaultIfEmpty()
+             where jobIds.Contains(j.jobid)
+             select new
+             {
+                 j.jobid,
+                 j.inv_no,
+
+                 outorigin_date = pod.outorigin_date == null
+                     ? null
+                     : pod.outorigin_date.Value.ToString("yyyy-MM-dd"),
+
+                 arriv_date = pod.arriv_date == null
+                     ? null
+                     : pod.arriv_date.Value.ToString("yyyy-MM-dd"),
+
+                 pod_ret_date = pod.pod_ret_date == null
+                     ? null
+                     : pod.pod_ret_date.Value.ToString("yyyy-MM-dd"),
+
+                 pod_send_date = pod.pod_send_date == null
+                     ? null
+                     : pod.pod_send_date.Value.ToString("yyyy-MM-dd"),
+
+                 pod.outorigin_time,
+                 pod.arriv_time,
+                 pod.arriv_pic,
+                 pod.pod_ret_time,
+                 pod.pod_ret_pic,
+                 pod.pod_send_time,
+                 pod.pod_send_pic,
+                 pod.pod_status,
+                 pod.spd_no,
+                 pod.pod_remark
+             }).ToList();
+
+
+            ViewBag.Headers = headers;
+            ViewBag.Details = details;
+
+            return View("JobPod");
+        }
+
+        [HttpPost]
+        public IActionResult SavePod([FromBody] List<JobPOD> data)
+        {
+            if (data == null || data.Count == 0)
+                return Json(new { success = false, message = "Data kosong" });
+
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
+            foreach (var item in data)
+            {
+                // 🔎 CEK APAKAH DATA SUDAH ADA (UNTUK EDIT)
+                var existing = _context.JobPODs
+                    .FirstOrDefault(x => x.jobid == item.jobid && x.inv_no == item.inv_no);
+
+                if (existing != null)
+                {
+                    // ===== UPDATE =====
+                    existing.outorigin_date = item.outorigin_date;
+                    existing.outorigin_time = item.outorigin_time;
+                    existing.arriv_date = item.arriv_date;
+                    existing.arriv_time = item.arriv_time;
+                    existing.arriv_pic = item.arriv_pic;
+                    existing.pod_ret_date = item.pod_ret_date;
+                    existing.pod_ret_time = item.pod_ret_time;
+                    existing.pod_ret_pic = item.pod_ret_pic;
+                    existing.pod_send_date = item.pod_send_date;
+                    existing.pod_send_time = item.pod_send_time;
+                    existing.pod_send_pic = item.pod_send_pic;
+                    existing.pod_status = item.pod_status;
+                    existing.spd_no = item.spd_no;
+                    existing.pod_remark = item.pod_remark;
+
+                    existing.update_user = username;
+                    existing.update_date = DateTime.Now;
+                }
+                else
+                {
+                    // ===== INSERT =====
+                    var model = new JobPOD
+                    {
+                        jobid = item.jobid,
+                        inv_no = item.inv_no,
+                        outorigin_date = item.outorigin_date,
+                        outorigin_time = item.outorigin_time,
+                        arriv_date = item.arriv_date,
+                        arriv_time = item.arriv_time,
+                        arriv_pic = item.arriv_pic,
+                        pod_ret_date = item.pod_ret_date,
+                        pod_ret_time = item.pod_ret_time,
+                        pod_ret_pic = item.pod_ret_pic,
+                        pod_send_date = item.pod_send_date,
+                        pod_send_time = item.pod_send_time,
+                        pod_send_pic = item.pod_send_pic,
+                        pod_status = item.pod_status,
+                        spd_no = item.spd_no,
+                        pod_remark = item.pod_remark,
+                        entry_user = username,
+                        entry_date = DateTime.Now
+                    };
+
+                    _context.JobPODs.Add(model);
+                }
+            }
+
+            _context.SaveChanges();
+
+            return Json(new { success = true });
+        }
+
+
 
     }
     public class OrderForJob {

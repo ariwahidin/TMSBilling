@@ -12,6 +12,7 @@
         <tr>
             <th>Destination Name</th>
             <th>Location Code</th>
+            <th>Area</th>
             <th>Action</th>
         </tr>
     </thead>
@@ -21,6 +22,7 @@
             <tr>
                 <td>@item.destination_code</td>
                 <td>@item.dest_loccode</td>
+                <td>@item.area</td>
                 <td>
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID">
                         <i class="bi bi-pencil-square"></i>
@@ -62,7 +64,7 @@
                 });
             });
 
-            $(".btnEdit").click(function () {
+            $(document).on('click', '.btnEdit',function () {
                 const id = $(this).data("id");
                 $.get("/Destination/Form?id=" + id, function (html) {
                     $("#modalContent").html(html);
@@ -71,6 +73,7 @@
             });
 
             $(".btnDelete").click(function () {
+                return;
                 if (!confirm("Yakin hapus data ini?")) return;
                 const id = $(this).data("id");
 

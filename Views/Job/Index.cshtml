@@ -12,11 +12,15 @@
     <button id="btnSyncJob" class="btn btn-info btn-sm">
         <i class="bi bi-check-circle"></i> Sync Job
     </button>
+    <button id="btnBulkConfirm" class="btn btn-warning btn-sm" style="display:none;">
+        <i class="bi bi-check-circle"></i> POD Selected (<span id="selectedCount">0</span>)
+    </button>
 </div>
 
 <table class="table table-sm table-bordered table-hover table-striped align-middle" id="tableJob">
     <thead class="table-light">
         <tr>
+            <th><input type="checkbox" id="checkAll" title="Select All"></th>
             <th>#</th>
             <th>Job ID</th>
             <th>Status</th>
@@ -29,6 +33,7 @@
             <th class="text-center">Action</th>
         </tr>
         <tr>
+            <th></th>
             <th></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Job ID"></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Status"></th>
@@ -47,6 +52,9 @@
             foreach (var item in Model)
             {
                 <tr>
+                    <td>
+                      <input type="checkbox" class="order-checkbox" data-order-id="@item.IdSeq">
+                    </td>
                     <td>@i</td>
                     <td>@item.JobId</td>
                     <td>@item.MCStatus</td>
@@ -150,6 +158,103 @@
                 });
             });
         });
+    </script>
+
+    <script>
+        let selectedOrders = new Set();
+
+        function updateSelectedCount() {
+            const count = selectedOrders.size;
+            $('#selectedCount').text(count);
+            $('#btnBulkConfirm').toggle(count > 0);
+        }
+
+        function updateCheckAllStatus() {
+            const visibleCheckboxes = $('.order-checkbox:visible');
+            const checkedVisible = visibleCheckboxes.filter(':checked').length;
+
+            if (visibleCheckboxes.length === 0) {
+                $('#checkAll').prop('checked', false).prop('indeterminate', false);
+            } else if (checkedVisible === 0) {
+                $('#checkAll').prop('checked', false).prop('indeterminate', false);
+            } else if (checkedVisible === visibleCheckboxes.length) {
+                $('#checkAll').prop('checked', true).prop('indeterminate', false);
+            } else {
+                $('#checkAll').prop('checked', false).prop('indeterminate', true);
+            }
+        }
+
+        // Check All handler
+        $('#checkAll').on('change', function() {
+            const isChecked = $(this).prop('checked');
+            $('.order-checkbox:visible').each(function() {
+                const orderId = $(this).data('order-id');
+                $(this).prop('checked', isChecked);
+
+                if (isChecked) {
+                    selectedOrders.add(orderId);
+                } else {
+                    selectedOrders.delete(orderId);
+                }
+            });
+            updateSelectedCount();
+        });
+
+        // Individual checkbox handler
+        $(document).on('change', '.order-checkbox', function() {
+            const orderId = $(this).data('order-id');
+
+            if ($(this).prop('checked')) {
+                selectedOrders.add(orderId);
+            } else {
+                selectedOrders.delete(orderId);
+            }
+
+            updateSelectedCount();
+            updateCheckAllStatus();
+        });
+
+        function bulkConfirmOrders() {
+            if (selectedOrders.size === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Selection',
+                    text: 'Please select at least one order to POD Job.'
+                });
+                return;
+            }
+
+            const orderIds = Array.from(selectedOrders);
+
+            console.log("Order Selecteds : ", orderIds);
+
+            fetch('/Job/BulkJobPod', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderIds)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    // pindah ke halaman edit
+                    window.location.href = res.redirectUrl;
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Server error', 'error');
+            });
+        }
+
+
+        // Bulk confirm button handler
+        $('#btnBulkConfirm').on('click', bulkConfirmOrders);
+
+
     </script>
 
     <style>

@@ -334,10 +334,6 @@
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Driver Name:</label>
                                 <div class="col-sm-8">
-                                    @* <select id="drivername" asp-for="Header.driver_name" class="form-select form-select-sm">
-                                        <option value="Budi Santoso" selected>Budi Santoso</option>
-                                        <option value="Ahmad Yani">Ahmad Yani</option>
-                                    </select> *@
                                     <input style="font-size:12px" id="drivername" asp-for="Header.driver_name" class="form-control" type="text" />
                                 </div>
                             </div>
@@ -697,7 +693,7 @@
                         tbody.append(row);
                     });
 
-                    updateModalSelectedCount(); // kalau kamu punya fungsi ini
+                    updateModalSelectedCount();
                 },
                 error: function (xhr) {
                     console.error("Error:", xhr.responseText);

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
@@ -8,10 +9,12 @@ using TMSBilling.Models;
 public class DestinationController : Controller
 {
     private readonly AppDbContext _context;
+    private readonly SelectListService _selectList;
 
-    public DestinationController(AppDbContext context)
+    public DestinationController(AppDbContext context, SelectListService selectList)
     {
         _context = context;
+        _selectList = selectList;
     }
 
     public IActionResult Index()
@@ -22,6 +25,8 @@ public class DestinationController : Controller
 
     public IActionResult Form(int? id)
     {
+        ViewBag.ListArea = _selectList.getArea();
+
         if (id == null)
         {
             return PartialView("_Form", new Destination
@@ -70,6 +75,7 @@ public class DestinationController : Controller
 
             existing.destination_code = model.destination_code;
             existing.dest_loccode = model.dest_loccode;
+            existing.area = model.area;
             existing.updateuser = HttpContext.Session.GetString("username") ?? "System"; ;
             existing.updatedate = DateTime.Now;
         }
