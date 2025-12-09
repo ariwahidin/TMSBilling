@@ -208,7 +208,8 @@ public class SelectListService
         {
             new SelectListItem { Value = "NORMAL", Text = "NORMAL" },
             new SelectListItem { Value = "RETURN", Text = "RETURN" },
-            new SelectListItem { Value = "STOCK", Text = "STOCK" },
+            new SelectListItem { Value = "STORAGE", Text = "STORAGE" },
+            new SelectListItem { Value = "OTHER", Text = "OTHER" },
         };
     }
 
