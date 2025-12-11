@@ -189,6 +189,12 @@ namespace TMSBilling.Controllers
                     return View(vm);
                 }
 
+                var geofence = _context.Geofences.FirstOrDefault(f => f.GeofenceId == jobHeader.starting_point);
+
+                if (geofence == null) { return View(vm); }
+
+                jobHeader.starting_point = geofence.Id;
+
                 vm.Header = jobHeader;
             }
 
@@ -695,6 +701,27 @@ namespace TMSBilling.Controllers
                 jobHeader.status_job = "DRAFT";
 
                 _context.JobHeaders.Add(jobHeader);
+            }
+
+
+            // Update field custom Order Type [udf2] dan Bisnis unit [udf4] 
+            var payloadFieldCustome = new
+            {
+                udf2 = Header.serv_type,
+                udf4 = Header.vendor_act,
+            };
+
+            foreach (var idUpd in deliveryOrderIds)
+            {
+                var (oks1, jsons1) = await _apiService.SendRequestAsync(
+                    HttpMethod.Patch,
+                    $"order/api/web/v1/delivery-order/{idUpd}",
+                    payloadFieldCustome
+                );
+                //if (!oks1)
+                //{
+                //    return (false, "GAGAL UPDATE CUSTOM FIELD");
+                //}
             }
 
             await _context.SaveChangesAsync();
