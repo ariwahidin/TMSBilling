@@ -60,9 +60,60 @@ namespace TMSBilling.Controllers
             return order;
         }
 
-        private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
+        //    private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
+        //    {
+        //        var username = HttpContext.Session.GetString("username") ?? "System";
+
+        //        var sql = @"
+        //            WITH od AS (
+        //                SELECT 
+        //                    id_seq_order, 
+        //                    COUNT(item_name) AS total_item,
+        //                    SUM(item_qty) AS total_qty
+        //                FROM TRC_ORDER_DTL
+        //                GROUP BY id_seq_order
+        //            ),
+        //            ord AS (SELECT 
+        //                a.id_seq AS IdSeq, 
+        //                a.wh_code AS WhCode, 
+        //                a.sub_custid AS SubCustId,
+        //                a.cnee_code AS CneeCode,
+        //                a.inv_no AS InvNo,
+        //                CAST(a.pickup_date AS date) AS PickupDate,
+        //                CAST(a.delivery_date AS date) AS DeliveryDate,
+        //                a.origin_id AS OriginId,
+        //                a.dest_area AS DestArea,
+        //                a.order_status AS OrderStatus,
+        //                a.mceasy_status AS MCOrderStatus,
+        //                a.mceasy_order_id AS McEasyOrderId,
+        //                COALESCE(od.total_item, 0) AS TotalItem,
+        //                COALESCE(od.total_qty, 0) AS TotalQty
+        //            FROM TRC_ORDER a 
+        //            LEFT JOIN od ON a.id_seq = od.id_seq_order
+        //            LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id)
+        //SELECT ord.*, b.jobid AS JobID, c.MAIN_CUST
+        //FROM ord 
+        //LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
+        //INNER JOIN TRC_CUST_GROUP c ON ord.SubCustId = c.SUB_CODE
+        //INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+        //WHERE d.Username = {0}
+        //ORDER BY ord.IdSeq DESC
+        //        ";
+
+        //        return _context.OrderSummaryView.FromSqlRaw(sql,username);
+        //    }
+
+
+        private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery(DateTime? startDate = null, DateTime? endDate = null)
         {
             var username = HttpContext.Session.GetString("username") ?? "System";
+
+            // Set default date range (last 7 days) if not provided
+            if (!startDate.HasValue)
+                startDate = DateTime.Now.AddDays(-7).Date;
+
+            if (!endDate.HasValue)
+                endDate = DateTime.Now.Date;
 
             var sql = @"
                 WITH od AS (
@@ -90,24 +141,35 @@ namespace TMSBilling.Controllers
                     COALESCE(od.total_qty, 0) AS TotalQty
                 FROM TRC_ORDER a 
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
-                LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id)
-				SELECT ord.*, b.jobid AS JobID, c.MAIN_CUST
-				FROM ord 
-				LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
-				INNER JOIN TRC_CUST_GROUP c ON ord.SubCustId = c.SUB_CODE
-				INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
-				WHERE d.Username = {0}
-				ORDER BY ord.IdSeq DESC
+                LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
+                WHERE CAST(a.pickup_date AS date) BETWEEN {1} AND {2})
+                SELECT ord.*, b.jobid AS JobID, c.MAIN_CUST
+                FROM ord 
+                LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
+                INNER JOIN TRC_CUST_GROUP c ON ord.SubCustId = c.SUB_CODE
+                INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+                WHERE d.Username = {0}
+                ORDER BY ord.IdSeq DESC
             ";
 
-            return _context.OrderSummaryView.FromSqlRaw(sql,username);
+            return _context.OrderSummaryView.FromSqlRaw(sql, username, startDate.Value, endDate.Value);
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
         {
-            var data = await GetOrderSummaryQuery().ToListAsync();
+            // Set default values to ViewBag for the date inputs
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(-7).ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd");
+
+            var data = await GetOrderSummaryQuery(startDate, endDate).ToListAsync();
             return View(data);
         }
+
+        //public async Task<IActionResult> Index()
+        //{
+        //    var data = await GetOrderSummaryQuery().ToListAsync();
+        //    return View(data);
+        //}
 
         public async Task<IActionResult> IndexSync()
         {

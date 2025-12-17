@@ -3,6 +3,10 @@
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Order List";
 }
+
+
+
+
 <div class="mb-3">
     <a href="/Order/Form" class="btn btn-primary btn-sm">
         <i class="bi bi-plus"></i> Create New Order
@@ -21,6 +25,36 @@
     </button>
 </div>
 
+<!-- Date Range Filter Section -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" action="/Order/Index" id="dateFilterForm">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label for="startDate" class="form-label mb-1 small">Pickup Date From</label>
+                    <input type="date" class="form-control form-control-sm" id="startDate" name="startDate"
+                           value="@ViewBag.StartDate" />
+                </div>
+                <div class="col-md-3">
+                    <label for="endDate" class="form-label mb-1 small">Pickup Date To</label>
+                    <input type="date" class="form-control form-control-sm" id="endDate" name="endDate"
+                           value="@ViewBag.EndDate" />
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnResetFilter">
+                        <i class="bi bi-arrow-clockwise"></i> Reset
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToday">Today</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnThisWeek">This Week</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnThisMonth">This Month</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
 <table class="table table-bordered table-hover table-striped table-sm align-middle compact" id="tableOrder">
     <thead class="table-light">
@@ -375,6 +409,37 @@
             });
         }
 
+        // Date filter quick buttons
+        function setDateRange(days) {
+            const today = new Date();
+            const endDate = today.toISOString().split('T')[0];
+            const startDate = new Date(today.setDate(today.getDate() - days)).toISOString().split('T')[0];
+
+            $('#startDate').val(startDate);
+            $('#endDate').val(endDate);
+            $('#dateFilterForm').submit();
+        }
+
+        function setThisWeek() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+
+            $('#startDate').val(monday.toISOString().split('T')[0]);
+            $('#endDate').val(new Date().toISOString().split('T')[0]);
+            $('#dateFilterForm').submit();
+        }
+
+        function setThisMonth() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            $('#startDate').val(firstDay.toISOString().split('T')[0]);
+            $('#endDate').val(today.toISOString().split('T')[0]);
+            $('#dateFilterForm').submit();
+        }
+
         $(document).ready(() => {
 
             dataTable = $('#tableOrder').DataTable({
@@ -490,6 +555,21 @@
 
             // Bulk Download button handler'
             $('#btnBulkDownload').on('click', bulkDownloadOrder);
+
+
+            // Date filter button handlers
+            $('#btnResetFilter').on('click', function() {
+                window.location.href = '/Order/Index';
+            });
+
+            $('#btnToday').on('click', function() {
+                setDateRange(0);
+            });
+
+            $('#btnThisWeek').on('click', setThisWeek);
+
+            $('#btnThisMonth').on('click', setThisMonth);
+
 
             // Initial sync
             syncCheckboxes();
