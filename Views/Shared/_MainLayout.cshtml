@@ -187,7 +187,7 @@
                             <span class="nav-text">Transaction</span>
                         </a>
 
-                        <div class="collapse submenu @(IsControllerActive("Order", "OrderDetail", "Job") ? "show" : "")" id="transactionMenu">
+                        <div class="collapse submenu @(IsControllerActive("Order", "OrderDetail", "Job", "KmOrder") ? "show" : "")" id="transactionMenu">
                             <a href="/Order/Index" class="nav-link @(IsControllerActive("Order") ? "active" : "")">
                                 <i class="bi bi-card-checklist"></i>
                                 <span class="nav-text">Order</span>
@@ -195,6 +195,10 @@
                             <a href="/Job/Index" class="nav-link @(IsControllerActive("Job") ? "active" : "")">
                                 <i class="bi bi-card-checklist"></i>
                                 <span class="nav-text">Job</span>
+                            </a>
+                            <a href="/KmOrder/Index" class="nav-link @(IsControllerActive("KmOrder") ? "active" : "")">
+                                <i class="bi bi-card-checklist"></i>
+                                <span class="nav-text">KM Monitoring</span>
                             </a>
                         </div>
                     </div>

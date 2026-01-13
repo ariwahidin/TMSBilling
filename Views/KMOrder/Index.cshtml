@@ -1,0 +1,491 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "KM Monitoring";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
+}
+
+<style>
+    #kmTable {
+        font-size: 12px;
+    }
+
+        #kmTable th,
+        #kmTable td {
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+    .filter-section {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                @* <div class="card-header">
+                    <h4 class="card-title">KM Monitoring</h4> <span></span>
+                </div> *@
+                <div class="card-body">
+                    <!-- Filter Section -->
+                    <div class="filter-section">
+                        <form id="filterForm">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="startDate">Start Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="startDate" name="startDate">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="endDate">End Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="endDate" name="endDate">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label for="servReq">Service</label>
+                                        <select class="form-control form-control-sm" id="servReq" name="servReq">
+                                            <option value="">All</option>
+                                            @foreach (var serv in ViewBag.ServReqList)
+                                            {
+                                                <option value="@serv">@serv</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label for="uom">Charge UOM</label>
+                                        <select class="form-control form-control-sm" id="uom" name="uom">
+                                            <option value="">All</option>
+                                            @foreach (var u in ViewBag.UomList)
+                                            {
+                                                <option value="@u">@u</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <div>
+                                            <button type="button" class="btn btn-primary btn-sm btn-block" id="btnFilter">
+                                                <i class="fas fa-search"></i> Filter
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm btn-block" id="btnReset">
+                                                <i class="fas fa-redo"></i> Reset
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Table Section -->
+                    <div class="table-responsive">
+                        <table id="kmTable" class="table table-bordered table-striped table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">No</th>
+                                    <th>Invoice No</th>
+                                    <th>Delivery Date</th>
+                                    <th>Customer</th>
+                                    <th>Destination</th>
+                                    <th>Service</th>
+                                    <th>UOM</th>
+                                    <th>KM</th>
+                                    <th style="white-space:nowrap">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr>
+                                    <td colspan="9" class="text-center">
+                                        <i class="fas fa-info-circle"></i> Silakan gunakan filter untuk menampilkan data
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Add/Edit KM -->
+<div class="modal fade" id="kmModal" tabindex="-1" role="dialog" aria-labelledby="kmModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="kmModalLabel">Add KM</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="kmForm">
+                <div class="modal-body">
+                    <input type="hidden" id="kmId" name="id">
+                    <input type="hidden" id="orderId" name="order_id">
+
+                    <div class="form-group">
+                        <label for="invNo">Invoice No</label>
+                        <input type="text" class="form-control" id="invNo" name="inv_no" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="km">KM <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="km" name="km" required min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var dataTable;
+        var isAdmin = @(isAdmin ? "true" : "false");
+
+        $(document).ready(function() {
+            // Initialize DataTable
+            dataTable = $('#kmTable').DataTable({
+                "responsive": true,
+                "lengthChange": true,
+                "autoWidth": false,
+                "ordering": true,
+                "order": [[0, 'asc']],
+                "pageLength": 25,
+                "language": {
+                    "emptyTable": "Tidak ada data ditemukan",
+                    "zeroRecords": "Tidak ada data yang sesuai dengan filter"
+                },
+                "columns": [
+                    { "data": null, "defaultContent": "" },
+                    { "data": "inv_no", "defaultContent": "-" },
+                    { "data": "delivery_date", "defaultContent": "-" },
+                    { "data": "sub_custid", "defaultContent": "-" },
+                    { "data": "dest_area", "defaultContent": "-" },
+                    { "data": "serv_req", "defaultContent": "-" },
+                    { "data": "uom", "defaultContent": "-" },
+                    { "data": null, "defaultContent": "" },
+                    { "data": null, "defaultContent": "" }
+                ],
+                "columnDefs": [
+                    {
+                        "targets": 0,
+                        "render": function(data, type, row, meta) {
+                            return meta.row + 1;
+                        }
+                    },
+                    {
+                        "targets": 7,
+                        "render": function(data, type, row) {
+                            if (row.kmOrder) {
+                                return '<span class="">' + row.kmOrder.km + ' KM</span>';
+                            } else {
+                                return '<span class="">Belum ada</span>';
+                            }
+                        }
+                    },
+                    {
+                        "targets": 8,
+                        "orderable": false,
+                        "render": function(data, type, row) {
+                            var buttons = '';
+                            if (row.kmOrder) {
+                                buttons = '<button type="button" class="btn btn-sm btn-primary btn-edit" ' +
+                                    'data-id="' + row.kmOrder.id + '" ' +
+                                    'data-orderid="' + row.id_seq + '" ' +
+                                    'data-invno="' + (row.inv_no || '') + '" ' +
+                                    'data-km="' + row.kmOrder.km + '">' +
+                                    '<i class="fas fa-edit"></i> Edit' +
+                                    '</button> ';
+
+                                if (isAdmin) {
+                                    buttons += '<button type="button" class="btn btn-sm btn-danger btn-delete" ' +
+                                        'data-id="' + row.kmOrder.id + '">' +
+                                        '<i class="fas fa-trash"></i>' +
+                                        '</button>';
+                                }
+                            } else {
+                                buttons = '<button type="button" class="btn btn-sm btn-success btn-add" ' +
+                                    'data-orderid="' + row.id_seq + '" ' +
+                                    'data-invno="' + (row.inv_no || '') + '">' +
+                                    '<i class="fas fa-plus"></i> Add KM' +
+                                    '</button>';
+                            }
+                            return buttons;
+                        }
+                    }
+                ]
+            });
+
+            // Set default dates (current month)
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            $('#startDate').val(formatDate(firstDay));
+            $('#endDate').val(formatDate(today));
+
+            // Load data on page load
+            loadData();
+
+            // Filter button
+            $('#btnFilter').on('click', function() {
+                loadData();
+            });
+
+            // Reset button
+            $('#btnReset').on('click', function() {
+                $('#filterForm')[0].reset();
+                var today = new Date();
+                var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                $('#startDate').val(formatDate(firstDay));
+                $('#endDate').val(formatDate(today));
+                loadData();
+            });
+
+            // Enter key to filter
+            $('#filterForm input, #filterForm select').on('keypress', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    loadData();
+                }
+            });
+        });
+
+        function formatDate(date) {
+            var d = new Date(date),
+                month = '' + (d.getMonth() + 1),
+                day = '' + d.getDate(),
+                year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        }
+
+        function loadData() {
+            var formData = {
+                startDate: $('#startDate').val(),
+                endDate: $('#endDate').val(),
+                servReq: $('#servReq').val(),
+                uom: $('#uom').val()
+            };
+
+            // Debug: log filter data
+            console.log('Filter Data:', formData);
+
+            $.ajax({
+                url: '@Url.Action("GetFilteredData", "KmOrder")',
+                type: 'POST',
+                data: formData,
+                beforeSend: function() {
+                    // Show loading indicator
+                    dataTable.clear().draw();
+                },
+                success: function(response) {
+                    console.log('Response:', response); // Debug
+
+                    if (response.success) {
+                        if (response.data && response.data.length > 0) {
+                            renderTable(response.data);
+
+                            // Show info
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Data Loaded',
+                                text: response.data.length + ' data ditemukan',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else {
+                            dataTable.clear().draw();
+
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'No Data',
+                                text: 'Tidak ada data yang sesuai dengan filter yang dipilih',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', xhr.responseText); // Debug
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Terjadi kesalahan: ' + error
+                    });
+                }
+            });
+        }
+
+        function renderTable(data) {
+            // Clear existing data
+            dataTable.clear();
+
+            // Add new data
+            if (data && data.length > 0) {
+                dataTable.rows.add(data);
+            }
+
+            // Redraw table
+            dataTable.draw();
+        }
+
+        // Add KM
+        $(document).on('click', '.btn-add', function() {
+            var orderId = $(this).data('orderid');
+            var invNo = $(this).data('invno');
+
+            $('#kmModalLabel').text('Add KM');
+            $('#kmForm')[0].reset();
+            $('#kmId').val('');
+            $('#orderId').val(orderId);
+            $('#invNo').val(invNo);
+            $('#km').val('');
+
+            $('#kmModal').modal('show');
+        });
+
+        // Edit KM
+        $(document).on('click', '.btn-edit', function() {
+            var id = $(this).data('id');
+            var orderId = $(this).data('orderid');
+            var invNo = $(this).data('invno');
+            var km = $(this).data('km');
+
+            $('#kmModalLabel').text('Edit KM');
+            $('#kmId').val(id);
+            $('#orderId').val(orderId);
+            $('#invNo').val(invNo);
+            $('#km').val(km);
+
+            $('#kmModal').modal('show');
+        });
+
+        // Submit Form
+        $('#kmForm').on('submit', function(e) {
+            e.preventDefault();
+
+            var id = $('#kmId').val();
+            var url = id ? '@Url.Action("Update", "KmOrder")' : '@Url.Action("Create", "KmOrder")';
+
+            var data = {
+                id: id ? parseInt(id) : 0,
+                order_id: parseInt($('#orderId').val()),
+                inv_no: $('#invNo').val(),
+                km: parseInt($('#km').val())
+            };
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    if (response.success) {
+                        $('#kmModal').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message,
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(function() {
+                            loadData();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Terjadi kesalahan: ' + error
+                    });
+                }
+            });
+        });
+
+        // Delete KM
+        $(document).on('click', '.btn-delete', function() {
+            var id = $(this).data('id');
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Data KM akan dihapus!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("Delete", "KmOrder")',
+                        type: 'POST',
+                        data: { id: id },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: response.message,
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(function() {
+                                    loadData();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message
+                                });
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Terjadi kesalahan: ' + error
+                            });
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

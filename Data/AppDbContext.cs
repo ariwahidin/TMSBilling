@@ -74,6 +74,8 @@ namespace TMSBilling.Data
 
         public DbSet<UserXCustomer> UserXCustomers { get; set; }
 
+        public DbSet<KMOrder> KMOrders { get; set; }
+
 
 
 
