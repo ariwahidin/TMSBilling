@@ -28,23 +28,35 @@
         <div class="col-12">
             <div class="card">
                 @* <div class="card-header">
-                    <h4 class="card-title">KM Monitoring</h4> <span></span>
+                    <h3 class="card-title">KM Monitoring</h3>
                 </div> *@
                 <div class="card-body">
                     <!-- Filter Section -->
                     <div class="filter-section">
                         <form id="filterForm">
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <div class="form-group">
                                         <label for="startDate">Start Date</label>
                                         <input type="date" class="form-control form-control-sm" id="startDate" name="startDate">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <div class="form-group">
                                         <label for="endDate">End Date</label>
                                         <input type="date" class="form-control form-control-sm" id="endDate" name="endDate">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label for="vendorId">Vendor</label>
+                                        <select class="form-control form-control-sm" id="vendorId" name="vendorId">
+                                            <option value="">All</option>
+                                            @foreach (var vendor in ViewBag.VendorList)
+                                            {
+                                                <option value="@vendor">@vendor</option>
+                                            }
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="col-md-2">
@@ -95,6 +107,8 @@
                                 <tr>
                                     <th style="width: 40px;">No</th>
                                     <th>Invoice No</th>
+                                    <th>Job ID</th>
+                                    <th>Vendor ID</th>
                                     <th>Delivery Date</th>
                                     <th>Customer</th>
                                     <th>Destination</th>
@@ -106,7 +120,7 @@
                             </thead>
                             <tbody id="tableBody">
                                 <tr>
-                                    <td colspan="9" class="text-center">
+                                    <td colspan="11" class="text-center">
                                         <i class="fas fa-info-circle"></i> Silakan gunakan filter untuk menampilkan data
                                     </td>
                                 </tr>
@@ -174,6 +188,8 @@
                 "columns": [
                     { "data": null, "defaultContent": "" },
                     { "data": "inv_no", "defaultContent": "-" },
+                    { "data": "jobid", "defaultContent": "-" },
+                    { "data": "vendorid", "defaultContent": "-" },
                     { "data": "delivery_date", "defaultContent": "-" },
                     { "data": "sub_custid", "defaultContent": "-" },
                     { "data": "dest_area", "defaultContent": "-" },
@@ -190,7 +206,7 @@
                         }
                     },
                     {
-                        "targets": 7,
+                        "targets": 9,
                         "render": function(data, type, row) {
                             if (row.kmOrder) {
                                 return '<span class="">' + row.kmOrder.km + ' KM</span>';
@@ -200,7 +216,7 @@
                         }
                     },
                     {
-                        "targets": 8,
+                        "targets": 10,
                         "orderable": false,
                         "render": function(data, type, row) {
                             var buttons = '';
@@ -263,6 +279,16 @@
                     loadData();
                 }
             });
+
+            // Fix modal close button - Bootstrap 4
+            $('.close').on('click', function() {
+                $('#kmModal').modal('hide');
+            });
+
+            // Alternative: using jQuery to manually close
+            $('[data-dismiss="modal"]').on('click', function() {
+                $(this).closest('.modal').modal('hide');
+            });
         });
 
         function formatDate(date) {
@@ -282,10 +308,10 @@
                 startDate: $('#startDate').val(),
                 endDate: $('#endDate').val(),
                 servReq: $('#servReq').val(),
-                uom: $('#uom').val()
+                uom: $('#uom').val(),
+                vendorId: $('#vendorId').val()
             };
 
-            // Debug: log filter data
             console.log('Filter Data:', formData);
 
             $.ajax({
@@ -293,17 +319,15 @@
                 type: 'POST',
                 data: formData,
                 beforeSend: function() {
-                    // Show loading indicator
                     dataTable.clear().draw();
                 },
                 success: function(response) {
-                    console.log('Response:', response); // Debug
+                    console.log('Response:', response);
 
                     if (response.success) {
                         if (response.data && response.data.length > 0) {
                             renderTable(response.data);
 
-                            // Show info
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Data Loaded',
@@ -335,7 +359,7 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText); // Debug
+                    console.error('AJAX Error:', xhr.responseText);
 
                     Swal.fire({
                         icon: 'error',
@@ -347,15 +371,12 @@
         }
 
         function renderTable(data) {
-            // Clear existing data
             dataTable.clear();
 
-            // Add new data
             if (data && data.length > 0) {
                 dataTable.rows.add(data);
             }
 
-            // Redraw table
             dataTable.draw();
         }
 

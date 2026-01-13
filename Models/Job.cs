@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TMSBilling.Models
@@ -49,7 +48,6 @@ namespace TMSBilling.Models
 
         public int? drop_seq { get; set; } = 0;
 
-        //public int? total_pkgs { get; set; }
 
         public int? ritase_seq { get; set; }
 
@@ -168,7 +166,6 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? entry_user { get; set; }
 
-        //public string? mceasy_job_id { get; set; }
 
         public DateTime? entry_date { get; set; }
 
