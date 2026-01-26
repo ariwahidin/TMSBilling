@@ -250,7 +250,7 @@ public class ProductController : Controller
 
         (ok, json) = await _apiService.SendRequestAsync(
             HttpMethod.Get,
-            $"order/api/web/v1/product-category?limit={limit}&page={page}&search={search}",
+            $"order/api/web/v1/product-category?limit={limit}&page={page}",
             new { }
         );
 
@@ -388,7 +388,7 @@ public class ProductController : Controller
 
         (ok, json) = await _apiService.SendRequestAsync(
             HttpMethod.Get,
-            $"order/api/web/v1/product-type?limit={limit}&page={page}&search={search}",
+            $"order/api/web/v1/product-type?limit={limit}&page={page}",
             new { }
         );
 
@@ -557,7 +557,7 @@ public class ProductController : Controller
 
         (ok, json) = await _apiService.SendRequestAsync(
             HttpMethod.Get,
-            $"order/api/web/v1/product-type?limit={limit}&page={page}&search={search}",
+            $"order/api/web/v1/product-type?limit={limit}&page={page}",
             new { }
         );
 
