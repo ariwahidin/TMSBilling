@@ -99,7 +99,7 @@ public class ProductController : Controller
                     new { }
                 );
 
-        if (!ok) throw new Exception("Failed to get product type by ud");
+        if (!ok) throw new Exception("Failed to get product type by id");
 
 
         var data = json.GetProperty("data")
@@ -388,33 +388,20 @@ public class ProductController : Controller
 
         if (id != null)
         {
-            try
+            var data = await FecthProductTypeByID(id);
+
+            if (data == null)
             {
-
-                var data = await FecthProductTypeByID(id);
-
-                if (data == null)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Data kosong dari API"
-                    });
-                }
-
-                model.id = data.id;
-                model.name = data.name;
-                model.product_category_id = data.product_category?.id;
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
+                return BadRequest(new
                 {
                     success = false,
-                    message = "Terjadi kesalahan saat memanggil API",
-                    error = ex.Message
+                    message = "Data kosong dari API"
                 });
             }
+
+            model.id = data.id;
+            model.name = data.name;
+            model.product_category_id = data.product_category?.id;
         }
 
         return PartialView("_FormType", model);
