@@ -70,64 +70,115 @@ namespace TMSBilling.Controllers
             }
         }
 
-        public async Task<IActionResult> Index()
+        //public async Task<IActionResult> Index()
+        //{
+        //    var data = await GetJobSummaryQuery().ToListAsync();
+        //    return View(data);
+        //}
+
+
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
         {
-            var data = await GetJobSummaryQuery().ToListAsync();
+            // Default: 7 hari terakhir
+            if (!startDate.HasValue)
+                startDate = DateTime.Now.AddDays(-7).Date;
+
+            if (!endDate.HasValue)
+                endDate = DateTime.Now.Date;
+
+            ViewBag.StartDate = startDate.Value.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate.Value.ToString("yyyy-MM-dd");
+
+            var data = await GetJobSummaryQuery(startDate.Value, endDate.Value).ToListAsync();
             return View(data);
         }
 
-        public async Task<IActionResult> IndexSync()
+        private IQueryable<JobSummaryViewModel> GetJobSummaryQuery(DateTime startDate, DateTime endDate)
         {
-
-            try
-            {
-                var ordersFromApi = await _sync.FetchFO();
-                var result = await _sync.SyncFOToDatabase(ordersFromApi);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error sync data: {ex.Message}");
-            }
-
-
-            var data = await GetJobSummaryQuery().ToListAsync();
-
-            return View("Index", data);
-        }
-
-        private IQueryable<JobSummaryViewModel> GetJobSummaryQuery() {
-
             var username = HttpContext.Session.GetString("username") ?? "System";
-
             var sql = @"
-                WITH tj AS (
-                    SELECT 
-                        jobid,
-                        COUNT(inv_no) AS total_do
-                    FROM TRC_JOB
-                    GROUP BY jobid
-                )
-                SELECT 
-                    a.id_seq AS IdSeq,
-                    a.jobid AS JobId,
-                    a.truck_no AS TruckNo,
-                    a.deliv_date AS DelivDate,
-                    a.origin AS Origin,
-                    a.dest AS Dest,
-				                mc_fo.status AS MCStatus,
-                    a.vendor_plan AS VendorPlan,
-                    COALESCE(tj.total_do, 0) AS TotalDo
-                FROM TRC_JOB_H a
-                LEFT JOIN tj ON a.jobid = tj.jobid
-                LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
-                INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
-                INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
-                WHERE d.Username = {0}
-                ORDER BY a.id_seq DESC
-            ";
-
-            return _context.JobSummaryView.FromSqlRaw(sql,username);
+        WITH tj AS (
+            SELECT 
+                jobid,
+                COUNT(inv_no) AS total_do
+            FROM TRC_JOB
+            GROUP BY jobid
+        )
+        SELECT 
+            a.id_seq AS IdSeq,
+            a.jobid AS JobId,
+            a.truck_no AS TruckNo,
+            a.deliv_date AS DelivDate,
+            a.origin AS Origin,
+            a.dest AS Dest,
+            mc_fo.status AS MCStatus,
+            a.vendor_plan AS VendorPlan,
+            COALESCE(tj.total_do, 0) AS TotalDo
+        FROM TRC_JOB_H a
+        LEFT JOIN tj ON a.jobid = tj.jobid
+        LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
+        INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
+        INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+        WHERE d.Username = {0}
+            AND a.deliv_date >= {1}
+            AND a.deliv_date <= {2}
+        ORDER BY a.id_seq DESC
+    ";
+            return _context.JobSummaryView.FromSqlRaw(sql, username, startDate, endDate);
         }
+
+        //public async Task<IActionResult> IndexSync()
+        //{
+
+        //    try
+        //    {
+        //        var ordersFromApi = await _sync.FetchFO();
+        //        var result = await _sync.SyncFOToDatabase(ordersFromApi);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Error sync data: {ex.Message}");
+        //    }
+
+
+        //    var data = await GetJobSummaryQuery().ToListAsync();
+
+        //    return View("Index", data);
+        //}
+
+        //private IQueryable<JobSummaryViewModel> GetJobSummaryQuery() {
+
+        //    var username = HttpContext.Session.GetString("username") ?? "System";
+
+        //    var sql = @"
+        //        WITH tj AS (
+        //            SELECT 
+        //                jobid,
+        //                COUNT(inv_no) AS total_do
+        //            FROM TRC_JOB
+        //            GROUP BY jobid
+        //        )
+        //        SELECT 
+        //            a.id_seq AS IdSeq,
+        //            a.jobid AS JobId,
+        //            a.truck_no AS TruckNo,
+        //            a.deliv_date AS DelivDate,
+        //            a.origin AS Origin,
+        //            a.dest AS Dest,
+				    //            mc_fo.status AS MCStatus,
+        //            a.vendor_plan AS VendorPlan,
+        //            COALESCE(tj.total_do, 0) AS TotalDo
+        //        FROM TRC_JOB_H a
+        //        LEFT JOIN tj ON a.jobid = tj.jobid
+        //        LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
+        //        INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
+        //        INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+        //        WHERE d.Username = {0}
+        //        ORDER BY a.id_seq DESC
+        //    ";
+
+        //    return _context.JobSummaryView.FromSqlRaw(sql,username);
+        //}
 
         [Route("Job/Form/{jobid?}")]
         public IActionResult Form(string? jobid)
