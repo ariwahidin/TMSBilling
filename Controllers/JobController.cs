@@ -121,7 +121,7 @@ namespace TMSBilling.Controllers
         INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
         WHERE d.Username = {0}
             AND a.deliv_date >= {1}
-            AND a.deliv_date <= {2}
+            AND a.deliv_date < {2}
         ORDER BY a.id_seq DESC
     ";
             return _context.JobSummaryView.FromSqlRaw(sql, username, startDate, endDate);
