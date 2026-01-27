@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.CodeDom;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -105,7 +106,6 @@ public class ProductController : Controller
 
         return products;
     }
-
     private async Task<List<ProductCategory>> FetchProductCategoryFromApi(int page = 1, int limit = 1000) { 
         bool ok;
         JsonElement json = default;
@@ -116,7 +116,7 @@ public class ProductController : Controller
         );
 
         if (!ok)
-            throw new Exception("Gagal kirim ke API get product");
+            throw new Exception("Failed to get product category");
 
         var categories = json
             .GetProperty("data")
@@ -126,6 +126,26 @@ public class ProductController : Controller
         return categories;
     }
 
+    private async Task<List<ProductType>> FetchProductTypeFromApi(int page = 1, int limit = 1000)
+    {
+        bool ok;
+        JsonElement json = default;
+
+        (ok, json) = await _apiService.SendRequestAsync(
+            HttpMethod.Get,
+            $"order/api/web/v1/product-type?limit={limit}&page={page}"
+        );
+
+        if (!ok) throw new Exception("Failed to get product type");
+
+        var types = json
+            .GetProperty ("data")
+            .GetProperty ("paginated_result")
+            .Deserialize<List<ProductType>>() ?? new List<ProductType>();
+
+        return types;
+            
+    }
     private void SyncProductsToDatabase(List<Product> products)
     {
         var existingIds = _context.Products
@@ -268,34 +288,7 @@ public class ProductController : Controller
     [ActionName("Category")]
     public async Task<IActionResult> Category(string search = "", int page = 1, int limit = 1000)
     {
-        //bool ok;
-        //JsonElement json = default;
-
-        //(ok, json) = await _apiService.SendRequestAsync(
-        //    HttpMethod.Get,
-        //    $"order/api/web/v1/product-category?limit={limit}&page={page}",
-        //    new { }
-        //);
-
-        //if (!ok)
-        //{
-        //    return BadRequest(new
-        //    {
-        //        success = false,
-        //        message = "Gagal kirim ke API get product category",
-        //        detail = json
-        //    });
-        //}
-
-        //var categorys = json
-        //.GetProperty("data")
-        //.GetProperty("paginated_result")
-        //.Deserialize<List<ProductCategory>>() ?? new List<ProductCategory>();
-
-        //return View("Category", categorys);
-
         var categories = await FetchProductCategoryFromApi(page, limit);
-
         return View("Category", categories);
     }
 
@@ -410,30 +403,7 @@ public class ProductController : Controller
     [ActionName("Type")]
     public async Task<IActionResult> Type(string search = "", int page = 1, int limit = 1000)
     {
-        bool ok;
-        JsonElement json = default;
-
-        (ok, json) = await _apiService.SendRequestAsync(
-            HttpMethod.Get,
-            $"order/api/web/v1/product-type?limit={limit}&page={page}",
-            new { }
-        );
-
-        if (!ok)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Gagal kirim ke API get product type",
-                detail = json
-            });
-        }
-
-        var types = json
-        .GetProperty("data")
-        .GetProperty("paginated_result")
-        .Deserialize<List<ProductType>>() ?? new List<ProductType>();
-
+        var types = await FetchProductTypeFromApi(page, limit);
         return View("Type", types);
     }
 
