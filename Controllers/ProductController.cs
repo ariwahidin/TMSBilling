@@ -6,10 +6,13 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.McEasyApiModel;
 using TMSBilling.Services;
 
+
+[SessionAuthorize]
 public class ProductController : Controller
 {
     private readonly HttpClient _httpClient;
@@ -102,6 +105,27 @@ public class ProductController : Controller
 
         return products;
     }
+
+    private async Task<List<ProductCategory>> FetchProductCategoryFromApi(int page = 1, int limit = 1000) { 
+        bool ok;
+        JsonElement json = default;
+
+        (ok, json) = await _apiService.SendRequestAsync(
+                HttpMethod.Get,
+                $"order/api/web/v1/product-category?limit={limit}&page={page}"
+        );
+
+        if (!ok)
+            throw new Exception("Gagal kirim ke API get product");
+
+        var categories = json
+            .GetProperty("data")
+            .GetProperty("paginated_result")
+            .Deserialize<List<ProductCategory>>() ?? new List<ProductCategory>();
+
+        return categories;
+    }
+
     private void SyncProductsToDatabase(List<Product> products)
     {
         var existingIds = _context.Products
@@ -156,7 +180,6 @@ public class ProductController : Controller
 
         return View(products);
     }
-
     public async Task<IActionResult> Form(Guid? id)
     {
         var model = new ProductStore();
@@ -243,33 +266,37 @@ public class ProductController : Controller
 
     // PRODUCT CATEGORY
     [ActionName("Category")]
-    public async Task<IActionResult> Category(string search = "", int page = 1, int limit = 10)
+    public async Task<IActionResult> Category(string search = "", int page = 1, int limit = 1000)
     {
-        bool ok;
-        JsonElement json = default;
+        //bool ok;
+        //JsonElement json = default;
 
-        (ok, json) = await _apiService.SendRequestAsync(
-            HttpMethod.Get,
-            $"order/api/web/v1/product-category?limit={limit}&page={page}",
-            new { }
-        );
+        //(ok, json) = await _apiService.SendRequestAsync(
+        //    HttpMethod.Get,
+        //    $"order/api/web/v1/product-category?limit={limit}&page={page}",
+        //    new { }
+        //);
 
-        if (!ok)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Gagal kirim ke API get product category",
-                detail = json
-            });
-        }
+        //if (!ok)
+        //{
+        //    return BadRequest(new
+        //    {
+        //        success = false,
+        //        message = "Gagal kirim ke API get product category",
+        //        detail = json
+        //    });
+        //}
 
-        var categorys = json
-        .GetProperty("data")
-        .GetProperty("paginated_result")
-        .Deserialize<List<ProductCategory>>() ?? new List<ProductCategory>();
+        //var categorys = json
+        //.GetProperty("data")
+        //.GetProperty("paginated_result")
+        //.Deserialize<List<ProductCategory>>() ?? new List<ProductCategory>();
 
-        return View("Category", categorys);
+        //return View("Category", categorys);
+
+        var categories = await FetchProductCategoryFromApi(page, limit);
+
+        return View("Category", categories);
     }
 
     public async Task<IActionResult> FormCategory(Guid? id)
@@ -381,7 +408,7 @@ public class ProductController : Controller
 
     // PRODUCT TYPE
     [ActionName("Type")]
-    public async Task<IActionResult> Type(string search = "", int page = 1, int limit = 10)
+    public async Task<IActionResult> Type(string search = "", int page = 1, int limit = 1000)
     {
         bool ok;
         JsonElement json = default;
