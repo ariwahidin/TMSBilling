@@ -120,8 +120,7 @@ namespace TMSBilling.Controllers
         INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
         INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
         WHERE d.Username = {0}
-            AND a.deliv_date >= {1}
-            AND a.deliv_date < {2}
+            AND CAST(a.deliv_date AS date) BETWEEN {1} AND {2}
         ORDER BY a.id_seq DESC
     ";
             return _context.JobSummaryView.FromSqlRaw(sql, username, startDate, endDate);
