@@ -357,25 +357,7 @@ public class ProductController : Controller
         JsonElement json = default;
 
 
-        (ok, json) = await _apiService.SendRequestAsync(
-            HttpMethod.Get,
-            $"order/api/web/v1/product-category?limit={100}&page={1}",
-            new { }
-        );
-
-        if (!ok)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Gagal kirim ke API Get Category",
-                detail = json
-            });
-        }
-
-        var categorys = json.GetProperty("data")
-            .GetProperty("paginated_result")
-            .Deserialize<List<ProductCategory>>() ?? new List<ProductCategory>();
+        var categorys = await FetchProductCategoryFromApi(1, 1000);
 
         ViewBag.CategoryList = categorys.Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
         {
@@ -386,27 +368,49 @@ public class ProductController : Controller
 
         if (id != null)
         {
-
-            (ok, json) = await _apiService.SendRequestAsync(
-                HttpMethod.Get,
-                $"order/api/web/v1/product-type/{id}",
-                new { }
-            );
-
-            if (!ok)
+            try
             {
-                return BadRequest(new
+                (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Get,
+                    $"order/api/web/v1/product-type/{id}",
+                    new { }
+                );
+
+                if (!ok)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Gagal kirim ke API show type",
+                        detail = json
+                    });
+                }
+
+                var data = json.GetProperty("data")
+                               .Deserialize<ProductType>();
+
+                if (data == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Data kosong dari API"
+                    });
+                }
+
+                model.id = data.id;
+                model.name = data.name;
+                model.product_category_id = data.product_category?.id;
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
                 {
                     success = false,
-                    message = "Gagal kirim ke API show type",
-                    detail = json
+                    message = "Terjadi kesalahan saat memanggil API",
+                    error = ex.Message
                 });
             }
-
-            var data = json.GetProperty("data").Deserialize<ProductType>() ?? new ProductType();
-            model.id = data?.id;
-            model.name = data?.name;
-            model.product_category_id = data?.product_category?.id;
         }
 
         return PartialView("_FormType", model);
