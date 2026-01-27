@@ -60,7 +60,7 @@ namespace TMSBilling.Controllers
                             join jh in _context.JobHeaders on j.jobid equals jh.jobid
                             join c in _context.CustomerGroups on jh.cust_group equals c.SUB_CODE
                             join uc in _context.UserXCustomers on c.MAIN_CUST equals uc.CustomerMain
-                            select new { Job = j, Order = o, UserCustomer = uc };
+                            select new { Job = j, Order = o, UserCustomer = uc, JobHeader = jh };
 
                 if (!string.IsNullOrEmpty(username))
                 {
@@ -74,8 +74,8 @@ namespace TMSBilling.Controllers
                     var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
 
                     query = query.Where(x =>
-                        x.Order.delivery_date >= start &&
-                        x.Order.delivery_date <= end
+                        x.JobHeader.deliv_date >= start &&
+                        x.JobHeader.deliv_date <= end
                     );
                 }
 
