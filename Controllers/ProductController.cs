@@ -87,6 +87,26 @@ public class ProductController : Controller
         return types;
             
     }
+
+    private async Task<ProductType> FecthProductTypeByID(Guid? id)
+    {
+        bool ok;
+        JsonElement json = default;
+
+        (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Get,
+                    $"order/api/web/v1/product-type/{id}",
+                    new { }
+                );
+
+        if (!ok) throw new Exception("Failed to get product type by ud");
+
+
+        var data = json.GetProperty("data")
+                       .Deserialize<ProductType>();
+
+        return data;
+    }
     private void SyncProductsToDatabase(List<Product> products)
     {
         var existingIds = _context.Products
@@ -370,24 +390,8 @@ public class ProductController : Controller
         {
             try
             {
-                (ok, json) = await _apiService.SendRequestAsync(
-                    HttpMethod.Get,
-                    $"order/api/web/v1/product-type/{id}",
-                    new { }
-                );
 
-                if (!ok)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Gagal kirim ke API show type",
-                        detail = json
-                    });
-                }
-
-                var data = json.GetProperty("data")
-                               .Deserialize<ProductType>();
+                var data = await FecthProductTypeByID(id);
 
                 if (data == null)
                 {
