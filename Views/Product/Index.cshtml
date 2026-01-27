@@ -8,9 +8,14 @@
 <button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Product</button>
 <a href="/Product/Type" class="btn btn-primary btn-sm mb-3">Product Type</a>
 <a href="/Product/Category" class="btn btn-primary btn-sm mb-3">Product Category</a>
-<form asp-action="Index" class="mb-3">
+<form method="get" asp-action="Index" class="mb-3">
     <div class="input-group">
-        <input type="text" name="search" class="form-control" value="@ViewBag.Search" placeholder="Search..." />
+        <input 
+            type="text" 
+            name="search" 
+            class="form-control" 
+            value="@Context.Request.Query["search"]"
+            placeholder="Search..." />
         <button type="submit" class="btn btn-primary">Search</button>
     </div>
 </form>

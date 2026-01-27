@@ -28,72 +28,14 @@ public class ProductController : Controller
         _apiSettings = apiSettings.Value;
         _apiService = apiService;
     }
-
-    //[ActionName("Index")]
-    //public async Task<IActionResult> Index(string search = "", int page = 1, int limit = 1000)
-    //{
-    //    bool ok;
-    //    JsonElement json = default;
-
-    //    (ok, json) = await _apiService.SendRequestAsync(
-    //        HttpMethod.Get,
-    //        $"order/api/web/v1/product?limit={limit}&page={page}"
-    //    );
-
-    //    if (!ok)
-    //    {
-    //        return BadRequest(new
-    //        {
-    //            success = false,
-    //            message = "Gagal kirim ke API get product",
-    //            detail = json
-    //        });
-    //    }
-
-    //    var products = json
-    //    .GetProperty("data")
-    //    .GetProperty("paginated_result")
-    //    .Deserialize<List<Product>>() ?? new List<Product>();
-
-    //    //Console.WriteLine("Product", products);
-
-    //    foreach (var p in products)
-    //    {
-    //        var existProduct = _context.Products.FirstOrDefault(o => o.ProductID == p.id);
-
-    //        if (existProduct == null) {
-    //            var newProduct = new ProductTable();
-    //            newProduct.ProductID = p.id;
-    //            newProduct.ProductTypeID = p.product_type?.id.ToString();
-    //            newProduct.ProductTypeName = p.product_type?.name;
-    //            newProduct.ProductCategoryID = p.product_type?.product_category?.id?.ToString();
-    //            newProduct.ProductCategoryName = p.product_type?.product_category?.name?.ToString();
-    //            newProduct.Name = p.name?.ToString();
-    //            newProduct.Sku = p.sku?.ToString();
-    //            newProduct.Description = p.description?.ToString();
-    //            newProduct.Uom = p.uom?.ToString();
-    //            newProduct.Weight = p.weight;
-    //            newProduct.Volume = p.volume;
-    //            newProduct.Price = p.price;
-    //            newProduct.CreatedAt = DateTime.Now;
-
-    //            _context.Products.Add(newProduct);
-    //            _context.SaveChanges();
-    //        }
-    //    }
-
-
-    //    return View(products);
-    //}
-
-    private async Task<List<Product>> FetchProductsFromApi(int page = 1, int limit = 1000)
+    private async Task<List<Product>> FetchProductsFromApi(int page = 1, int limit = 1000, string search = "")
     {
         bool ok;
         JsonElement json = default;
 
         (ok, json) = await _apiService.SendRequestAsync(
             HttpMethod.Get,
-            $"order/api/web/v1/product?limit={limit}&page={page}"
+            $"order/api/web/v1/product?limit={limit}&page={page}&search={search}"
         );
 
         if (!ok)
@@ -125,7 +67,6 @@ public class ProductController : Controller
 
         return categories;
     }
-
     private async Task<List<ProductType>> FetchProductTypeFromApi(int page = 1, int limit = 1000)
     {
         bool ok;
@@ -185,18 +126,20 @@ public class ProductController : Controller
             _context.SaveChanges();
         }
     }
+    
+    [ActionName("Index")]
     public async Task<IActionResult> Index(string search = "", int page = 1, int limit = 1000)
     {
         try
         {
-            var productsFromApi = await FetchProductsFromApi(page, limit);
+            var productsFromApi = await FetchProductsFromApi(page, limit, search);
             SyncProductsToDatabase(productsFromApi);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error sync data: {ex.Message}");
         }
-        var products = await FetchProductsFromApi(page, limit);
+        var products = await FetchProductsFromApi(page, limit, search);
 
         return View(products);
     }
