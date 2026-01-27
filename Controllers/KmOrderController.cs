@@ -14,95 +14,6 @@ namespace TMSBilling.Controllers
             _context = context;
         }
 
-        //public async Task<IActionResult> Index()
-        //{
-        //    // Get distinct values for dropdowns
-        //    ViewBag.ServReqList = await _context.Orders
-        //        .Where(o => !string.IsNullOrEmpty(o.serv_req))
-        //        .Select(o => o.serv_req)
-        //        .Distinct()
-        //        .OrderBy(s => s)
-        //        .ToListAsync();
-
-        //    ViewBag.UomList = await _context.Orders
-        //        .Where(o => !string.IsNullOrEmpty(o.uom))
-        //        .Select(o => o.uom)
-        //        .Distinct()
-        //        .OrderBy(u => u)
-        //        .ToListAsync();
-
-        //    return View();
-        //}
-
-        //[HttpPost]
-        //public async Task<IActionResult> GetFilteredData(
-        //    DateTime? startDate,
-        //    DateTime? endDate,
-        //    string? servReq,
-        //    string? uom)
-        //{
-        //    try
-        //    {
-        //        var query = _context.Orders.AsQueryable();
-
-        //        // Apply filters
-        //        if (startDate.HasValue)
-        //        {
-        //            query = query.Where(o => o.delivery_date >= startDate.Value);
-        //        }
-
-        //        if (endDate.HasValue)
-        //        {
-        //            query = query.Where(o => o.delivery_date <= endDate.Value);
-        //        }
-
-        //        if (!string.IsNullOrEmpty(servReq))
-        //        {
-        //            query = query.Where(o => o.serv_req == servReq);
-        //        }
-
-        //        if (!string.IsNullOrEmpty(uom))
-        //        {
-        //            query = query.Where(o => o.uom == uom);
-        //        }
-
-        //        // Execute query first, then do the formatting in memory
-        //        var ordersData = await query
-        //            .OrderByDescending(o => o.delivery_date)
-        //            .ToListAsync();
-
-        //        // Get all KM orders for these orders
-        //        var orderIds = ordersData.Select(o => o.id_seq).ToList();
-        //        var kmOrders = await _context.KMOrders
-        //            .Where(k => orderIds.Contains(k.order_id.Value))
-        //            .ToListAsync();
-
-        //        // Format the result
-        //        var result = ordersData.Select(o => new
-        //        {
-        //            o.id_seq,
-        //            o.inv_no,
-        //            delivery_date = o.delivery_date.HasValue
-        //                ? o.delivery_date.Value.ToString("dd/MM/yyyy")
-        //                : "-",
-        //            o.sub_custid,
-        //            o.dest_area,
-        //            o.serv_req,
-        //            o.uom,
-        //            kmOrder = kmOrders
-        //                .Where(k => k.order_id == o.id_seq)
-        //                .Select(k => new { k.id, k.km })
-        //                .FirstOrDefault()
-        //        }).ToList();
-
-        //        return Json(new { success = true, data = result });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return Json(new { success = false, message = ex.Message });
-        //    }
-        //}
-
         public async Task<IActionResult> Index()
         {
             // Get distinct values for dropdowns
@@ -146,15 +57,27 @@ namespace TMSBilling.Controllers
                             select new { Job = j, Order = o };
 
                 // Apply filters
-                if (startDate.HasValue)
+                //if (startDate.HasValue)
+                //{
+                //    query = query.Where(x => x.Order.delivery_date >= startDate.Value);
+                //}
+
+                //if (endDate.HasValue)
+                //{
+                //    query = query.Where(x => x.Order.delivery_date <= endDate.Value);
+                //}
+
+                if (startDate.HasValue && endDate.HasValue)
                 {
-                    query = query.Where(x => x.Order.delivery_date >= startDate.Value);
+                    var start = startDate.Value.Date;
+                    var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+
+                    query = query.Where(x =>
+                        x.Order.delivery_date >= start &&
+                        x.Order.delivery_date <= end
+                    );
                 }
 
-                if (endDate.HasValue)
-                {
-                    query = query.Where(x => x.Order.delivery_date <= endDate.Value);
-                }
 
                 if (!string.IsNullOrEmpty(servReq))
                 {
