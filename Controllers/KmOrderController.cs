@@ -60,14 +60,11 @@ namespace TMSBilling.Controllers
                             join jh in _context.JobHeaders on j.jobid equals jh.jobid
                             join c in _context.CustomerGroups on jh.cust_group equals c.SUB_CODE
                             join uc in _context.UserXCustomers on c.MAIN_CUST equals uc.CustomerMain
-                            select new { Job = j, Order = o };
+                            select new { Job = j, Order = o, UserCustomer = uc };
 
                 if (!string.IsNullOrEmpty(username))
                 {
-                    query = query.Where(x =>
-                        _context.UserXCustomers
-                            .Any(uc =>  uc.UserName == username)
-                    );
+                    query = query.Where(x => x.UserCustomer.UserName == username);
                 }
 
 
