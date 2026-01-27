@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 
 namespace TMSBilling.Controllers
 {
+    [SessionAuthorize]
     public class KmOrderController : Controller
     {
         private readonly AppDbContext _context;
