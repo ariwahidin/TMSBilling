@@ -53,21 +53,23 @@ namespace TMSBilling.Controllers
         {
             try
             {
+                var username = HttpContext.Session.GetString("username") ?? "System";
                 // Start with Jobs and join to Orders
                 var query = from j in _context.Jobs
                             join o in _context.Orders on j.inv_no equals o.inv_no
+                            join jh in _context.JobHeaders on j.jobid equals jh.jobid
+                            join c in _context.CustomerGroups on jh.cust_group equals c.SUB_CODE
+                            join uc in _context.UserXCustomers on c.MAIN_CUST equals uc.CustomerMain
                             select new { Job = j, Order = o };
 
-                // Apply filters
-                //if (startDate.HasValue)
-                //{
-                //    query = query.Where(x => x.Order.delivery_date >= startDate.Value);
-                //}
+                if (!string.IsNullOrEmpty(username))
+                {
+                    query = query.Where(x =>
+                        _context.UserXCustomers
+                            .Any(uc =>  uc.UserName == username)
+                    );
+                }
 
-                //if (endDate.HasValue)
-                //{
-                //    query = query.Where(x => x.Order.delivery_date <= endDate.Value);
-                //}
 
                 if (startDate.HasValue && endDate.HasValue)
                 {
