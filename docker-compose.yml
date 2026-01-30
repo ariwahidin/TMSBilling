@@ -1,0 +1,9 @@
+﻿version: "3.9"
+
+services:
+  tms-billing:
+    build: .
+    container_name: tms-billing
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
