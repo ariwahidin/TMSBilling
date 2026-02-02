@@ -340,7 +340,9 @@ namespace TMSBilling.Controllers
                 return Json(new { success = true, message = "Customer group not found!" });
             }
 
-            var customerApi = await _context.Customers.AnyAsync(cs => cs.MAIN_CUST == customerGroup.MAIN_CUST && cs.API_FLAG == 1);
+            //var customerApi = await _context.Customers.AnyAsync(cs => cs.MAIN_CUST == customerGroup.MAIN_CUST && cs.API_FLAG == 1);
+
+            var customerApi = await _context.CustomerGroups.AnyAsync(cs => cs.SUB_CODE == Header.cust_group && cs.API_FLAG == 1);
 
             var GeofenceStartingPoint = await _context.Geofences.FirstOrDefaultAsync(f => f.Id == Header.starting_point);
 
