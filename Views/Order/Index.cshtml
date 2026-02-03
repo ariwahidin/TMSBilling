@@ -81,7 +81,7 @@
             <th><input type="text" class="form-control form-control-sm" placeholder="Search WH" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Customer" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Cnee" /></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Invoice No" /></th>
+            <th><input type="text" class="form-control form-control-sm" style="white-space:nowrap;" placeholder="Invoice No" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="YYYY-MM-DD" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="YYYY-MM-DD" /></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Origin" /></th>
@@ -109,7 +109,7 @@
                     <td>@item.WhCode</td>
                     <td>@item.SubCustId</td>
                     <td>@item.CneeCode</td>
-                    <td>@item.InvNo</td>
+                    <td style ="white-space:nowrap;">@item.InvNo</td>
                     <td>@item.PickupDate.ToString("yyyy-MM-dd")</td>
                     <td>@item.DeliveryDate.ToString("yyyy-MM-dd")</td>
                     <td>@item.OriginId</td>

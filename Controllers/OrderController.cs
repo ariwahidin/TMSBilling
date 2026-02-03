@@ -165,11 +165,6 @@ namespace TMSBilling.Controllers
             return View(data);
         }
 
-        //public async Task<IActionResult> Index()
-        //{
-        //    var data = await GetOrderSummaryQuery().ToListAsync();
-        //    return View(data);
-        //}
 
         public async Task<IActionResult> IndexSync()
         {
@@ -1123,6 +1118,11 @@ namespace TMSBilling.Controllers
                 }
 
                 var origin = _context.Geofences.FirstOrDefault(o => o.FenceName == header.mceasy_origin_name);
+
+                if (customerGroup.API_FLAG == 1) {
+                    origin = _context.Geofences.FirstOrDefault(o => o.FenceName == header.mceasy_origin_name && o.GeofenceId != null);
+                }
+
                 if (origin == null)
                 {
                     return NotFound(new { success = false, message = $"Origin '{header.mceasy_origin_name}' not found." });
@@ -1192,6 +1192,26 @@ namespace TMSBilling.Controllers
                         shipment_number = header.inv_no,
                     };
 
+                    var nullFields = payload
+                        .GetType()
+                        .GetProperties()
+                        .Where(p => p.GetValue(payload) == null)
+                        .Select(p => p.Name)
+                        .ToList();
+
+                    if (nullFields.Any())
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "Saving order failed",
+                            detail = new
+                            {
+                                null_fields = nullFields
+                            }
+                        });
+                    }
+
                     bool ok;
                     JsonElement json = default;
 
@@ -1206,7 +1226,7 @@ namespace TMSBilling.Controllers
                         return BadRequest(new
                         {
                             success = false,
-                            message = "Failed add order to API : "+json,
+                            message = "Error fetching API",
                             detail = json
                         });
                     }
@@ -1458,7 +1478,7 @@ namespace TMSBilling.Controllers
                 entry_user = HttpContext.Session.GetString("username") ?? "System"
             };
 
-            if (customer.API_FLAG == 1)
+            if (customerGroup.API_FLAG == 1)
             {
 
                 var payload = new
@@ -1538,7 +1558,7 @@ namespace TMSBilling.Controllers
             orderLoad.update_date = DateTime.Now;
             orderLoad.update_user = HttpContext.Session.GetString("username") ?? "System";
             
-            if (customer.API_FLAG == 1 && orderLoad.mceasy_order_dtl_id != null)
+            if (customerGroup.API_FLAG == 1 && orderLoad.mceasy_order_dtl_id != null)
             {
                 var payload = new
                 {

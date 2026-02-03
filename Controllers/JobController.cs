@@ -111,7 +111,15 @@ namespace TMSBilling.Controllers
             a.deliv_date AS DelivDate,
             a.origin AS Origin,
             a.dest AS Dest,
-            mc_fo.status AS MCStatus,
+            CASE 
+				WHEN mc_fo.[status] IS NOT NULL THEN mc_fo.[status]
+				ELSE 
+					CASE 
+						WHEN a.status_job = 'DRAFT' THEN 'Draf'
+						WHEN a.status_job = 'STARTED' THEN 'Perjalanan'
+						ELSE NULL
+					END
+			END AS MCStatus,
             a.vendor_plan AS VendorPlan,
             COALESCE(tj.total_do, 0) AS TotalDo
         FROM TRC_JOB_H a
