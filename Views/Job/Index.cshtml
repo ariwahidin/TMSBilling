@@ -55,7 +55,7 @@
             <th>Destination</th>
             <th>Vendor ID</th>
             <th>Total DO</th>
-            <th class="text-center">Action</th>
+            <th class="text-center" style="width: 80px;">Action</th>
         </tr>
         <tr>
             <th></th>
@@ -78,7 +78,7 @@
             {
                 <tr>
                     <td>
-                      <input type="checkbox" class="order-checkbox" data-order-id="@item.IdSeq">
+                        <input type="checkbox" class="order-checkbox" data-order-id="@item.IdSeq">
                     </td>
                     <td>@i</td>
                     <td>@item.JobId</td>
@@ -90,12 +90,30 @@
                     <td>@item.VendorPlan</td>
                     <td>@item.TotalDo</td>
                     <td class="text-center">
-                        <a href="/Job/Form/@item.JobId" class="text-primary me-2">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <a href="#" class="text-danger" onclick="confirmDelete('@item.JobId')">
-                            <i class="bi bi-trash"></i>
-                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-dark p-0" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="/Job/Form/@item.JobId">
+                                        <i class="bi bi-pencil-square text-primary"></i> Edit
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/Job/PrintSPK?jobid=@item.JobId" target="_blank">
+                                        <i class="bi bi-printer text-success"></i> Print SPK
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete('@item.JobId'); return false;">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </td>
                 </tr>
                 i++;
@@ -282,25 +300,6 @@
 
     </script>
 
-    @* <style>
-        /* Compact mode */
-        #tableJob th, #tableJob td {
-            padding: 4px 6px !important;
-            font-size: 13px;
-        }
-
-        /* Placeholder kecil */
-        #tableJob input::placeholder {
-            font-size: 11px;
-            opacity: 0.7;
-        }
-
-        #tableJob input.form-control-sm {
-            height: 24px;
-            padding: 2px 6px;
-        }
-    </style> *@
-
     <style>
         /* Compact mode */
         #tableJob th, #tableJob td {
@@ -325,5 +324,20 @@
             padding: 2px 6px;
             font-size: 12px;
         }
+
+        /* Dropdown action styling */
+        .dropdown-menu {
+            min-width: 150px;
+            font-size: 13px;
+        }
+
+        .dropdown-item {
+            padding: 6px 12px;
+        }
+
+            .dropdown-item i {
+                width: 20px;
+                margin-right: 8px;
+            }
     </style>
 }

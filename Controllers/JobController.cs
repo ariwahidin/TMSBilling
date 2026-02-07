@@ -121,7 +121,9 @@ namespace TMSBilling.Controllers
 					END
 			END AS MCStatus,
             a.vendor_plan AS VendorPlan,
-            COALESCE(tj.total_do, 0) AS TotalDo
+            COALESCE(tj.total_do, 0) AS TotalDo,
+            a.driver_name as DriverName,
+            a.serv_type as ServiceType
         FROM TRC_JOB_H a
         LEFT JOIN tj ON a.jobid = tj.jobid
         LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
@@ -1443,6 +1445,192 @@ namespace TMSBilling.Controllers
         }
 
 
+        public IActionResult PrintSPK(string jobid)
+        {
+            if (string.IsNullOrEmpty(jobid))
+            {
+                return NotFound("Job ID tidak ditemukan");
+            }
+
+            // Ambil data dari database berdasarkan JobId
+            var jobData = GetJobDataByJobId(jobid);
+
+            if (jobData == null)
+            {
+                return NotFound($"Job dengan ID {jobid} tidak ditemukan");
+            }
+
+            //var jobHeader = _context.JobHeaders.FirstOrDefault(or => or.jobid == jobid);
+            //if (jobHeader == null)
+            //{
+            //    return View();
+            //}
+
+            // Prepare view model untuk SPK
+            var spkViewModel = new SPKViewModel
+            {
+                NoSPK = jobData.JobId,
+                TglOrder = jobData.DelivDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                TipeOrder = jobData.ServiceType,
+                JenisTruck = jobData.TruckNo ?? "",
+                TglMuat = jobData.DelivDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                JamMulaiMuat = "",
+                JamSelesaiMuat = "",
+                Transporter = jobData.VendorPlan,
+                NamaSopir = jobData.DriverName,
+                NoPol = jobData.TruckNo,
+                //TglTiba = jobData.DelivDate?.AddDays(-1).ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"),
+                TglTiba = "",
+                JamTiba = "",
+                Catatan = "",
+
+                // Kelengkapan Dokumen
+                KelengkapanDokumen = new KelengkapanDokumen
+                {
+                    Berangkat = true,
+                    Kembali = false
+                },
+
+                // List Delivery Orders
+                DeliveryOrders = GetDeliveryOrdersByJobId(jobid)
+            };
+
+            return View(spkViewModel);
+        }
+
+        // Method helper untuk mengambil data Job dari database
+        private JobSummaryViewModel GetJobDataByJobId(string jobId)
+        {
+            // TODO: Replace with actual database query
+            // Contoh implementasi:
+            //return _context.JobHeaders.FirstOrDefault(j => j.jobid == jobId);
+
+            var jobHeader = _context.JobHeaders.FirstOrDefault(or => or.jobid == jobId);
+            if (jobHeader == null)
+            {
+                return new JobSummaryViewModel
+                {
+                    JobId = jobId,
+                    TruckNo = "0000",
+                    DelivDate = DateTime.Parse("2026-02-07"),
+                    Origin = "JAKARTA",
+                    Dest = "MALANG",
+                    VendorPlan = "YUSEN",
+                    MCStatus = "CONFIRMED"
+                };
+            }
+
+            // Sementara return dummy data untuk testing
+            return new JobSummaryViewModel
+            {
+                JobId = jobId,
+                TruckNo = jobHeader.truck_no,
+                DelivDate = jobHeader.deliv_date,
+                Origin = jobHeader.origin,
+                Dest = jobHeader.dest,
+                VendorPlan = jobHeader.vendor_act,
+                DriverName = jobHeader.driver_name,
+                ServiceType = jobHeader.serv_type,
+                MCStatus = "CONFIRMED"
+            };
+        }
+
+        // Method helper untuk mengambil Delivery Orders berdasarkan JobId
+        private List<DeliveryOrderItem> GetDeliveryOrdersByJobId(string jobId)
+        {
+            // TODO: Replace with actual database query
+            // Contoh implementasi:
+            // return _context.DeliveryOrders.Where(d => d.JobId == jobId).ToList();
+
+            // Sementara return dummy data untuk testing
+            //return new List<DeliveryOrderItem>
+            //{
+            //    new DeliveryOrderItem
+            //    {
+            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
+            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
+            //        City = "MALANG",
+            //        DO = "JF-2625921",
+            //        TotalBoxKoli = 65,
+            //        TotalQtyPcs = 987,
+            //        TotalVolume = 0
+            //    },
+            //    new DeliveryOrderItem
+            //    {
+            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
+            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
+            //        City = "MALANG",
+            //        DO = "JF-2624451",
+            //        TotalBoxKoli = 17,
+            //        TotalQtyPcs = 195,
+            //        TotalVolume = 0
+            //    },
+            //    new DeliveryOrderItem
+            //    {
+            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
+            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
+            //        City = "MALANG",
+            //        DO = "JF-2637275",
+            //        TotalBoxKoli = 1,
+            //        TotalQtyPcs = 25,
+            //        TotalVolume = 0
+            //    },
+            //    new DeliveryOrderItem
+            //    {
+            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
+            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
+            //        City = "MALANG",
+            //        DO = "JF-2635415",
+            //        TotalBoxKoli = 3,
+            //        TotalQtyPcs = 35,
+            //        TotalVolume = 0
+            //    },
+            //    new DeliveryOrderItem
+            //    {
+            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
+            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
+            //        City = "MALANG",
+            //        DO = "JF-2635457",
+            //        TotalBoxKoli = 7,
+            //        TotalQtyPcs = 94,
+            //        TotalVolume = 0
+            //    }
+            //};
+
+
+            // Query menggunakan Entity Framework dengan Join
+            var deliveryOrders = (from job in _context.Jobs
+                                  join order in _context.Orders on job.inv_no equals order.inv_no into orderGroup
+                                  from order in orderGroup.DefaultIfEmpty()
+                                  join geofence in _context.Geofences on order.cnee_code equals geofence.FenceName into geoGroup
+                                  from geofence in geoGroup.DefaultIfEmpty()
+                                  join orderDtl in _context.OrderDetails on order.inv_no equals orderDtl.inv_no into dtlGroup
+                                  from orderDtl in dtlGroup.DefaultIfEmpty()
+                                  where job.jobid == jobId
+                                  group new { job, order, geofence, orderDtl } by new
+                                  {
+                                      job.jobid,
+                                      job.inv_no,
+                                      ShipTo = geofence.FenceName,
+                                      City = geofence.City
+                                  } into g
+                                  select new DeliveryOrderItem
+                                  {
+                                      ShipTo = g.Key.ShipTo ?? "",
+                                      ShipToName = g.Key.ShipTo ?? "",
+                                      City = g.Key.City ?? "",
+                                      DO = g.Key.inv_no ?? "",
+                                      TotalBoxKoli = g.Sum(x => x.orderDtl != null ? x.orderDtl.item_qty ?? 0 : 0),
+                                      TotalQtyPcs = g.Sum(x => x.orderDtl != null ? x.orderDtl.unit_qty ?? 0 : 0),
+                                      TotalVolume = 0
+                                  })
+                                 .ToList();
+
+            return deliveryOrders;
+
+        }
+
+
 
     }
     public class OrderForJob {
@@ -1558,6 +1746,8 @@ namespace TMSBilling.Controllers
         public string? Origin { get; set; }
         public string? Dest { get; set; }
         public string? VendorPlan { get; set; }
+        public string? DriverName { get; set; }
+        public string? ServiceType { get; set; }
         public string? MCStatus { get; set; }
         public int TotalDo { get; set; }
     }
@@ -1569,5 +1759,46 @@ namespace TMSBilling.Controllers
         [JsonPropertyName("vendor_name")]
         public string? VendorName { get; set; } = string.Empty;
     }
-    
+
+    // View Models
+    public class SPKViewModel
+    {
+        public string NoSPK { get; set; }
+        public string TglOrder { get; set; }
+        public string TipeOrder { get; set; }
+        public string JenisTruck { get; set; }
+        public string TglMuat { get; set; }
+        public string JamMulaiMuat { get; set; }
+        public string JamSelesaiMuat { get; set; }
+        public string Transporter { get; set; }
+        public string NamaSopir { get; set; }
+        public string NoPol { get; set; }
+        public string TglTiba { get; set; }
+        public string JamTiba { get; set; }
+        public string Catatan { get; set; }
+        public KelengkapanDokumen KelengkapanDokumen { get; set; }
+        public List<DeliveryOrderItem> DeliveryOrders { get; set; }
+
+        public int GrandTotalBox => DeliveryOrders?.Sum(d => d.TotalBoxKoli) ?? 0;
+        public int GrandTotalQty => DeliveryOrders?.Sum(d => d.TotalQtyPcs) ?? 0;
+        public decimal GrandTotalVolume => DeliveryOrders?.Sum(d => d.TotalVolume) ?? 0;
+    }
+
+    public class KelengkapanDokumen
+    {
+        public bool Berangkat { get; set; }
+        public bool Kembali { get; set; }
+    }
+
+    public class DeliveryOrderItem
+    {
+        public string ShipTo { get; set; }
+        public string ShipToName { get; set; }
+        public string City { get; set; }
+        public string DO { get; set; }
+        public int TotalBoxKoli { get; set; }
+        public int TotalQtyPcs { get; set; }
+        public decimal TotalVolume { get; set; }
+    }
+
 }

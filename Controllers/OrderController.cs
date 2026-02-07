@@ -60,50 +60,6 @@ namespace TMSBilling.Controllers
             return order;
         }
 
-        //    private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery()
-        //    {
-        //        var username = HttpContext.Session.GetString("username") ?? "System";
-
-        //        var sql = @"
-        //            WITH od AS (
-        //                SELECT 
-        //                    id_seq_order, 
-        //                    COUNT(item_name) AS total_item,
-        //                    SUM(item_qty) AS total_qty
-        //                FROM TRC_ORDER_DTL
-        //                GROUP BY id_seq_order
-        //            ),
-        //            ord AS (SELECT 
-        //                a.id_seq AS IdSeq, 
-        //                a.wh_code AS WhCode, 
-        //                a.sub_custid AS SubCustId,
-        //                a.cnee_code AS CneeCode,
-        //                a.inv_no AS InvNo,
-        //                CAST(a.pickup_date AS date) AS PickupDate,
-        //                CAST(a.delivery_date AS date) AS DeliveryDate,
-        //                a.origin_id AS OriginId,
-        //                a.dest_area AS DestArea,
-        //                a.order_status AS OrderStatus,
-        //                a.mceasy_status AS MCOrderStatus,
-        //                a.mceasy_order_id AS McEasyOrderId,
-        //                COALESCE(od.total_item, 0) AS TotalItem,
-        //                COALESCE(od.total_qty, 0) AS TotalQty
-        //            FROM TRC_ORDER a 
-        //            LEFT JOIN od ON a.id_seq = od.id_seq_order
-        //            LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id)
-        //SELECT ord.*, b.jobid AS JobID, c.MAIN_CUST
-        //FROM ord 
-        //LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
-        //INNER JOIN TRC_CUST_GROUP c ON ord.SubCustId = c.SUB_CODE
-        //INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
-        //WHERE d.Username = {0}
-        //ORDER BY ord.IdSeq DESC
-        //        ";
-
-        //        return _context.OrderSummaryView.FromSqlRaw(sql,username);
-        //    }
-
-
         private IQueryable<OrderSummaryViewModel> GetOrderSummaryQuery(DateTime? startDate = null, DateTime? endDate = null)
         {
             var username = HttpContext.Session.GetString("username") ?? "System";
@@ -682,6 +638,7 @@ namespace TMSBilling.Controllers
             detailSheet.Cell("G1").Value = "Lebar";
             detailSheet.Cell("H1").Value = "Tinggi";
             detailSheet.Cell("I1").Value = "Berat";
+            detailSheet.Cell("J1").Value = "Qty (Pcs)";
 
             // Format header details
             var detailHeader = detailSheet.Range("A1:I1");
@@ -703,13 +660,13 @@ namespace TMSBilling.Controllers
             detailSheet.Cell("G2").Value = 4;
             detailSheet.Cell("H2").Value = 17;
             detailSheet.Cell("I2").Value = 0.5;
+            detailSheet.Cell("J2").Value = 0;
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             var content = stream.ToArray();
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "sample_import_order.xlsx");
         }
-
 
         [HttpPost]
         public IActionResult DownloadOrder([FromBody] BulkDownloadRequest request)
@@ -1318,6 +1275,9 @@ namespace TMSBilling.Controllers
                                 });
                             }
 
+                            
+
+
                             detail.mceasy_order_id = header.mceasy_order_id;
                             detail.mceasy_order_dtl_id = jsonDetail.GetProperty("data").GetProperty("id").GetString();
                             detail.mceasy_product_id = product.ProductID;
@@ -1327,6 +1287,7 @@ namespace TMSBilling.Controllers
                             detail.cnee_code = header.cnee_code;
                             detail.delivery_date = header.delivery_date;
                             detail.item_qty = detail.item_qty;
+                            detail.unit_qty ??= 0;
                             detail.entry_user = header.entry_user;
                             detail.entry_date = DateTime.Now;
                         }
@@ -1473,6 +1434,7 @@ namespace TMSBilling.Controllers
                 item_width = model.width,
                 item_wgt = (int?)model.weight,
                 item_qty = (int?)model.quantity,
+                unit_qty = (int?)model.unit_qty,
                 pack_unit = model.uom,
                 entry_date = DateTime.Now,
                 entry_user = HttpContext.Session.GetString("username") ?? "System"
@@ -1553,6 +1515,7 @@ namespace TMSBilling.Controllers
             orderLoad.item_width = model.width;
             orderLoad.item_wgt = (int?)model.weight;
             orderLoad.item_qty = (int?)model.quantity;
+            orderLoad.unit_qty = (int?)model.unit_qty;
             orderLoad.pkg_unit = model.uom;
             orderLoad.pack_unit = model.uom;
             orderLoad.update_date = DateTime.Now;
@@ -1820,6 +1783,8 @@ namespace TMSBilling.Controllers
         public decimal? volume { get; set; }
         public decimal? price { get; set; }
         public decimal? quantity { get; set; }
+
+        public decimal? unit_qty { get; set; }
         public string? note { get; set; }
         public int? length { get; set; }
 

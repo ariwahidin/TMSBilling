@@ -148,6 +148,8 @@ namespace TMSBilling.Models
 
         public int? item_qty { get; set; }
 
+        public int? unit_qty { get; set; }
+
         [Column(TypeName = "decimal(9,2)")]
         public decimal? item_wgt { get; set; }
 
