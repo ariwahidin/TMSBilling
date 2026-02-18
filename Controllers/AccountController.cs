@@ -5,6 +5,7 @@ using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
+using TMSBilling.Services;
 
 namespace TMSBilling.Controllers
 {
@@ -13,23 +14,25 @@ namespace TMSBilling.Controllers
         private readonly AppDbContext _context;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly ILogger<AccountController> _logger;
-
+        private readonly IPermissionService _permissionService;
 
         public AccountController(
             AppDbContext context,
             IPasswordHasher<User> passwordHasher,
-            ILogger<AccountController> logger
+            ILogger<AccountController> logger,
+            IPermissionService permissionService
             )
         {
             _context = context;
             _passwordHasher = passwordHasher;
             _logger = logger;
+            _permissionService = permissionService;
         }
 
         public IActionResult Login() => View();
 
         [HttpPost]
-        public IActionResult Login([FromForm] LoginViewModel model)
+        public async Task<IActionResult> Login([FromForm] LoginViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -46,6 +49,10 @@ namespace TMSBilling.Controllers
                 {
                     HttpContext.Session.SetString("username", user.Username);
                     HttpContext.Session.SetString("is_admin", user.IsAdmin ? "true" : "false");
+                    HttpContext.Session.SetInt32("user_id", user.Id);
+
+                    // *** Resolve & store permissions ***
+                    await _permissionService.ResolveAndStorePermissionsAsync(user.Id);
 
                     return Json(new { success = true, redirectUrl = "/Dashboard/Index" });
                 }
@@ -181,5 +188,9 @@ namespace TMSBilling.Controllers
             }
         }
 
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
     }
 }

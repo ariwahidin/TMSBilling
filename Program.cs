@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using TMSBilling.Data;
+using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Services;
 
@@ -37,6 +38,16 @@ builder.Services.AddScoped<SyncronizeWithMcEasy>();
 
 // Daftarkan background worker
 builder.Services.AddHostedService<SyncWorker>();
+
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+
+builder.Services.AddScoped<MenuFilter>();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.AddService<MenuFilter>();
+});
 
 
 

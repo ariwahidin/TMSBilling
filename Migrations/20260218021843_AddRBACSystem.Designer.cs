@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218021843_AddRBACSystem")]
+    partial class AddRBACSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1655,156 +1658,6 @@ namespace TMSBilling.Migrations
                             ParentId = 7,
                             PermissionCode = "role_management",
                             Url = "/Role/Index"
-                        },
-                        new
-                        {
-                            Id = 9,
-                            Icon = "fa fa-bars",
-                            IsActive = true,
-                            Name = "Menus",
-                            OrderIndex = 2,
-                            ParentId = 7,
-                            Url = "/Menu/Index"
-                        },
-                        new
-                        {
-                            Id = 11,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Vendor Truck",
-                            OrderIndex = 4,
-                            ParentId = 1,
-                            Url = "/Vendor/Index"
-                        },
-                        new
-                        {
-                            Id = 12,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Vendor Vechile",
-                            OrderIndex = 5,
-                            ParentId = 1,
-                            Url = "/VendorTruck/Index"
-                        },
-                        new
-                        {
-                            Id = 13,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Driver",
-                            OrderIndex = 6,
-                            ParentId = 1,
-                            Url = "/Driver/Index"
-                        },
-                        new
-                        {
-                            Id = 14,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Truck Size",
-                            OrderIndex = 7,
-                            ParentId = 1,
-                            Url = "/TruckSize/Index"
-                        },
-                        new
-                        {
-                            Id = 15,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Origin Area",
-                            OrderIndex = 8,
-                            ParentId = 1,
-                            Url = "/Origin/Index"
-                        },
-                        new
-                        {
-                            Id = 16,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Destination Area",
-                            OrderIndex = 9,
-                            ParentId = 1,
-                            Url = "/Destination/Index"
-                        },
-                        new
-                        {
-                            Id = 17,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Warehouse",
-                            OrderIndex = 10,
-                            ParentId = 1,
-                            Url = "/Warehouse/Index"
-                        },
-                        new
-                        {
-                            Id = 18,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Service Moda",
-                            OrderIndex = 11,
-                            ParentId = 1,
-                            Url = "/ServiceModa/Index"
-                        },
-                        new
-                        {
-                            Id = 19,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Service Type",
-                            OrderIndex = 12,
-                            ParentId = 1,
-                            Url = "/ServiceType/Index"
-                        },
-                        new
-                        {
-                            Id = 20,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Charge UoM",
-                            OrderIndex = 13,
-                            ParentId = 1,
-                            Url = "/ChargeUom/Index"
-                        },
-                        new
-                        {
-                            Id = 21,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Area Group",
-                            OrderIndex = 14,
-                            ParentId = 1,
-                            Url = "/AreaGroup/Index"
-                        },
-                        new
-                        {
-                            Id = 22,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Price Buy",
-                            OrderIndex = 15,
-                            ParentId = 1,
-                            Url = "/PriceBuy/Index"
-                        },
-                        new
-                        {
-                            Id = 23,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Price Sell",
-                            OrderIndex = 16,
-                            ParentId = 1,
-                            Url = "/PriceSell/Index"
-                        },
-                        new
-                        {
-                            Id = 24,
-                            Icon = "fa-database",
-                            IsActive = true,
-                            Name = "Product",
-                            OrderIndex = 17,
-                            ParentId = 1,
-                            Url = "/Product/Index"
                         });
                 });
 

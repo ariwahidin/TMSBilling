@@ -1,0 +1,104 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Menu Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Menu Management</h4>
+    <button class="btn btn-primary btn-sm" onclick="window.location.href='/Menu/Create'">
+        <i class="fa fa-plus"></i> Add Menu
+    </button>
+</div>
+
+<div class="mb-2">
+    <button class="btn btn-warning btn-sm" onclick="editMenu()">Edit</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteMenu()">Delete</button>
+</div>
+
+<div id="menu-table"></div>
+<form id="tokenForm">@Html.AntiForgeryToken()</form>
+
+@section Styles {
+    <link href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
+}
+
+@section Scripts {
+    <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+    <script>
+        var table = new Tabulator("#menu-table", {
+            height: 450,
+            layout: "fitColumns",
+            selectableRows: true,
+            pagination: "local",
+            paginationSize: 10,
+            rowHeader: {
+                headerSort: false, resizable: false, frozen: true,
+                headerHozAlign: "center", hozAlign: "center",
+                formatter: "rowSelection", titleFormatter: "rowSelection", width: 10,
+                cellClick: function (e, cell) { cell.getRow().toggleSelect(); }
+            },
+            columns: [
+                { title: "Name",            field: "name",           width: 180 },
+                { title: "URL",             field: "url",            width: 200 },
+                { title: "Icon",            field: "icon",           width: 150,
+                  formatter: function(cell) {
+                      const val = cell.getValue();
+                      return val ? `<i class="${val}"></i> ${val}` : '-';
+                  }
+                },
+                { title: "Parent",          field: "parentName",     width: 150 },
+                { title: "Permission",      field: "permissionCode", width: 150 },
+                { title: "Order",           field: "orderIndex",     width: 80,  hozAlign: "center" },
+                { title: "Active",          field: "isActive",       width: 80,  hozAlign: "center",
+                  formatter: function(cell) {
+                      return cell.getValue()
+                          ? '<span class="badge bg-success">Yes</span>'
+                          : '<span class="badge bg-secondary">No</span>';
+                  }
+                }
+            ]
+        });
+
+        $.get("/Menu/GetMenus", function (res) {
+            if (res.success) table.setData(res.data);
+        });
+
+        function getSelected() {
+            const data = table.getSelectedData();
+            if (data.length !== 1) {
+                showToast("Please select exactly one menu.", "error");
+                return null;
+            }
+            return data[0];
+        }
+
+        function editMenu() {
+            const row = getSelected();
+            if (row) window.location.href = '/Menu/Edit/' + row.id;
+        }
+
+        function deleteMenu() {
+            const row = getSelected();
+            if (!row) return;
+
+            if (!confirm(`Delete menu "${row.name}"?`)) return;
+
+            fetch('/Menu/DeleteAjax', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: row.id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    $.get("/Menu/GetMenus", res => {
+                        if (res.success) table.setData(res.data);
+                    });
+                } else {
+                    showToast(data.message, 'error');
+                }
+            });
+        }
+    </script>
+}
