@@ -130,6 +130,17 @@
 
             <div class="field-group mb-3">
                 <label for="customerId" class="form-label">
+                    <i class="bi bi-card-text me-1 text-primary"></i> Report Type
+                </label>
+                <select id="reportType" name="reportType" class="form-select" required>
+                    <option value="">-- Select Type --</option>
+                    <option value="PROFORMA-INVOICE">PROFORMA INVOICE</option>
+                </select>
+                <div class="invalid-feedback">Please select a report type.</div>
+            </div>
+
+            <div class="field-group mb-3">
+                <label for="customerId" class="form-label">
                     <i class="bi bi-building me-1 text-primary"></i> Customer
                 </label>
                 <select id="customerId" name="customerId" class="form-select" required>
@@ -187,6 +198,7 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const reportType = document.getElementById('reportType');
             const form = document.getElementById('reportForm');
             const dateFrom = document.getElementById('dateFrom');
             const dateTo = document.getElementById('dateTo');

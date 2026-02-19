@@ -5,6 +5,7 @@ using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Services;
+using TMSBilling.Services.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,9 @@ builder.Services.AddControllersWithViews(options =>
     options.Filters.AddService<MenuFilter>();
 });
 
+builder.Services.AddScoped<IReportGenerator, ProformaInvoiceReport>();
+// builder.Services.AddScoped<IReportGenerator, DeliveryOrderReport>();   ← contoh nanti
+// builder.Services.AddScoped<IReportGenerator, SummaryBillingReport>();  ← contoh nanti
 
 
 
