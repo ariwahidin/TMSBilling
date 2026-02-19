@@ -228,7 +228,8 @@
                             <!-- Menu item biasa -->
                             <li class="nav-item">
                                 <a class="nav-link" href="@menu.Url">
-                                    <i class="@menu.Icon me-2"></i> @menu.Name
+                                    <i class="@menu.Icon"></i>
+                                    <span class="nav-text">@menu.Name</span>
                                 </a>
                             </li>
                         }
@@ -237,14 +238,16 @@
                             <!-- Menu group dengan dropdown -->
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                    <i class="@menu.Icon me-2"></i> @menu.Name
+                                    <i class="@menu.Icon"></i>
+                                    <span class="nav-text">@menu.Name</span>
                                 </a>
-                                <ul class="dropdown-menu">
+                                <ul class="dropdown-menu" style="overflow-y:scroll;max-height:420px">
                                     @foreach (var child in menu.Children)
                                     {
                                         <li>
                                             <a class="dropdown-item" href="@child.Url">
-                                                <i class="@child.Icon"></i> @child.Name
+                                                <i class="@child.Icon"></i>
+                                                <span>@child.Name</span>
                                             </a>
                                         </li>
                                     }

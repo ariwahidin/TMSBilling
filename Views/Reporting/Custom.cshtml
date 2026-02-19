@@ -1,0 +1,234 @@
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@model IEnumerable<TMSBilling.Models.CustomerMain>
+
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Custom Report";
+}
+
+<style>
+    .report-page {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .page-header-icon {
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .page-header h5 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+    }
+
+    .page-header small {
+        color: #6c757d;
+        font-size: 0.78rem;
+    }
+
+    .report-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 24px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .section-divider {
+        border: 0;
+        border-top: 1px solid #f0f0f0;
+        margin: 20px 0;
+    }
+
+    .form-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+
+    .form-control, .form-select {
+        font-size: 0.875rem;
+        border-radius: 6px;
+        border-color: #ced4da;
+        padding: 8px 12px;
+        height: auto;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,.15);
+        }
+
+    .btn-download {
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 9px 20px;
+        border-radius: 6px;
+        letter-spacing: 0.01em;
+    }
+
+    .info-bar {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 14px;
+        font-size: 0.78rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .alert {
+        font-size: 0.82rem;
+        padding: 10px 14px;
+        border-radius: 6px;
+    }
+
+    .field-group label i {
+        font-size: 0.75rem;
+    }
+</style>
+
+<div class="report-page">
+
+    <div class="page-header">
+        <div class="page-header-icon">
+            <i class="bi bi-file-earmark-spreadsheet text-white" style="font-size:1rem;"></i>
+        </div>
+        <div>
+            <h5>Custom Report</h5>
+            <small>Generate and download Excel report by customer and date range</small>
+        </div>
+    </div>
+
+    <div class="report-card">
+
+        <form id="reportForm" asp-action="DownloadCustomReport" asp-controller="Reporting" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="field-group mb-3">
+                <label for="customerId" class="form-label">
+                    <i class="bi bi-building me-1 text-primary"></i> Customer
+                </label>
+                <select id="customerId" name="customerId" class="form-select" required>
+                    <option value="">-- Select Customer --</option>
+                    @foreach (var customer in Model)
+                    {
+                        <option value="@customer.ID">@customer.MAIN_CUST</option>
+                    }
+                </select>
+                <div class="invalid-feedback">Please select a customer.</div>
+            </div>
+
+            <hr class="section-divider" />
+
+           
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label for="dateFrom" class="form-label">
+                        <i class="bi bi-calendar-event me-1 text-primary"></i> Date From
+                    </label>
+                    <input type="date" id="dateFrom" name="dateFrom" class="form-control" required />
+                    <div class="invalid-feedback">Please select a start date.</div>
+                </div>
+                <div class="col-sm-6">
+                    <label for="dateTo" class="form-label">
+                        <i class="bi bi-calendar-check me-1 text-primary"></i> Date To
+                    </label>
+                    <input type="date" id="dateTo" name="dateTo" class="form-control" required />
+                    <div class="invalid-feedback">Please select an end date.</div>
+                </div>
+            </div>
+
+            <div id="validationAlert" class="alert alert-danger d-none mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="validationMessage"></span>
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <button type="submit" id="btnDownload" class="btn btn-primary btn-download">
+                    <i class="bi bi-download me-2"></i> Download Excel
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="info-bar">
+        <i class="bi bi-info-circle-fill text-primary" style="font-size:0.85rem;flex-shrink:0;"></i>
+        Report will be exported as <strong class="mx-1">Excel (.xlsx)</strong> based on selected customer and date range.
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('reportForm');
+            const dateFrom = document.getElementById('dateFrom');
+            const dateTo = document.getElementById('dateTo');
+            const validationAlert = document.getElementById('validationAlert');
+            const alertMsg = document.getElementById('validationMessage');
+            const btnDownload = document.getElementById('btnDownload');
+
+            // Default: first day of current month → today
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            dateFrom.value = firstDay.toISOString().split('T')[0];
+            dateTo.value = today.toISOString().split('T')[0];
+
+            form.addEventListener('submit', function (e) {
+                validationAlert.classList.add('d-none');
+                let valid = true;
+
+                if (!form.checkValidity()) {
+                    e.preventDefault();
+                    form.classList.add('was-validated');
+                    valid = false;
+                }
+
+                if (dateFrom.value && dateTo.value) {
+                    if (new Date(dateTo.value) < new Date(dateFrom.value)) {
+                        e.preventDefault();
+                        alertMsg.textContent = '"Date To" cannot be earlier than "Date From".';
+                        validationAlert.classList.remove('d-none');
+                        valid = false;
+                    }
+                }
+
+                if (valid) {
+                    btnDownload.disabled = true;
+                    btnDownload.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Generating...';
+
+                    setTimeout(() => {
+                        btnDownload.disabled = false;
+                        btnDownload.innerHTML = '<i class="bi bi-download me-2"></i> Download Excel';
+                    }, 5000);
+                }
+            });
+        });
+    </script>
+}

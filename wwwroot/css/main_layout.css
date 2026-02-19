@@ -43,7 +43,7 @@ body {
     .sidebar.collapsed {
         width: var(--sidebar-collapsed-width);
     }
-
+.navbar-nav
 .sidebar-content {
     height: 100vh;
     overflow-y: auto;
@@ -60,6 +60,8 @@ body {
         background: #d1d5db;
         border-radius: 2px;
     }
+
+
 
 .logo {
     display: flex;
