@@ -111,6 +111,7 @@ namespace TMSBilling.Controllers
             a.deliv_date AS DelivDate,
             a.origin AS Origin,
             a.dest AS Dest,
+            a.truck_size AS TruckSize,
             CASE 
 				WHEN mc_fo.[status] IS NOT NULL THEN mc_fo.[status]
 				ELSE 
