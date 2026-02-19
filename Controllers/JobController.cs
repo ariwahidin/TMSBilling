@@ -1472,7 +1472,7 @@ namespace TMSBilling.Controllers
                 NoSPK = jobData.JobId,
                 TglOrder = jobData.DelivDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"),
                 TipeOrder = jobData.ServiceType,
-                JenisTruck = jobData.TruckNo ?? "",
+                JenisTruck = jobData.TruckSize ?? "",
                 TglMuat = jobData.DelivDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"),
                 JamMulaiMuat = "",
                 JamSelesaiMuat = "",
@@ -1525,6 +1525,7 @@ namespace TMSBilling.Controllers
             {
                 JobId = jobId,
                 TruckNo = jobHeader.truck_no,
+                TruckSize = jobHeader.truck_size,
                 DelivDate = jobHeader.deliv_date,
                 Origin = jobHeader.origin,
                 Dest = jobHeader.dest,
@@ -1742,6 +1743,7 @@ namespace TMSBilling.Controllers
         public int IdSeq { get; set; }
         public string? JobId { get; set; }
         public string? TruckNo { get; set; }
+        public string? TruckSize { get; set; }
         public DateTime? DelivDate { get; set; }
         public string? Origin { get; set; }
         public string? Dest { get; set; }

@@ -196,7 +196,8 @@ namespace TMSBilling.Data
                 new Menu { Id = 21, Name = "Area Group", Url = "/AreaGroup/Index", Icon = "fa-database", ParentId = 1, PermissionCode = null, OrderIndex = 14, IsActive = true },
                 new Menu { Id = 22, Name = "Price Buy", Url = "/PriceBuy/Index", Icon = "fa-database", ParentId = 1, PermissionCode = null, OrderIndex = 15, IsActive = true },
                 new Menu { Id = 23, Name = "Price Sell", Url = "/PriceSell/Index", Icon = "fa-database", ParentId = 1, PermissionCode = null, OrderIndex = 16, IsActive = true },
-                new Menu { Id = 24, Name = "Product", Url = "/Product/Index", Icon = "fa-database", ParentId = 1, PermissionCode = null, OrderIndex = 17, IsActive = true }
+                new Menu { Id = 24, Name = "Product", Url = "/Product/Index", Icon = "fa-database", ParentId = 1, PermissionCode = null, OrderIndex = 17, IsActive = true },
+                new Menu { Id = 30, Name = "Permissions", Url = "/Permission/Index", Icon = "fa fa-key", ParentId = 7, PermissionCode = null, OrderIndex = 3, IsActive = true }
             );
 
 

@@ -1,0 +1,91 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Permission Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Permission Management</h4>
+    <button class="btn btn-primary btn-sm" onclick="window.location.href='/Permission/Create'">
+        <i class="fa fa-plus"></i> Add Permission
+    </button>
+</div>
+
+<div class="mb-2">
+    <button class="btn btn-warning btn-sm" onclick="editPermission()">Edit</button>
+    <button class="btn btn-danger btn-sm" onclick="deletePermission()">Delete</button>
+</div>
+
+<div id="permission-table"></div>
+<form id="tokenForm">@Html.AntiForgeryToken()</form>
+
+@section Styles {
+    <link href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
+}
+
+@section Scripts {
+    <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+    <script>
+        var table = new Tabulator("#permission-table", {
+            height: 450,
+            layout: "fitColumns",
+            selectableRows: true,
+            pagination: "local",
+            paginationSize: 10,
+            rowHeader: {
+                headerSort: false, resizable: false, frozen: true,
+                headerHozAlign: "center", hozAlign: "center",
+                formatter: "rowSelection", titleFormatter: "rowSelection", width: 10,
+                cellClick: function (e, cell) { cell.getRow().toggleSelect(); }
+            },
+            columns: [
+                { title: "Code",        field: "code",        width: 200 },
+                { title: "Name",        field: "name",        width: 200 },
+                { title: "Description", field: "description"              },
+                { title: "Used by Roles", field: "usedByRoles", width: 120, hozAlign: "center" },
+                { title: "Used by Menus", field: "usedByMenus", width: 120, hozAlign: "center" }
+            ]
+        });
+
+        $.get("/Permission/GetPermissions", function (res) {
+            if (res.success) table.setData(res.data);
+        });
+
+        function getSelected() {
+            const data = table.getSelectedData();
+            if (data.length !== 1) {
+                showToast("Please select exactly one permission.", "error");
+                return null;
+            }
+            return data[0];
+        }
+
+        function editPermission() {
+            const row = getSelected();
+            if (row) window.location.href = '/Permission/Edit/' + row.id;
+        }
+
+        function deletePermission() {
+            const row = getSelected();
+            if (!row) return;
+
+            if (!confirm(`Delete permission "${row.code}"?`)) return;
+
+            fetch('/Permission/DeleteAjax', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: row.id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    $.get("/Permission/GetPermissions", res => {
+                        if (res.success) table.setData(res.data);
+                    });
+                } else {
+                    showToast(data.message, 'error');
+                }
+            });
+        }
+    </script>
+}

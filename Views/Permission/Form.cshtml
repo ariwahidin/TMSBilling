@@ -1,0 +1,98 @@
+﻿@model TMSBilling.Models.Permission
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    var isEdit = Model.Id != 0;
+    ViewData["Title"] = isEdit ? "Edit Permission" : "Create Permission";
+}
+
+<h4 class="mb-3">@ViewData["Title"]</h4>
+<input type="hidden" id="PermissionId" value="@Model.Id" />
+
+<div class="row">
+    <div class="col-md-5">
+
+        <div class="form-group mb-3">
+            <label>Code <span class="text-danger">*</span></label>
+            <input type="text" id="Code" class="form-control" value="@Model.Code"
+                   placeholder="e.g. invoice_report" @(isEdit ? "readonly" : "") />
+            <small class="text-muted">
+                Hanya huruf kecil, angka, dan underscore. Tidak bisa diubah setelah dibuat.
+            </small>
+        </div>
+
+        <div class="form-group mb-3">
+            <label>Name <span class="text-danger">*</span></label>
+            <input type="text" id="Name" class="form-control" value="@Model.Name"
+                   placeholder="e.g. Invoice Report" />
+        </div>
+
+        <div class="form-group mb-3">
+            <label>Description</label>
+            <textarea id="Description" class="form-control" rows="3"
+                      placeholder="Optional description">@Model.Description</textarea>
+        </div>
+
+        @if (isEdit)
+        {
+            <div class="alert alert-warning py-2">
+                <i class="fa fa-exclamation-triangle"></i>
+                <small>
+                    <strong>Code adalah readonly</strong> karena digunakan sebagai referensi di tabel Menu.
+                    Jika perlu mengubah code, gunakan fitur edit dan sistem akan otomatis update referensi yang terkait.
+                </small>
+            </div>
+        }
+
+        <button id="btnSave" class="btn btn-primary">Save</button>
+        <a href="/Permission/Index" class="btn btn-secondary">Cancel</a>
+        <div id="resultMsg" class="mt-3"></div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-format code: lowercase + replace spasi dengan underscore
+        $("#Code").on("input", function () {
+            const val = $(this).val()
+                .toLowerCase()
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_]/g, '');
+            $(this).val(val);
+        });
+
+        $("#btnSave").click(function () {
+            const id     = $("#PermissionId").val();
+            const isEdit = id && id !== "0";
+
+            const data = {
+                Id:          parseInt(id) || 0,
+                Code:        $("#Code").val().trim(),
+                Name:        $("#Name").val().trim(),
+                Description: $("#Description").val().trim()
+            };
+
+            if (!data.Code || !data.Name) {
+                showToast("Code and Name are required.", "error");
+                return;
+            }
+
+            $.ajax({
+                url: isEdit ? "/Permission/EditAjax" : "/Permission/CreateAjax",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message, "success");
+                        setTimeout(() => window.location.href = '/Permission/Index', 600);
+                    }
+                },
+                error: function (xhr) {
+                    const res = xhr.responseJSON;
+                    showToast(res?.message ?? "An error occurred.", "error");
+                }
+            });
+        });
+    </script>
+}

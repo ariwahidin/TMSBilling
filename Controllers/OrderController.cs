@@ -1006,6 +1006,7 @@ namespace TMSBilling.Controllers
                                             : null,
                                 item_qty = long.TryParse(detailSheet.Cell(drow, 3).GetValue<string>(), out var iq) ? (int?)iq : null,
                                 pkg_unit = detailSheet.Cell(drow, 4).GetString(),
+                                unit_qty = long.TryParse(detailSheet.Cell(drow, 10).GetValue<string>(), out var uq) ? (int?)uq : null,
                             });
                         }
                         catch (Exception ex)
