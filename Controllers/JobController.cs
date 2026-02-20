@@ -32,12 +32,15 @@ namespace TMSBilling.Controllers
         private readonly ApiService _apiService;
         private readonly IConfiguration _configuration;
         private readonly SyncronizeWithMcEasy _sync;
+        private readonly IEmailService _emailService;
 
         public JobController(AppDbContext context, 
             SelectListService selectList, 
             ApiService apiService, 
             IConfiguration configuration,
-            SyncronizeWithMcEasy sync
+            SyncronizeWithMcEasy sync,
+            IEmailService emailService
+            
             )
         {
             _context = context;
@@ -45,6 +48,8 @@ namespace TMSBilling.Controllers
             _apiService = apiService;
             _configuration = configuration;
             _sync = sync;
+            _emailService = emailService;
+
         }
 
         [HttpPost]
@@ -70,13 +75,6 @@ namespace TMSBilling.Controllers
             }
         }
 
-        //public async Task<IActionResult> Index()
-        //{
-        //    var data = await GetJobSummaryQuery().ToListAsync();
-        //    return View(data);
-        //}
-
-
         public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
         {
             // Default: 7 hari terakhir
@@ -97,98 +95,45 @@ namespace TMSBilling.Controllers
         {
             var username = HttpContext.Session.GetString("username") ?? "System";
             var sql = @"
-        WITH tj AS (
-            SELECT 
-                jobid,
-                COUNT(inv_no) AS total_do
-            FROM TRC_JOB
-            GROUP BY jobid
-        )
-        SELECT 
-            a.id_seq AS IdSeq,
-            a.jobid AS JobId,
-            a.truck_no AS TruckNo,
-            a.deliv_date AS DelivDate,
-            a.origin AS Origin,
-            a.dest AS Dest,
-            a.truck_size AS TruckSize,
-            CASE 
-				WHEN mc_fo.[status] IS NOT NULL THEN mc_fo.[status]
-				ELSE 
-					CASE 
-						WHEN a.status_job = 'DRAFT' THEN 'Draf'
-						WHEN a.status_job = 'STARTED' THEN 'Perjalanan'
-						ELSE NULL
-					END
-			END AS MCStatus,
-            a.vendor_plan AS VendorPlan,
-            COALESCE(tj.total_do, 0) AS TotalDo,
-            a.driver_name as DriverName,
-            a.serv_type as ServiceType
-        FROM TRC_JOB_H a
-        LEFT JOIN tj ON a.jobid = tj.jobid
-        LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
-        INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
-        INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
-        WHERE d.Username = {0}
-            AND CAST(a.deliv_date AS date) BETWEEN {1} AND {2}
-        ORDER BY a.id_seq DESC
-    ";
+                WITH tj AS (
+                    SELECT 
+                        jobid,
+                        COUNT(inv_no) AS total_do
+                    FROM TRC_JOB
+                    GROUP BY jobid
+                )
+                SELECT 
+                    a.id_seq AS IdSeq,
+                    a.jobid AS JobId,
+                    a.truck_no AS TruckNo,
+                    a.deliv_date AS DelivDate,
+                    a.origin AS Origin,
+                    a.dest AS Dest,
+                    a.truck_size AS TruckSize,
+                    CASE 
+				        WHEN mc_fo.[status] IS NOT NULL THEN mc_fo.[status]
+				        ELSE 
+					        CASE 
+						        WHEN a.status_job = 'DRAFT' THEN 'Draf'
+						        WHEN a.status_job = 'STARTED' THEN 'Perjalanan'
+						        ELSE NULL
+					        END
+			        END AS MCStatus,
+                    a.vendor_plan AS VendorPlan,
+                    COALESCE(tj.total_do, 0) AS TotalDo,
+                    a.driver_name as DriverName,
+                    a.serv_type as ServiceType
+                FROM TRC_JOB_H a
+                LEFT JOIN tj ON a.jobid = tj.jobid
+                LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
+                INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
+                INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
+                WHERE d.Username = {0}
+                    AND CAST(a.deliv_date AS date) BETWEEN {1} AND {2}
+                ORDER BY a.id_seq DESC
+            ";
             return _context.JobSummaryView.FromSqlRaw(sql, username, startDate, endDate);
         }
-
-        //public async Task<IActionResult> IndexSync()
-        //{
-
-        //    try
-        //    {
-        //        var ordersFromApi = await _sync.FetchFO();
-        //        var result = await _sync.SyncFOToDatabase(ordersFromApi);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Error sync data: {ex.Message}");
-        //    }
-
-
-        //    var data = await GetJobSummaryQuery().ToListAsync();
-
-        //    return View("Index", data);
-        //}
-
-        //private IQueryable<JobSummaryViewModel> GetJobSummaryQuery() {
-
-        //    var username = HttpContext.Session.GetString("username") ?? "System";
-
-        //    var sql = @"
-        //        WITH tj AS (
-        //            SELECT 
-        //                jobid,
-        //                COUNT(inv_no) AS total_do
-        //            FROM TRC_JOB
-        //            GROUP BY jobid
-        //        )
-        //        SELECT 
-        //            a.id_seq AS IdSeq,
-        //            a.jobid AS JobId,
-        //            a.truck_no AS TruckNo,
-        //            a.deliv_date AS DelivDate,
-        //            a.origin AS Origin,
-        //            a.dest AS Dest,
-				    //            mc_fo.status AS MCStatus,
-        //            a.vendor_plan AS VendorPlan,
-        //            COALESCE(tj.total_do, 0) AS TotalDo
-        //        FROM TRC_JOB_H a
-        //        LEFT JOIN tj ON a.jobid = tj.jobid
-        //        LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
-        //        INNER JOIN TRC_CUST_GROUP c ON a.cust_group = c.SUB_CODE
-        //        INNER JOIN UserXCustomers d ON d.CustomerMain = c.MAIN_CUST
-        //        WHERE d.Username = {0}
-        //        ORDER BY a.id_seq DESC
-        //    ";
-
-        //    return _context.JobSummaryView.FromSqlRaw(sql,username);
-        //}
 
         [Route("Job/Form/{jobid?}")]
         public IActionResult Form(string? jobid)
@@ -330,18 +275,14 @@ namespace TMSBilling.Controllers
         public async Task<IActionResult> Save([FromBody] JobViewModel model, string? jobid) 
         {
 
-
             if (model == null || model.FormJobHeader == null || model.FormJobDetails == null)
             {
                 return BadRequest(new { success = false, message = "Incomplete data!" });
             }
 
-
             Console.WriteLine("JOB ID " + jobid);
             Console.WriteLine("JOB FORM HEADER " + System.Text.Json.JsonSerializer.Serialize(model.FormJobHeader));
             Console.WriteLine("JOB FORM DETAIL " + System.Text.Json.JsonSerializer.Serialize(model.FormJobDetails));
-
-            //return Ok(new { success = true, message = $"masok 1" });
 
             var Header = model.FormJobHeader;
             var Details = model.FormJobDetails;
@@ -351,10 +292,7 @@ namespace TMSBilling.Controllers
                 return Json(new { success = true, message = "Customer group not found!" });
             }
 
-            //var customerApi = await _context.Customers.AnyAsync(cs => cs.MAIN_CUST == customerGroup.MAIN_CUST && cs.API_FLAG == 1);
-
             var customerApi = await _context.CustomerGroups.AnyAsync(cs => cs.SUB_CODE == Header.cust_group && cs.API_FLAG == 1);
-
             var GeofenceStartingPoint = await _context.Geofences.FirstOrDefaultAsync(f => f.Id == Header.starting_point);
 
             if (GeofenceStartingPoint != null) {
@@ -367,7 +305,6 @@ namespace TMSBilling.Controllers
                 if (!run.ok) return BadRequest(new { success = false, message = run.message });
             }
             else {
-                    //return BadRequest(new { success = false, message = "Customer not using API" });
                 var run = await RunSaveWithOutApi(Header, Details, jobid);
                 if (!run.ok) return BadRequest( new { success = false, message = run.message });
             }
@@ -1282,6 +1219,184 @@ namespace TMSBilling.Controllers
             return Ok(new { success = true, data = result });
         }
 
+        public async Task<IActionResult> SetStarted(string id)
+        {
+            var username = HttpContext.Session.GetString("username") ?? "System";
+            try
+            {
+                var job = _context.JobHeaders.FirstOrDefault(j => j.jobid == id);
+                if (job == null)
+                    return Json(new { success = false, message = "Job not found." });
+
+                job.status_job = "STARTED";
+                job.update_user = username;
+                job.update_date = DateTime.Now;
+                _context.SaveChanges();
+
+                // ─── Trigger Kirim Email ───────────────────────────────────────
+                try
+                {
+                    // Ambil data Customer
+                    var customerGroup = _context.CustomerGroups
+                        .FirstOrDefault(c => c.SUB_CODE == job.cust_group);
+
+                    // Ambil data Vendor
+                    var vendor = _context.Vendors
+                        .FirstOrDefault(v => v.SUP_CODE == job.vendor_plan);
+
+                    //  List<DeliveryOrderItem> GetDeliveryOrdersByJobId
+
+                    var deliveryDetail = GetDeliveryOrdersByJobId(job?.jobid);
+
+                    var details = deliveryDetail.Select((item, index) => new SuratPerintahKirimDetailViewModel
+                    {
+                        No = index + 1,
+                        ShipToParty = item.ShipToName ?? item.ShipTo ?? "-",
+                        City = item.City ?? "-",
+                        DateUnloading = job.deliv_date,
+                        DeliveryNo = item.DO ?? "-",
+                        TotalBox = item.TotalBoxKoli,
+                        TotalQty = item.TotalQtyPcs,
+                        Volume = item.TotalVolume
+                    }).ToList();
+
+                    // Ambil detail job (job detail / job lines)
+                    // Karena belum ada tabel detail, pakai dummy dulu
+                    //var details = new List<SuratPerintahKirimDetailViewModel>
+                    //{
+                    //    new SuratPerintahKirimDetailViewModel
+                    //    {
+                    //        No            = 1,
+                    //        ShipToParty   = customerGroup?.MAIN_CUST ?? "-",
+                    //        City          = customerGroup?.SUB_CODE ?? "-",
+                    //        DateUnloading = job.deliv_date,
+                    //        DeliveryNo    = job.jobid ?? "-",
+                    //        TotalBox      = 0,   // dummy
+                    //        TotalQty      = 0,   // dummy
+                    //        Volume        = 0    // dummy
+                    //    }
+                    //};
+
+                    // Susun ViewModel
+                    var emailModel = new SuratPerintahKirimViewModel
+                    {
+                        NomorOrder = job.jobid ?? "-",
+                        Transporter = vendor?.SUP_NAME ?? job.vendor_plan ?? "-",
+                        JenisTruck = job.truck_size ?? "-",
+                        NomorPolisi = job.truck_no ?? "-",
+                        DriverName = job.driver_name ?? "-",
+                        DriverPhone = job.driver_phone ?? "-",
+                        TanggalOrder = job.entry_date,
+                        TanggalMuat = job.pickup_date,
+                        JamMulai = null,   // dummy, belum ada di JobHeader
+                        JamSelesai = null,   // dummy, belum ada di JobHeader
+                        Remarks = null,
+                        Details = details
+                    };
+
+
+                    // Ambil dari CustomerMain berdasarkan MAIN_CUST di TRC_CUSTOMER
+                    //var customerMain = _context.CustomerMains
+                    //    .FirstOrDefault(cm => cm.MAIN_CUST == customer.MAIN_CUST);
+
+                    // ← Simpan nilai MAIN_CUST ke variable dulu sebelum query CustomerMain
+                    var mainCustCode = customerGroup?.MAIN_CUST;
+
+                    // Baru query CustomerMain pakai variable biasa
+                    var customerMain = mainCustCode != null
+                        ? _context.CustomerMains.FirstOrDefault(cm => cm.MAIN_CUST == mainCustCode)
+                        : null;
+
+                    var toEmails = new List<string>();
+                    var ccEmails = new List<string>();
+
+                    // To → dari TO_EMAIL di CustomerMain
+                    if (!string.IsNullOrWhiteSpace(customerMain?.TO_EMAIL))
+                    {
+                        var emails = customerMain.TO_EMAIL
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(e => e.Trim())
+                            .Where(e => !string.IsNullOrWhiteSpace(e));
+                        toEmails.AddRange(emails);
+                    }
+
+                    // CC → dari CC_EMAIL di CustomerMain
+                    if (!string.IsNullOrWhiteSpace(customerMain?.CC_EMAIL))
+                    {
+                        var emails = customerMain.CC_EMAIL
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(e => e.Trim())
+                            .Where(e => !string.IsNullOrWhiteSpace(e));
+                        ccEmails.AddRange(emails);
+                    }
+
+                    // CC → email user yang login
+                    var currentUser = _context.Users
+                        .FirstOrDefault(u => u.Username == username);
+                    if (!string.IsNullOrWhiteSpace(currentUser?.Email))
+                        ccEmails.Add(currentUser.Email);
+
+                    // Skip jika tidak ada To email
+                    if (!toEmails.Any())
+                    {
+                        Console.WriteLine($"[EMAIL SKIP] Job {id} - CustomerMain tidak memiliki TO_EMAIL.");
+                    }
+                    else
+                    {
+                        await _emailService.SendSuratPerintahKirimAsync(
+                            model: emailModel,
+                            toEmails: toEmails,
+                            ccEmails: ccEmails.Any() ? ccEmails : null,
+                            sentByUserId: currentUser?.Id
+                        );
+                    }
+
+
+                    // Susun To & CC
+
+                    //var toEmails = new List<string>
+                    //{
+                    //    "ari.wahidin@id.yusen-logistics.com",
+                    //    //"email2@contoh.com",
+                    //    //"email3@contoh.com"
+                    //};
+
+                    //var ccEmails = new List<string>
+                    //{
+                    //    //"wahyudi.wahyu@id.yusen-logistics.com",
+                    //    //"andri.sutrisna@id.yusen-logistics.com"
+                    //    "ari.wahidin@id.yusen-logistics.com",
+                    //    "ari.wahidin@id.yusen-logistics.com",
+                    //};
+
+                    // Kirim hanya jika ada penerima
+                    //if (toEmails.Any())
+                    //{
+                    //    // SendSuratPerintahKirimAsync
+                    //    await _emailService.SendSuratPerintahKirimAsync(
+                    //        model: emailModel,
+                    //        toEmails: toEmails,
+                    //        ccEmails: ccEmails,
+                    //        sentByUserId: currentUser?.Id
+                    //    );
+                    //}
+                }
+                catch (Exception emailEx)
+                {
+                    // Jangan gagalkan SetStarted hanya karena email error
+                    // Log sudah tersimpan di EmailLogs oleh EmailService
+                    Console.WriteLine($"[EMAIL ERROR] {emailEx.Message}");
+                }
+                // ──────────────────────────────────────────────────────────────
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
 
         [HttpPost]
         [Route("Job/BulkJobPod")]
@@ -1445,7 +1560,6 @@ namespace TMSBilling.Controllers
             return Json(new { success = true });
         }
 
-
         public IActionResult PrintSPK(string jobid)
         {
             if (string.IsNullOrEmpty(jobid))
@@ -1540,65 +1654,6 @@ namespace TMSBilling.Controllers
         // Method helper untuk mengambil Delivery Orders berdasarkan JobId
         private List<DeliveryOrderItem> GetDeliveryOrdersByJobId(string jobId)
         {
-            // TODO: Replace with actual database query
-            // Contoh implementasi:
-            // return _context.DeliveryOrders.Where(d => d.JobId == jobId).ToList();
-
-            // Sementara return dummy data untuk testing
-            //return new List<DeliveryOrderItem>
-            //{
-            //    new DeliveryOrderItem
-            //    {
-            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
-            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
-            //        City = "MALANG",
-            //        DO = "JF-2625921",
-            //        TotalBoxKoli = 65,
-            //        TotalQtyPcs = 987,
-            //        TotalVolume = 0
-            //    },
-            //    new DeliveryOrderItem
-            //    {
-            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
-            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
-            //        City = "MALANG",
-            //        DO = "JF-2624451",
-            //        TotalBoxKoli = 17,
-            //        TotalQtyPcs = 195,
-            //        TotalVolume = 0
-            //    },
-            //    new DeliveryOrderItem
-            //    {
-            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
-            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
-            //        City = "MALANG",
-            //        DO = "JF-2637275",
-            //        TotalBoxKoli = 1,
-            //        TotalQtyPcs = 25,
-            //        TotalVolume = 0
-            //    },
-            //    new DeliveryOrderItem
-            //    {
-            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
-            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
-            //        City = "MALANG",
-            //        DO = "JF-2635415",
-            //        TotalBoxKoli = 3,
-            //        TotalQtyPcs = 35,
-            //        TotalVolume = 0
-            //    },
-            //    new DeliveryOrderItem
-            //    {
-            //        ShipTo = "ASICS MALL OLYMPIC GARDEN",
-            //        ShipToName = "ASICS MALL OLYMPIC GARDEN",
-            //        City = "MALANG",
-            //        DO = "JF-2635457",
-            //        TotalBoxKoli = 7,
-            //        TotalQtyPcs = 94,
-            //        TotalVolume = 0
-            //    }
-            //};
-
 
             // Query menggunakan Entity Framework dengan Join
             var deliveryOrders = (from job in _context.Jobs

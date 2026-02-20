@@ -1,0 +1,195 @@
+﻿@model TMSBilling.Models.ViewModels.SuratPerintahKirimViewModel
+@{
+    Layout = null; // Email template tidak pakai layout
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Surat Perintah Kirim</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #000;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 15px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+            .header-table td {
+                border: 1px solid #000;
+                padding: 4px 8px;
+            }
+
+                .header-table td:first-child {
+                    width: 200px;
+                    font-weight: normal;
+                }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+            .detail-table th {
+                background-color: #FFFF00;
+                border: 1px solid #000;
+                padding: 6px 8px;
+                text-align: left;
+                font-weight: bold;
+            }
+
+            .detail-table td {
+                border: 1px solid #000;
+                padding: 5px 8px;
+                vertical-align: top;
+            }
+
+            .detail-table tr.grand-total td {
+                font-weight: bold;
+                text-align: right;
+            }
+
+                .detail-table tr.grand-total td:first-child {
+                    text-align: right;
+                }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+        }
+
+            .footer .company-name {
+                font-weight: bold;
+            }
+
+        .divider {
+            border: none;
+            border-top: 2px solid #000;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <hr class="divider" />
+
+        <div class="title">SURAT PERINTAH KIRIM</div>
+
+        <table class="header-table">
+            <tr>
+                <td>Nomor Order</td>
+                <td>@Model.NomorOrder</td>
+            </tr>
+            <tr>
+                <td>Transporter</td>
+                <td>@Model.Transporter</td>
+            </tr>
+            <tr>
+                <td>Jenis Truck</td>
+                <td>@Model.JenisTruck</td>
+            </tr>
+            <tr>
+                <td>Nomor Polisi / Driver / HP</td>
+                <td>@Model.NomorPolisi / @Model.DriverName / @Model.DriverPhone</td>
+            </tr>
+            <tr>
+                <td>Tanggal Order / Tanggal Muat</td>
+                <td>
+                    @Model.TanggalOrder?.ToString("yyyy-MM-dd") /
+                    @Model.TanggalMuat?.ToString("yyyy-MM-dd")
+                </td>
+            </tr>
+            <tr>
+                <td>Jam Mulai/Selesai Muat</td>
+                <td>@(Model.JamMulai ?? "00:00:00") / @(Model.JamSelesai ?? "00:00:00")</td>
+            </tr>
+            <tr>
+                <td>Remarks</td>
+                <td>@Model.Remarks</td>
+            </tr>
+        </table>
+
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th style="width:30px;">No</th>
+                    <th>Ship To Party</th>
+                    <th style="width:100px;">City</th>
+                    <th style="width:100px;">DATE Unloading</th>
+                    <th style="width:90px;">Delivery No</th>
+                    <th style="width:80px;">Total Box/Koli</th>
+                    <th style="width:70px;">Total Qty Pcs</th>
+                    <th style="width:80px;">Volume(CBM)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Details)
+                {
+                    <tr>
+                        <td>@item.No</td>
+                        <td>@item.ShipToParty</td>
+                        <td>@item.City</td>
+                        <td>@item.DateUnloading?.ToString("yyyy-MM-dd")</td>
+                        <td>@item.DeliveryNo</td>
+                        <td style="text-align:center;">@item.TotalBox</td>
+                        <td style="text-align:center;">@item.TotalQty</td>
+                        <td style="text-align:center;">@item.Volume</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="grand-total">
+                    <td colspan="5" style="text-align:right;">Grand Total</td>
+                    <td style="text-align:center;">@Model.Details.Sum(x => x.TotalBox)</td>
+                    <td style="text-align:center;">@Model.Details.Sum(x => x.TotalQty)</td>
+                    <td style="text-align:center;">@Model.Details.Sum(x => x.Volume)</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="footer">
+            <p>
+                Best Regards,<br />
+                <strong>Admin Control Tower</strong>
+            </p>
+
+            <p>
+                <strong>PT. Yusen Logistics Interlink Indonesia</strong><br />
+                Jalan Raya Cakung Cilincing Km. 1,5<br />
+                Jakarta 13910 - Indonesia
+            </p>
+
+            <p>
+                T: +62.21.4608720 (Hunting)<br />
+                F: +62.21.4602280, 4413234<br />
+                afrianto.simanjuntak@id.yusen-logistics.com
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

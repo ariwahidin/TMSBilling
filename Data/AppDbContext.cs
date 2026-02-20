@@ -99,6 +99,9 @@ namespace TMSBilling.Data
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<Menu> Menus { get; set; }
 
+        public DbSet<EmailSettings> EmailSettings { get; set; }
+        public DbSet<EmailLog> EmailLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

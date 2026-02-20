@@ -55,6 +55,12 @@ namespace TMSBilling.Models
         public DateTime? UPDATE_DATE { get; set; }
 
         public int? STATUS_FLAG { get; set; }
+
+        [MaxLength(500)]
+        public string? TO_EMAIL { get; set; }
+
+        [MaxLength(500)]
+        public string? CC_EMAIL { get; set; }
     }
 
 

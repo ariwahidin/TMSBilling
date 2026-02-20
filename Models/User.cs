@@ -22,6 +22,8 @@ namespace TMSBilling.Models
         [Required]
         public bool IsAdmin { get; set; } = false;
 
+        public string? Email { get; set; }
+
         public string? CreatedBy { get; set; }
         public DateTime? CreatedAt { get; set; }
 

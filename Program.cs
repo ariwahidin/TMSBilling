@@ -4,6 +4,7 @@ using System.Globalization;
 using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
+using TMSBilling.Repositories;
 using TMSBilling.Services;
 using TMSBilling.Services.Reports;
 
@@ -54,6 +55,10 @@ builder.Services.AddScoped<IReportGenerator, ProformaInvoiceReport>();
 // builder.Services.AddScoped<IReportGenerator, DeliveryOrderReport>();   ← contoh nanti
 // builder.Services.AddScoped<IReportGenerator, SummaryBillingReport>();  ← contoh nanti
 
+builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<IEmailSettingsRepository, EmailSettingsRepository>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 
 

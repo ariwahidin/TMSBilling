@@ -1,0 +1,160 @@
+﻿@model TMSBilling.Models.ViewModels.EmailSettingsViewModel
+
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Konfigurasi Email";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-envelope-open-text me-2"></i>Konfigurasi SMTP Email
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    <form asp-action="Index" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label asp-for="SmtpHost" class="form-label fw-bold"></label>
+                                <input asp-for="SmtpHost" class="form-control"
+                                       placeholder="contoh: smtp.gmail.com" />
+                                <span asp-validation-for="SmtpHost" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="SmtpPort" class="form-label fw-bold"></label>
+                                <input asp-for="SmtpPort" class="form-control" type="number" />
+                                <span asp-validation-for="SmtpPort" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="FromEmail" class="form-label fw-bold"></label>
+                                <input asp-for="FromEmail" class="form-control"
+                                       placeholder="noreply@yusen-logistics.com" />
+                                <span asp-validation-for="FromEmail" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="DisplayName" class="form-label fw-bold"></label>
+                                <input asp-for="DisplayName" class="form-control"
+                                       placeholder="PT. Yusen Logistics" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Username" class="form-label fw-bold"></label>
+                                <input asp-for="Username" class="form-control" />
+                                <span asp-validation-for="Username" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Password" class="form-label fw-bold"></label>
+                                <div class="input-group">
+                                    <input asp-for="Password" class="form-control"
+                                           type="password" id="passwordInput"
+                                           placeholder="Kosongkan jika tidak ingin mengubah" />
+                                    <button class="btn btn-outline-secondary" type="button"
+                                            onclick="togglePassword()">
+                                        <i class="fas fa-eye" id="eyeIcon"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Password" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="form-check form-switch mt-2">
+                                    <input asp-for="UseSSL" class="form-check-input"
+                                           type="checkbox" role="switch" />
+                                    <label asp-for="UseSSL" class="form-check-label fw-bold"></label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check form-switch mt-2">
+                                    <input asp-for="IsActive" class="form-check-input"
+                                           type="checkbox" role="switch" />
+                                    <label asp-for="IsActive" class="form-check-label fw-bold"></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Simpan Konfigurasi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paper-plane me-2"></i>Test Kirim Email
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Kirim email percobaan untuk memastikan konfigurasi SMTP sudah benar.
+                    </p>
+                    <form asp-action="TestEmail" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email Tujuan Test</label>
+                            <input type="email" name="testEmailAddress"
+                                   class="form-control"
+                                   placeholder="email@contoh.com" />
+                        </div>
+                        <button type="submit" class="btn btn-secondary w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Kirim Test Email
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('passwordInput');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+    </script>
+}

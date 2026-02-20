@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260220021755_UpdateEmailLogRecipientLength")]
+    partial class UpdateEmailLogRecipientLength
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -664,10 +667,6 @@ namespace TMSBilling.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<string>("CC_EMAIL")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("CUST_ADDR1")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -722,10 +721,6 @@ namespace TMSBilling.Migrations
                     b.Property<string>("TAX_REG_NO")
                         .HasMaxLength(25)
                         .HasColumnType("nvarchar(25)");
-
-                    b.Property<string>("TO_EMAIL")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("UPDATE_DATE")
                         .HasColumnType("datetime2");

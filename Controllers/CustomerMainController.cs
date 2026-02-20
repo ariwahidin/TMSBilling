@@ -77,6 +77,8 @@ namespace TMSBilling.Controllers
                 existing.CUST_CITY = model.CUST_CITY;
                 existing.CUST_TEL = model.CUST_TEL;
                 existing.STATUS_FLAG = model.STATUS_FLAG;
+                existing.TO_EMAIL = model.TO_EMAIL;   // ← tambah
+                existing.CC_EMAIL = model.CC_EMAIL;   // ← tambah
                 existing.UPDATE_DATE = DateTime.Now;
                 existing.UPDATE_USER = HttpContext.Session.GetString("username") ?? "System";
             }

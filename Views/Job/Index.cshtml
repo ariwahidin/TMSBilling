@@ -97,6 +97,11 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
+                                    <a class="dropdown-item text-success" href="#" onclick="confirmStartJob('@item.JobId'); return false;">
+                                        <i class="bi bi-play-circle text-success"></i> Start Job
+                                    </a>
+                                </li>
+                                <li>
                                     <a class="dropdown-item" href="/Job/Form/@item.JobId">
                                         <i class="bi bi-pencil-square text-primary"></i> Edit
                                     </a>
@@ -296,6 +301,31 @@
 
         // Bulk confirm button handler
         $('#btnBulkConfirm').on('click', bulkConfirmOrders);
+
+        function confirmStartJob(jobId) {
+            Swal.fire({
+                icon: 'question',
+                title: 'Start Job?',
+                text: `Change job ${jobId} status to STARTED?`,
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, Start it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/Job/SetStarted/${jobId}`, { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('Started!', 'Job status changed to STARTED.', 'success')
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire('Error', data.message || 'Failed to update status.', 'error');
+                            }
+                        });
+                }
+            });
+        }
 
 
     </script>

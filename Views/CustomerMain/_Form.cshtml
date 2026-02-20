@@ -26,6 +26,19 @@
         </div>
     </div>
 
+    <div class="mb-3">
+        <label class="form-label fw-bold">To Email</label>
+        <input asp-for="TO_EMAIL" class="form-control"
+               placeholder="email1@contoh.com,email2@contoh.com" />
+        <small class="text-muted">Pisahkan dengan koma jika lebih dari satu.</small>
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-bold">CC Email</label>
+        <input asp-for="CC_EMAIL" class="form-control"
+               placeholder="cc1@contoh.com,cc2@contoh.com" />
+        <small class="text-muted">Pisahkan dengan koma jika lebih dari satu.</small>
+    </div>
+
     <div class="text-end">
         <button type="submit" class="btn btn-sm btn-primary">Save</button>
     </div>
