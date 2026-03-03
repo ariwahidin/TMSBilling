@@ -1,0 +1,411 @@
+@model TMSBilling.Controllers.IntegrationFormViewModel
+@{
+    var attachments = Model.Attachments ?? new List<TMSBilling.Models.IntegrationAttachment>();
+}
+
+<div class="row g-3">
+
+    <!-- Header + Mode Selector -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="fw-bold mb-0">Attachment Email</h6>
+                <small class="text-muted">File yang dilampirkan ke email notifikasi. Attachment dengan Group Key yang sama → 1 file Excel multi-sheet.</small>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="btnAddAttachment">
+                <i class="bi bi-plus-lg me-1"></i>Tambah Attachment
+            </button>
+        </div>
+    </div>
+
+    <!-- Attachment Mode -->
+    <div class="col-12">
+        <div class="card border bg-light">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-4 flex-wrap">
+                    <small class="text-muted fw-semibold">Mode Email:</small>
+                    @{
+                        var currentMode = Model.Integration.EmailAttachmentMode ?? "inline";
+                    }
+                    @foreach (var (val, label, desc, icon) in new[]
+                                        {
+                                        ("none",       "Tanpa Attachment",   "Tidak ada file",                            "bi-x-circle"),
+                                        ("inline",     "Inline Only",        "Tabel data di body email saja",             "bi-table"),
+                                        ("attachment", "Attachment Only",    "File lampiran, tanpa tabel di body",        "bi-paperclip"),
+                                        ("both",       "Inline + Attachment","Tabel di body DAN file lampiran",           "bi-envelope-paper"),
+                                        })
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                   name="Integration.EmailAttachmentMode"
+                                   id="mode_@val" value="@val"
+                                   @(currentMode == val ? "checked" : "")>
+                            <label class="form-check-label" for="mode_@val">
+                                <i class="bi @icon me-1"></i><strong>@label</strong>
+                                <small class="d-block text-muted" style="font-size:11px;">@desc</small>
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachment List -->
+    <div class="col-12">
+        <div id="attachmentList">
+            @for (int i = 0; i < attachments.Count; i++)
+            {
+                var att = attachments[i];
+                var isQuery = att.AttachmentType != "file_path";
+                <div class="card shadow-sm border mb-3 attachment-row" data-index="@i">
+                    <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-grip-vertical text-muted" style="cursor:grab;"></i>
+                            <span class="fw-semibold small att-display-name">@(att.DisplayName ?? "Attachment")</span>
+                            <span class="badge bg-info bg-opacity-10 text-info att-type-badge">@att.AttachmentType</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary att-format-badge">@att.FileFormat</span>
+                            <span class="badge bg-warning bg-opacity-10 text-warning att-group-badge">@(att.GroupFileKey ?? "?")</span>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-link p-0 text-muted toggle-att-body">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-attachment ms-2">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body att-body">
+                        <div class="row g-3">
+                            <input type="hidden" name="Attachments[@i].AttachmentType" class="att-type-input" value="@att.AttachmentType">
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Tipe</label>
+                                <select class="form-select form-select-sm att-type-select" onchange="onAttTypeChange(this,@i)">
+                                    @if (isQuery)
+                                    {
+                                        <option value="query" selected>📊 SQL Query</option>
+                                        <option value="file_path">📁 File Path</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="query">📊 SQL Query</option>
+                                        <option value="file_path" selected>📁 File Path</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Nama Tampilan</label>
+                                <input type="text" name="Attachments[@i].DisplayName" class="form-control form-control-sm att-displayname-input"
+                                       placeholder="Daftar Order Hari Ini" value="@att.DisplayName">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Format</label>
+                                <select name="Attachments[@i].FileFormat" class="form-select form-select-sm">
+                                    @if (att.FileFormat == "xlsx")
+                                    {
+                                        <option value="xlsx" selected>Excel (.xlsx)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="xlsx">Excel (.xlsx)</option>
+                                    }
+                                    @if (att.FileFormat == "csv")
+                                    {
+                                        <option value="csv" selected>CSV</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="csv">CSV</option>
+                                    }
+                                    @if (att.FileFormat == "json")
+                                    {
+                                        <option value="json" selected>JSON</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="json">JSON</option>
+                                    }
+                                    @if (att.FileFormat == "txt")
+                                    {
+                                        <option value="txt" selected>TXT</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="txt">TXT</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small fw-semibold">Aktif</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input type="checkbox" name="Attachments[@i].IsActive" class="form-check-input"
+                                           value="true" @(att.IsActive ? "checked" : "")>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Group File Key</label>
+                                <input type="text" name="Attachments[@i].GroupFileKey" class="form-control form-control-sm"
+                                       placeholder="laporan_harian" value="@att.GroupFileKey">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-semibold">Nama File <span class="text-muted fw-normal">— support {{date}}</span></label>
+                                <input type="text" name="Attachments[@i].GroupFileName" class="form-control form-control-sm"
+                                       placeholder="Laporan_{{date}}.xlsx" value="@att.GroupFileName">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Sheet Name</label>
+                                <input type="text" name="Attachments[@i].SheetName" class="form-control form-control-sm"
+                                       placeholder="Sheet1" value="@att.SheetName">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small fw-semibold">Order</label>
+                                <input type="number" name="Attachments[@i].SheetOrder" class="form-control form-control-sm"
+                                       min="1" value="@att.SheetOrder">
+                            </div>
+
+                            <div class="col-12 att-query-section" style="@(!isQuery ? "display:none" : "")">
+                                <label class="form-label small fw-semibold">SQL Query</label>
+                                <textarea name="Attachments[@i].Query" class="form-control form-control-sm font-monospace att-query-input"
+                                      rows="5" placeholder="SELECT ...">@att.Query</textarea>
+                                <div class="d-flex gap-2 mt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-info btn-validate-att" data-idx="@i">
+                                        <i class="bi bi-check-circle me-1"></i>Validasi
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-preview-att" data-idx="@i">
+                                        <i class="bi bi-play me-1"></i>Preview
+                                    </button>
+                                </div>
+                                <div class="att-validation-msg mt-1" style="display:none"></div>
+                                <div class="att-preview-result mt-2" style="display:none">
+                                    <div class="att-preview-info alert alert-info small py-1 mb-1"></div>
+                                    <div class="table-responsive" style="max-height:200px; overflow-y:auto;">
+                                        <table class="table table-sm table-bordered small mb-0 att-preview-table"></table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 att-filepath-section" style="@(isQuery ? "display:none" : "")">
+                                <label class="form-label small fw-semibold">File Path</label>
+                                <input type="text" name="Attachments[@i].FilePath" class="form-control form-control-sm font-monospace"
+                                       placeholder="C:\Reports\Template_{{date}}.pdf" value="@att.FilePath">
+                                <small class="text-muted">Support placeholder: {{date}}, {{order_no}}, dll.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (!attachments.Any())
+        {
+            <div id="attachmentEmpty" class="text-center text-muted py-5 border rounded">
+                <i class="bi bi-paperclip fs-1 d-block mb-2 opacity-25"></i>
+                Belum ada attachment. Klik <strong>Tambah Attachment</strong> untuk mulai.
+            </div>
+        }
+        else
+        {
+            <div id="attachmentEmpty" style="display:none"></div>
+        }
+    </div>
+
+</div>
+
+<script id="att-inline-script">
+    // ── GLOBAL FUNCTIONS — dipanggil dari onclick di HTML dinamis ─────────────
+
+    function onAttTypeChange(select, i) {
+        const row = document.querySelector(`.attachment-row[data-index="${i}"]`);
+        if (!row) return;
+        const isQuery = select.value === 'query';
+        row.querySelector('.att-query-section').style.display = isQuery ? 'block' : 'none';
+        row.querySelector('.att-filepath-section').style.display = isQuery ? 'none' : 'block';
+        row.querySelector('.att-type-input').value = select.value;
+        row.querySelector('.att-type-badge').textContent = select.value;
+    }
+
+    function buildAttachmentRowHtml(i, d) {
+        return `
+        <div class="card shadow-sm border mb-3 attachment-row" data-index="${i}">
+            <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-grip-vertical text-muted" style="cursor:grab;"></i>
+                    <span class="fw-semibold small att-display-name">${d.displayName || 'Attachment Baru'}</span>
+                    <span class="badge bg-info bg-opacity-10 text-info att-type-badge">${d.attachmentType}</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary att-format-badge">${d.fileFormat}</span>
+                    <span class="badge bg-warning bg-opacity-10 text-warning att-group-badge">${d.groupFileKey || 'group?'}</span>
+                </div>
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-link p-0 text-muted toggle-att-body"><i class="bi bi-chevron-down"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-attachment ms-2"><i class="bi bi-trash"></i></button>
+                </div>
+            </div>
+            <div class="card-body att-body">
+                <div class="row g-3">
+                    <input type="hidden" name="Attachments[${i}].AttachmentType" class="att-type-input" value="${d.attachmentType}">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Tipe</label>
+                        <select class="form-select form-select-sm att-type-select" onchange="onAttTypeChange(this,${i})">
+                            <option value="query" ${d.attachmentType==='query'?'selected':''}>📊 SQL Query</option>
+                            <option value="file_path" ${d.attachmentType==='file_path'?'selected':''}>📁 File Path</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Nama Tampilan</label>
+                        <input type="text" name="Attachments[${i}].DisplayName" class="form-control form-control-sm att-displayname-input"
+                               placeholder="Daftar Order Hari Ini" value="${d.displayName}"
+                               oninput="document.querySelector('[data-index=&quot;${i}&quot;] .att-display-name').textContent=this.value||'Attachment Baru'">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Format</label>
+                        <select name="Attachments[${i}].FileFormat" class="form-select form-select-sm"
+                                onchange="document.querySelector('[data-index=&quot;${i}&quot;] .att-format-badge').textContent=this.value">
+                            <option value="xlsx" ${d.fileFormat==='xlsx'?'selected':''}>Excel (.xlsx)</option>
+                            <option value="csv"  ${d.fileFormat==='csv' ?'selected':''}>CSV</option>
+                            <option value="json" ${d.fileFormat==='json'?'selected':''}>JSON</option>
+                            <option value="txt"  ${d.fileFormat==='txt' ?'selected':''}>TXT</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label small fw-semibold">Aktif</label>
+                        <div class="form-check form-switch mt-1">
+                            <input type="checkbox" name="Attachments[${i}].IsActive" class="form-check-input" value="true" ${d.isActive?'checked':''}>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Group File Key</label>
+                        <input type="text" name="Attachments[${i}].GroupFileKey" class="form-control form-control-sm"
+                               placeholder="laporan_harian" value="${d.groupFileKey}"
+                               oninput="document.querySelector('[data-index=&quot;${i}&quot;] .att-group-badge').textContent=this.value||'group?'">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Nama File <span class="text-muted fw-normal">— support {{date}}</span></label>
+                        <input type="text" name="Attachments[${i}].GroupFileName" class="form-control form-control-sm"
+                               placeholder="Laporan_{{date}}.xlsx" value="${d.groupFileName}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Sheet Name</label>
+                        <input type="text" name="Attachments[${i}].SheetName" class="form-control form-control-sm"
+                               placeholder="Sheet1" value="${d.sheetName}">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label small fw-semibold">Order</label>
+                        <input type="number" name="Attachments[${i}].SheetOrder" class="form-control form-control-sm" min="1" value="${d.sheetOrder}">
+                    </div>
+                    <div class="col-12 att-query-section" style="${d.attachmentType==='file_path'?'display:none':''}">
+                        <label class="form-label small fw-semibold">SQL Query</label>
+                        <textarea name="Attachments[${i}].Query" class="form-control form-control-sm font-monospace att-query-input"
+                                  rows="5" placeholder="SELECT ...">${d.query}</textarea>
+                        <div class="d-flex gap-2 mt-1">
+                            <button type="button" class="btn btn-sm btn-outline-info btn-validate-att" data-idx="${i}">
+                                <i class="bi bi-check-circle me-1"></i>Validasi
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-preview-att" data-idx="${i}">
+                                <i class="bi bi-play me-1"></i>Preview
+                            </button>
+                        </div>
+                        <div class="att-validation-msg mt-1" style="display:none"></div>
+                        <div class="att-preview-result mt-2" style="display:none">
+                            <div class="att-preview-info alert alert-info small py-1 mb-1"></div>
+                            <div class="table-responsive" style="max-height:200px;overflow-y:auto;">
+                                <table class="table table-sm table-bordered small mb-0 att-preview-table"></table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 att-filepath-section" style="${d.attachmentType==='file_path'?'':'display:none'}">
+                        <label class="form-label small fw-semibold">File Path</label>
+                        <input type="text" name="Attachments[${i}].FilePath" class="form-control form-control-sm font-monospace"
+                               placeholder="C:\\Reports\\Template_{{date}}.pdf" value="${d.filePath}">
+                        <small class="text-muted">Support placeholder: {{date}}, {{order_no}}, dll.</small>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function bindAttachmentRow(i) {
+        const row = document.querySelector(`.attachment-row[data-index="${i}"]`);
+        if (!row) return;
+
+        row.querySelector('.toggle-att-body').addEventListener('click', function() {
+            const body = row.querySelector('.att-body');
+            body.style.display = body.style.display === 'none' ? '' : 'none';
+            this.querySelector('i').className = body.style.display === 'none' ? 'bi bi-chevron-right' : 'bi bi-chevron-down';
+        });
+
+        row.querySelector('.remove-attachment').addEventListener('click', function() {
+            if (confirm('Hapus attachment ini?')) {
+                row.remove();
+                if (!document.querySelectorAll('.attachment-row').length)
+                    document.getElementById('attachmentEmpty').style.display = '';
+            }
+        });
+
+        row.querySelector('.btn-validate-att')?.addEventListener('click', async function() {
+            const query = row.querySelector('.att-query-input').value;
+            const msg = row.querySelector('.att-validation-msg');
+            const res = await fetch('/Integration/ValidateQuery', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({query})
+            });
+            const data = await res.json();
+            msg.style.display = '';
+            msg.className = `att-validation-msg alert alert-${data.isValid?'success':'danger'} small py-1 mt-1`;
+            msg.textContent = data.isValid ? '✓ Query valid' : data.error;
+        });
+
+        row.querySelector('.btn-preview-att')?.addEventListener('click', async function() {
+            const query = row.querySelector('.att-query-input').value;
+            const btn = this;
+            btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass"></i>';
+            const res = await fetch('/Integration/PreviewQuery', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({query})
+            });
+            const data = await res.json();
+            btn.disabled = false; btn.innerHTML = '<i class="bi bi-play me-1"></i>Preview';
+            const resultEl = row.querySelector('.att-preview-result');
+            resultEl.style.display = '';
+            if (!data.success) {
+                row.querySelector('.att-preview-info').innerHTML = `<i class="bi bi-x-circle me-1"></i>${data.error}`;
+                row.querySelector('.att-preview-table').innerHTML = '';
+                return;
+            }
+            row.querySelector('.att-preview-info').innerHTML = `<i class="bi bi-table me-1"></i>${data.rowCount} baris | ${data.columns?.length} kolom`;
+            const tbl = row.querySelector('.att-preview-table');
+            let html = '<thead class="table-dark"><tr>' + (data.columns||[]).map(c=>`<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+            (data.rows||[]).forEach(r => { html += '<tr>' + (data.columns||[]).map(c=>`<td>${r[c]??''}</td>`).join('') + '</tr>'; });
+            tbl.innerHTML = html + '</tbody>';
+        });
+    }
+
+    // ── INIT on DOM ready ─────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        let attIdx = @(attachments.Count);
+
+        document.getElementById('btnAddAttachment').addEventListener('click', () => {
+            const i = attIdx++;
+            const html = buildAttachmentRowHtml(i, {
+                attachmentType:'query', groupFileKey:'', groupFileName:'',
+                fileFormat:'xlsx', sheetName:'', sheetOrder: attIdx,
+                query:'', filePath:'', displayName:'', isActive:true
+            });
+            document.getElementById('attachmentList').insertAdjacentHTML('beforeend', html);
+            bindAttachmentRow(i);
+            document.getElementById('attachmentEmpty').style.display = 'none';
+        });
+
+        // Bind existing server-rendered rows
+        document.querySelectorAll('.attachment-row').forEach(row => {
+            bindAttachmentRow(parseInt(row.dataset.index));
+        });
+
+        // btn-xs style
+        const s = document.createElement('style');
+        s.textContent = '.btn-xs{padding:2px 8px;font-size:11px;}';
+        document.head.appendChild(s);
+    });
+</script>

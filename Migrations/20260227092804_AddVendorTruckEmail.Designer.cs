@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260227092804_AddVendorTruckEmail")]
+    partial class AddVendorTruckEmail
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1153,19 +1156,8 @@ namespace TMSBilling.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("EmailAttachmentMode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<string>("EmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmailFooterTemplate")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("EmailIncludeDataTable")
-                        .HasColumnType("bit");
 
                     b.Property<string>("EmailSubjectTemplate")
                         .HasMaxLength(500)
@@ -1235,70 +1227,6 @@ namespace TMSBilling.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Integrations");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.IntegrationAttachment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AttachmentType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DisplayName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FileFormat")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("FilePath")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("GroupFileKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("GroupFileName")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("IntegrationId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Query")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SheetName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("SheetOrder")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IntegrationId");
-
-                    b.ToTable("IntegrationAttachments");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.IntegrationConnection", b =>
@@ -2009,269 +1937,6 @@ namespace TMSBilling.Migrations
                     b.ToTable("MC_ORDER");
                 });
 
-            modelBuilder.Entity("TMSBilling.Models.MailReport", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<DateTime?>("entry_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("entry_user")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("event_key")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<byte>("is_active")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("report_code")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("report_desc")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("report_name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int?>("schedule_day_of_month")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("schedule_day_of_week")
-                        .HasColumnType("int");
-
-                    b.Property<string>("schedule_freq")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<TimeSpan?>("schedule_time")
-                        .HasColumnType("time");
-
-                    b.Property<string>("trigger_type")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("update_date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("update_user")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("ID");
-
-                    b.ToTable("RPT_MAIL_REPORT");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportLog", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<string>("body_sent")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("error_message")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("recipients_cc")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("recipients_to")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("report_id")
-                        .HasColumnType("int");
-
-                    b.Property<int>("retry_count")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("sent_at")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("status")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("subject_sent")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("trigger_ref")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("trigger_type")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("triggered_by")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("report_id");
-
-                    b.ToTable("RPT_MAIL_LOG");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportRecipient", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<string>("email_address")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("email_name")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("email_type")
-                        .IsRequired()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
-
-                    b.Property<byte>("is_active")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("recipient_source")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("report_id")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("truck_email_id")
-                        .HasColumnType("int");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("report_id");
-
-                    b.HasIndex("truck_email_id");
-
-                    b.ToTable("RPT_MAIL_RECIPIENT");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportSection", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<string>("display_mode")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("grand_total_label")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("report_id")
-                        .HasColumnType("int");
-
-                    b.Property<string>("section_label")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("section_type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<byte>("show_grand_total")
-                        .HasColumnType("tinyint");
-
-                    b.Property<int>("sort_order")
-                        .HasColumnType("int");
-
-                    b.Property<string>("sql_query")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("sql_where")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<byte>("use_as_placeholder")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("visible_columns")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("report_id");
-
-                    b.ToTable("RPT_MAIL_SECTION");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportTemplate", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<byte>("attach_excel")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("attach_filename")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<byte>("attach_pdf")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("body_footer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("body_header")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("report_id")
-                        .HasColumnType("int");
-
-                    b.Property<string>("subject")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("report_id")
-                        .IsUnique();
-
-                    b.ToTable("RPT_MAIL_TEMPLATE");
-                });
-
             modelBuilder.Entity("TMSBilling.Models.Menu", b =>
                 {
                     b.Property<int>("Id")
@@ -2567,8 +2232,8 @@ namespace TMSBilling.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id_seq"));
 
                     b.Property<string>("cnee_code")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("delivery_date")
                         .HasColumnType("datetime2");
@@ -2595,16 +2260,13 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("is_b2c")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("jobid")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("mceasy_dest_name")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int?>("mceasy_destination_address_id")
                         .HasColumnType("int");
@@ -2692,15 +2354,6 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("user_def_1")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("user_def_2")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("user_def_3")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("wh_code")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -2719,8 +2372,8 @@ namespace TMSBilling.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id_seq"));
 
                     b.Property<string>("cnee_code")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("delivery_date")
                         .HasColumnType("datetime2");
@@ -2808,15 +2461,6 @@ namespace TMSBilling.Migrations
                     b.Property<string>("update_user")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("user_def_1")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("user_def_2")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("user_def_3")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("wh_code")
                         .HasMaxLength(50)
@@ -3887,6 +3531,7 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("vehicle_no")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -3962,17 +3607,6 @@ namespace TMSBilling.Migrations
                     b.Navigation("SentByUser");
                 });
 
-            modelBuilder.Entity("TMSBilling.Models.IntegrationAttachment", b =>
-                {
-                    b.HasOne("TMSBilling.Models.Integration", "Integration")
-                        .WithMany("Attachments")
-                        .HasForeignKey("IntegrationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Integration");
-                });
-
             modelBuilder.Entity("TMSBilling.Models.IntegrationConnection", b =>
                 {
                     b.HasOne("TMSBilling.Models.Integration", "Integration")
@@ -4004,56 +3638,6 @@ namespace TMSBilling.Migrations
                         .IsRequired();
 
                     b.Navigation("Integration");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportLog", b =>
-                {
-                    b.HasOne("TMSBilling.Models.MailReport", "Report")
-                        .WithMany()
-                        .HasForeignKey("report_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Report");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportRecipient", b =>
-                {
-                    b.HasOne("TMSBilling.Models.MailReport", "Report")
-                        .WithMany("Recipients")
-                        .HasForeignKey("report_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TMSBilling.Models.VendorTruckEmail", "TruckEmail")
-                        .WithMany()
-                        .HasForeignKey("truck_email_id");
-
-                    b.Navigation("Report");
-
-                    b.Navigation("TruckEmail");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportSection", b =>
-                {
-                    b.HasOne("TMSBilling.Models.MailReport", "Report")
-                        .WithMany("Sections")
-                        .HasForeignKey("report_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Report");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReportTemplate", b =>
-                {
-                    b.HasOne("TMSBilling.Models.MailReport", "Report")
-                        .WithOne("Template")
-                        .HasForeignKey("TMSBilling.Models.MailReportTemplate", "report_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Report");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.Menu", b =>
@@ -4123,22 +3707,11 @@ namespace TMSBilling.Migrations
 
             modelBuilder.Entity("TMSBilling.Models.Integration", b =>
                 {
-                    b.Navigation("Attachments");
-
                     b.Navigation("Connection");
 
                     b.Navigation("Histories");
 
                     b.Navigation("Recipients");
-                });
-
-            modelBuilder.Entity("TMSBilling.Models.MailReport", b =>
-                {
-                    b.Navigation("Recipients");
-
-                    b.Navigation("Sections");
-
-                    b.Navigation("Template");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.Menu", b =>

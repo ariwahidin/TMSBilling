@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Quartz;
 using System.Globalization;
 using TMSBilling.Data;
 using TMSBilling.Filters;
+using TMSBilling.Jobs;
 using TMSBilling.Models;
 using TMSBilling.Repositories;
 using TMSBilling.Services;
+using TMSBilling.Services.Integration;
 using TMSBilling.Services.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,6 +63,77 @@ builder.Services.AddScoped<IEmailSettingsRepository, EmailSettingsRepository>();
 builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+
+
+// ── HttpClient untuk ApiSender ────────────────────────────────────────────
+builder.Services.AddHttpClient("IntegrationHub", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// ── Integration Hub Repositories ─────────────────────────────────────────
+builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
+
+// ── Query Services ────────────────────────────────────────────────────────
+builder.Services.AddScoped<IQueryValidator, QueryValidator>();
+builder.Services.AddScoped<IQueryExecutor, QueryExecutor>();
+
+// ── File Generator ────────────────────────────────────────────────────────
+builder.Services.AddScoped<IFileGenerator, FileGenerator>();
+
+// ── Channel Senders ───────────────────────────────────────────────────────
+builder.Services.AddScoped<IChannelSender, GoogleSheetsSender>();
+builder.Services.AddScoped<IChannelSender, SftpSender>();
+builder.Services.AddScoped<IChannelSender, FtpSender>();
+builder.Services.AddScoped<IChannelSender, ApiSender>();
+builder.Services.AddScoped<IChannelSender, FileSender>();
+
+// ── Email Notifier ────────────────────────────────────────────────────────
+builder.Services.AddScoped<IIntegrationEmailNotifier, IntegrationEmailNotifier>();
+
+// ── Dispatcher ────────────────────────────────────────────────────────────
+builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
+builder.Services.AddScoped<IMailReportService, MailReportService>();
+// ── Quartz Scheduler ─────────────────────────────────────────────────────
+builder.Services.AddQuartz(q =>
+{
+    q.UseMicrosoftDependencyInjectionJobFactory();
+
+    // Quartz menggunakan in-memory store (tidak perlu DB)
+    q.UseInMemoryStore();
+
+    // Add to existing Quartz config:
+    q.AddJob<MailReportSchedulerJob>(opts => opts.WithIdentity("MailReportJob"));
+    q.AddTrigger(opts => opts
+        .ForJob("MailReportJob")
+        .WithIdentity("MailReportTrigger")
+        .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).RepeatForever()));
+});
+
+
+
+builder.Services.AddQuartzHostedService(q =>
+{
+    q.WaitForJobsToComplete = true;
+
+});
+
+// Register scheduler service sebagai SINGLETON (karena IHostedService lifecycle)
+// dan sebagai IIntegrationScheduler untuk injection ke controller
+builder.Services.AddSingleton<IntegrationSchedulerService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<IntegrationSchedulerService>());
+builder.Services.AddSingleton<IIntegrationScheduler>(sp =>
+    sp.GetRequiredService<IntegrationSchedulerService>());
+
+builder.Services.AddScoped<IAttachmentBuilder, AttachmentBuilder>();
+
+
+
+//   q.AddJob<MailReportSchedulerJob>(opts => opts.WithIdentity("MailReportJob"));
+//   q.AddTrigger(opts => opts
+//       .ForJob("MailReportJob")
+//       .WithIdentity("MailReportTrigger")
+//       .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).RepeatForever()));
 
 
 // 🔧 SET DEFAULT CULTURE

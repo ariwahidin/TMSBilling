@@ -17,7 +17,7 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? sub_custid { get; set; }
 
-        [StringLength(50)]
+        [StringLength(255)]
         public string? cnee_code { get; set; }
 
         [StringLength(50)]
@@ -92,7 +92,7 @@ namespace TMSBilling.Models
 
         [StringLength(50)]
         public string? mceasy_origin_name { get; set; }
-        [StringLength(50)]
+        [StringLength(255)]
         public string? mceasy_dest_name { get; set; }
 
         [StringLength(20)]
@@ -102,6 +102,12 @@ namespace TMSBilling.Models
 
         [StringLength(100)]
         public string? packing_type { get; set; }
+
+        public string? user_def_1 { get; set; }
+        public string? user_def_2 { get; set; }
+        public string? user_def_3 { get; set; }
+
+        public string? is_b2c { get; set; } = "0";
     }
 
     [Table("TRC_ORDER_DTL")]
@@ -119,7 +125,7 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? sub_custid { get; set; }
 
-        [StringLength(50)]
+        [StringLength(255)]
         public string? cnee_code { get; set; }
 
         [StringLength(50)]
@@ -178,6 +184,10 @@ namespace TMSBilling.Models
         public string? mceasy_order_id { get; set; }
 
         public string? mceasy_product_id { get; set; }
+
+        public string? user_def_1 { get; set; }
+        public string? user_def_2 { get; set; }
+        public string? user_def_3 { get; set; }
 
     }
 

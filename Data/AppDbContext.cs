@@ -33,6 +33,8 @@ namespace TMSBilling.Data
 
         public DbSet<VendorTruck> VendorTrucks { get; set; }
 
+        public DbSet<VendorTruckEmail> VendorTruckEmails { get; set; }
+
         public DbSet<Driver> Drivers { get; set; }
 
         public DbSet<ServiceModa>  ServiceModas { get; set; }
@@ -101,6 +103,127 @@ namespace TMSBilling.Data
 
         public DbSet<EmailSettings> EmailSettings { get; set; }
         public DbSet<EmailLog> EmailLogs { get; set; }
+
+
+        public DbSet<Integration> Integrations { get; set; }
+        public DbSet<IntegrationAttachment> IntegrationAttachments { get; set; }
+        public DbSet<IntegrationConnection> IntegrationConnections { get; set; }
+        public DbSet<IntegrationRecipient> IntegrationRecipients { get; set; }
+        public DbSet<IntegrationHistory> IntegrationHistories { get; set; }
+
+
+        public DbSet<MailReport> MailReports { get; set; }
+        public DbSet<MailReportTemplate> MailReportTemplates { get; set; }
+        public DbSet<MailReportSection> MailReportSections { get; set; }
+        public DbSet<MailReportRecipient> MailReportRecipients { get; set; }
+        public DbSet<MailReportLog> MailReportLogs { get; set; }
+
+
+        //protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
+        //{
+        //    // ── Integration ──────────────────────────────────────────────────
+        //    modelBuilder.Entity<Integration>(e =>
+        //    {
+        //        e.HasIndex(x => x.EventKey);
+        //        e.HasIndex(x => x.IsActive);
+        //        e.HasIndex(x => new { x.EventKey, x.IsActive });
+
+        //        e.Property(x => x.ChannelType)
+        //            .HasConversion<string>();
+
+        //        e.Property(x => x.Timing)
+        //            .HasDefaultValue("realtime");
+
+        //        e.Property(x => x.SourceType)
+        //            .HasDefaultValue("event");
+        //    });
+
+        //    // ── IntegrationConnection (1-to-1) ───────────────────────────────
+        //    modelBuilder.Entity<IntegrationConnection>(e =>
+        //    {
+        //        e.HasOne(x => x.Integration)
+        //            .WithOne(x => x.Connection)
+        //            .HasForeignKey<IntegrationConnection>(x => x.IntegrationId)
+        //            .OnDelete(DeleteBehavior.Cascade);
+        //    });
+
+        //    // ── IntegrationRecipient (1-to-many) ─────────────────────────────
+        //    modelBuilder.Entity<IntegrationRecipient>(e =>
+        //    {
+        //        e.HasOne(x => x.Integration)
+        //            .WithMany(x => x.Recipients)
+        //            .HasForeignKey(x => x.IntegrationId)
+        //            .OnDelete(DeleteBehavior.Cascade);
+
+        //        e.HasIndex(x => x.IntegrationId);
+        //    });
+
+        //    // ── IntegrationHistory (1-to-many) ───────────────────────────────
+        //    modelBuilder.Entity<IntegrationHistory>(e =>
+        //    {
+        //        e.HasOne(x => x.Integration)
+        //            .WithMany(x => x.Histories)
+        //            .HasForeignKey(x => x.IntegrationId)
+        //            .OnDelete(DeleteBehavior.Cascade);
+
+        //        e.HasIndex(x => new { x.IntegrationId, x.ExecutedAt });
+        //        e.HasIndex(x => x.Status);
+        //    });
+        //}
+
+        protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
+        {
+            // ── Integration ──────────────────────────────────────────────────
+            modelBuilder.Entity<Integration>(e =>
+            {
+                e.HasIndex(x => x.EventKey);
+                e.HasIndex(x => x.IsActive);
+                e.HasIndex(x => new { x.EventKey, x.IsActive });
+                e.Property(x => x.Timing).HasDefaultValue("realtime");
+                e.Property(x => x.SourceType).HasDefaultValue("event");
+                e.Property(x => x.EmailAttachmentMode).HasDefaultValue("inline");
+            });
+
+            // ── IntegrationConnection (1-to-1) ───────────────────────────────
+            modelBuilder.Entity<IntegrationConnection>(e =>
+            {
+                e.HasOne(x => x.Integration)
+                    .WithOne(x => x.Connection)
+                    .HasForeignKey<IntegrationConnection>(x => x.IntegrationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ── IntegrationRecipient (1-to-many) ─────────────────────────────
+            modelBuilder.Entity<IntegrationRecipient>(e =>
+            {
+                e.HasOne(x => x.Integration)
+                    .WithMany(x => x.Recipients)
+                    .HasForeignKey(x => x.IntegrationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => x.IntegrationId);
+            });
+
+            // ── IntegrationHistory (1-to-many) ───────────────────────────────
+            modelBuilder.Entity<IntegrationHistory>(e =>
+            {
+                e.HasOne(x => x.Integration)
+                    .WithMany(x => x.Histories)
+                    .HasForeignKey(x => x.IntegrationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => new { x.IntegrationId, x.ExecutedAt });
+                e.HasIndex(x => x.Status);
+            });
+
+            // ── IntegrationAttachment (1-to-many) ────────────────────────────
+            modelBuilder.Entity<IntegrationAttachment>(e =>
+            {
+                e.HasOne(x => x.Integration)
+                    .WithMany(x => x.Attachments)
+                    .HasForeignKey(x => x.IntegrationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => new { x.IntegrationId, x.GroupFileKey, x.SheetOrder });
+            });
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -214,17 +337,6 @@ namespace TMSBilling.Data
             modelBuilder.Entity<OrderNotInJob>().HasNoKey().ToView(null);
         }
 
-
-        //protected override void OnModelCreating(ModelBuilder modelBuilder)
-        //{
-        //    modelBuilder.Entity<OrderSummaryViewModel>().HasNoKey().ToView(null);
-        //    modelBuilder.Entity<JobSummaryViewModel>().HasNoKey().ToView(null);
-        //    modelBuilder.Entity<ConsigneeViewModel>().HasNoKey().ToView(null);
-        //    modelBuilder.Entity<ConfirmOrderID>().HasNoKey().ToView(null);
-        //    modelBuilder.Entity<JobOrder>().HasNoKey().ToView(null);
-        //    modelBuilder.Entity<OrderForJob>().HasNoKey().ToView(null);
-        //    modelBuilder.Entity<OrderNotInJob>().HasNoKey().ToView(null);
-        //}
 
 
     }

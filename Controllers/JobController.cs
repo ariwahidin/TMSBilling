@@ -1,4 +1,5 @@
 ﻿
+using AspNetCore.ReportingServices.ReportProcessing.ReportObjectModel;
 using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -18,6 +19,7 @@ using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.ViewModels;
 using TMSBilling.Services;
+using TMSBilling.Services.Integration;
 using static TMSBilling.Models.ViewModels.JobViewModel;
 
 namespace TMSBilling.Controllers
@@ -33,14 +35,18 @@ namespace TMSBilling.Controllers
         private readonly IConfiguration _configuration;
         private readonly SyncronizeWithMcEasy _sync;
         private readonly IEmailService _emailService;
+        private readonly IIntegrationDispatcher _integrationDispatcher;
+        private readonly IMailReportService _mailer;
 
         public JobController(AppDbContext context, 
             SelectListService selectList, 
             ApiService apiService, 
             IConfiguration configuration,
             SyncronizeWithMcEasy sync,
-            IEmailService emailService
-            
+            IEmailService emailService,
+            IIntegrationDispatcher integrationDispatcher,
+            IMailReportService mailer
+
             )
         {
             _context = context;
@@ -49,6 +55,8 @@ namespace TMSBilling.Controllers
             _configuration = configuration;
             _sync = sync;
             _emailService = emailService;
+            _integrationDispatcher = integrationDispatcher;
+            _mailer = mailer;
 
         }
 
@@ -295,19 +303,79 @@ namespace TMSBilling.Controllers
             var customerApi = await _context.CustomerGroups.AnyAsync(cs => cs.SUB_CODE == Header.cust_group && cs.API_FLAG == 1);
             var GeofenceStartingPoint = await _context.Geofences.FirstOrDefaultAsync(f => f.Id == Header.starting_point);
 
-            if (GeofenceStartingPoint != null) {
+            if (GeofenceStartingPoint != null)
+            {
                 Header.starting_point = GeofenceStartingPoint.GeofenceId;
             }
 
-            if (customerApi)
+            //// check order is b2c
+            //var isB2C = false;
+            //foreach (var ord in Details) {
+            //    var order = _context.Orders.First(o => o.inv_no == ord.inv_no);
+            //    if (order == null) { continue; }
+            //    if (order.is_b2c == "1") {
+            //        isB2C = true;
+            //        continue;
+            //    }
+            //}
+
+            var invNos = Details.Select(d => d.inv_no).ToList();
+
+            var isB2C = _context.Orders
+                .Where(o => invNos.Contains(o.inv_no) && o.is_b2c == "1")
+                .Any();
+
+
+            if (customerApi && !isB2C)
             {
                 var run = await RunSaveWithApi(Header, Details, jobid);
                 if (!run.ok) return BadRequest(new { success = false, message = run.message });
             }
-            else {
+            else
+            {
                 var run = await RunSaveWithOutApi(Header, Details, jobid);
-                if (!run.ok) return BadRequest( new { success = false, message = run.message });
+                if (!run.ok) return BadRequest(new { success = false, message = run.message });
             }
+
+
+            var userId = HttpContext.Session.GetString("username") ?? "System";
+
+
+            // Panggil setelah update status order
+            await _integrationDispatcher.DispatchAsync("job.created", new Dictionary<string, object?>
+            {
+                { "order_no", jobid },
+                { "status", "created" },
+                { "updated_by", userId },
+                { "updated_at", DateTime.UtcNow },
+            });
+
+
+            if (jobid != null)
+            {
+                var emailVendors = await _context.VendorTruckEmails
+                  .Where(vte => vte.sup_code == Header.vendor_act && vte.is_active == 1)
+                  .ToListAsync();
+
+                var emailTo = string.Join(",", emailVendors
+                    .Where(e => e.email_type == "TO")
+                    .Select(e => e.email_address));
+
+                var emailCc = string.Join(",", emailVendors
+                    .Where(e => e.email_type == "CC")
+                    .Select(e => e.email_address));
+
+                _mailer.TriggerEvent("spk.created", new Dictionary<string, string>
+                {
+                    ["nomor_spk"] = jobid,
+                    ["vendor_name"] = model.FormJobHeader.vendor_act,
+                    ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
+                    ["order_id"] = jobid,
+                    ["email_to"] = emailTo,
+                    ["email_cc"] = emailCc
+                }, HttpContext.Session.GetString("username") ?? "System");
+            }
+           
 
             return Json(new { success = true, message = "Job saved successfully" });
         }

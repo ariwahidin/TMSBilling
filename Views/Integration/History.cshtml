@@ -1,0 +1,161 @@
+@model List<TMSBilling.Models.IntegrationHistory>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    var integration = ViewBag.Integration as TMSBilling.Models.Integration;
+    ViewData["Title"] = $"History: {integration?.Name}";
+}
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="Index" class="btn btn-link text-muted ps-0">
+            <i class="bi bi-arrow-left me-1"></i>Kembali
+        </a>
+        <h5 class="mb-0 ms-2 fw-bold">
+            <i class="bi bi-clock-history text-primary me-2"></i>History: @integration?.Name
+        </h5>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="fs-3 fw-bold">@Model.Count</div>
+                    <small class="text-muted">Total Eksekusi</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="fs-3 fw-bold text-success">@Model.Count(x => x.Status == "success")</div>
+                    <small class="text-muted">Sukses</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="fs-3 fw-bold text-danger">@Model.Count(x => x.Status == "failed")</div>
+                    <small class="text-muted">Gagal</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    @{ var avgDuration = Model.Any() ? Model.Average(x => x.DurationMs ?? 0) : 0; }
+                    <div class="fs-3 fw-bold">@avgDuration.ToString("N0")ms</div>
+                    <small class="text-muted">Rata-rata Durasi</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Waktu</th>
+                            <th>Status</th>
+                            <th>Trigger</th>
+                            <th>Baris</th>
+                            <th>Durasi</th>
+                            <th>Email</th>
+                            <th>Pesan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model)
+                        {
+                            <tr>
+                                <td class="ps-3">@h.ExecutedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                <td>
+                                    @if (h.Status == "success")
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-check me-1"></i>Sukses</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-x me-1"></i>Gagal</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary">@h.TriggerType</span>
+                                </td>
+                                <td>@(h.RowCount?.ToString("N0") ?? "—")</td>
+                                <td>@(h.DurationMs.HasValue ? $"{h.DurationMs:N0}ms" : "—")</td>
+                                <td>
+                                    @if (h.EmailSent)
+                                    {
+                                        <i class="bi bi-envelope-check text-success" title="Email terkirim"></i>
+                                    }
+                                    else if (!string.IsNullOrEmpty(h.EmailError))
+                                    {
+                                        <i class="bi bi-envelope-x text-danger" title="@h.EmailError"></i>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td>
+                                    <span class="text-truncate d-inline-block" style="max-width:300px"
+                                          title="@h.Message">@h.Message</span>
+                                    @if (!string.IsNullOrEmpty(h.ErrorDetail))
+                                    {
+                                        <button class="btn btn-link btn-sm text-danger p-0 ms-1"
+                                                onclick="showError('@h.Id')" data-error="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(h.ErrorDetail))">
+                                            <i class="bi bi-bug"></i>
+                                        </button>
+                                    }
+                                    @if (!string.IsNullOrEmpty(h.EventDataJson))
+                                    {
+                                        <button class="btn btn-link btn-sm text-info p-0 ms-1"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#payload-@h.Id">
+                                            <i class="bi bi-code"></i>
+                                        </button>
+                                        <div class="collapse" id="payload-@h.Id">
+                                            <pre class="bg-light rounded p-2 small mt-1">@h.EventDataJson</pre>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">Belum ada history eksekusi.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-bug me-2"></i>Error Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="errorContent" class="bg-light rounded p-3 small overflow-auto" style="max-height:400px"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function showError(id) {
+    const btn = event.target.closest('button');
+    const errorText = JSON.parse(btn.dataset.error);
+    document.getElementById('errorContent').textContent = errorText;
+    new bootstrap.Modal(document.getElementById('errorModal')).show();
+}
+</script>
+}

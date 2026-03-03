@@ -12,5 +12,7 @@ namespace TMSBilling.Services
         );
 
         Task SendTestEmailAsync(string toEmail);
+
+        Task SendAsync(EmailMessage message);
     }
 }

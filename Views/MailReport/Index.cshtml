@@ -1,0 +1,324 @@
+﻿@model IEnumerable<TMSBilling.Models.MailReport>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Report Mailer";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
+}
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .page-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #344767;
+        margin: 0;
+    }
+
+    .tbl sm td, .tbl-sm th {
+        font-size: .79rem;
+        vertical-align: middle;
+    }
+
+    .tbl-sm th {
+        font-size: .71rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #6c757d;
+        background: #f8f9fa;
+    }
+
+    .badge-trigger {
+        font-size: .68rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 600;
+        letter-spacing: .04em;
+    }
+
+    .badge-event {
+        background: #e8f4fd;
+        color: #1a73e8;
+        border: 1px solid #b8d9f8;
+    }
+
+    .badge-scheduled {
+        background: #fef3e2;
+        color: #e67e00;
+        border: 1px solid #fcd49a;
+    }
+
+    .badge-manual {
+        background: #f0f0f0;
+        color: #555;
+        border: 1px solid #ddd;
+    }
+
+    .action-btn {
+        padding: 2px 7px;
+        font-size: .73rem;
+    }
+
+    .stat-pill {
+        font-size: .7rem;
+        padding: 1px 7px;
+        border-radius: 10px;
+    }
+</style>
+
+<div class="page-header">
+    <h6 class="page-title"><i class="bi bi-envelope-paper me-1 text-primary"></i> Report Mailer</h6>
+    <a class="btn btn-sm btn-primary" asp-action="Form">
+        <i class="bi bi-plus-lg me-1"></i> New Report
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-2">
+        <table class="table table-hover tbl-sm mb-0" id="reportTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Report Name</th>
+                    <th>Trigger</th>
+                    <th>Schedule / Event</th>
+                    <th>Status</th>
+                    <th style="width:130px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td><code style="font-size:.75rem;">@r.report_code</code></td>
+                        <td>
+                            <div style="font-weight:500;">@r.report_name</div>
+                            @if (!string.IsNullOrEmpty(r.report_desc))
+                            {
+                                <div class="text-muted" style="font-size:.71rem;">@r.report_desc</div>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge-trigger @(r.trigger_type == "EVENT" ? "badge-event" :
+                                                                                            r.trigger_type == "SCHEDULED" ? "badge-scheduled" : "badge-manual")">
+                            @r.trigger_type
+                        </span>
+                    </td>
+                    <td style="font-size:.75rem;">
+                        @if (r.trigger_type == "EVENT")
+                            {
+                                <span class="text-muted">@r.event_key</span>
+                            }
+                            else if (r.trigger_type == "SCHEDULED")
+                            {
+                                <span>
+                                    @r.schedule_freq
+                                    @if (r.schedule_time.HasValue)
+                                    {
+                                        @(" @ " + r.schedule_time.Value.ToString(@"hh\:mm"))
+                                    }
+                                </span>
+                            }
+                            else
+                            {
+
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (r.is_active == 1)
+                            {
+                                <span class="stat-pill bg-success-subtle text-success border border-success-subtle">Active</span>
+                            }
+                            else
+                            {
+                                <span class="stat-pill bg-secondary-subtle text-secondary border border-secondary-subtle">Inactive</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Form" asp-route-id="@r.ID" class="btn btn-sm btn-warning action-btn" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-action="Log" asp-route-reportId="@r.ID" class="btn btn-sm btn-info action-btn" title="History">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                            <button class="btn btn-sm btn-success action-btn btnSend"
+                                    data-id="@r.ID" data-name="@r.report_name"
+                                    data-trigger="@r.trigger_type" title="Send Manual">
+                                <i class="bi bi-send"></i>
+                            </button>
+                            @if (isAdmin)
+                            {
+                                <button class="btn btn-sm btn-danger action-btn btnDelete" data-id="@r.ID">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Send Modal -->
+<div class="modal fade" id="modalSend" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-send me-1"></i> Send Report</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="sendBody">
+                <p class="mb-2" style="font-size:.82rem;">Report: <strong id="sendReportName"></strong></p>
+                <div id="eventParamsArea"></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-outline-primary" id="btnPreview">
+                    <i class="bi bi-eye me-1"></i> Preview
+                </button>
+                <button class="btn btn-sm btn-primary" id="btnSendConfirm">
+                    <i class="bi bi-send me-1"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="modalPreview" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-eye me-1"></i> Email Preview</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="px-3 py-2 bg-light border-bottom" style="font-size:.78rem;" id="previewMeta"></div>
+                <iframe id="previewFrame" style="width:100%;height:70vh;border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#reportTable').DataTable({ pageLength: 25, columnDefs: [{ orderable: false, targets: -1 }] });
+
+            let currentReportId = null;
+
+            // --- Open send modal ---
+            $('.btnSend').click(function () {
+                currentReportId = $(this).data('id');
+                const triggerType = $(this).data('trigger');
+                $('#sendReportName').text($(this).data('name'));
+
+                let html = '';
+                if (triggerType === 'EVENT') {
+                    html = `<div class="alert alert-info py-2" style="font-size:.78rem;">
+                                <i class="bi bi-info-circle me-1"></i>
+                                This is an EVENT-based report. Enter the event parameters below.
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label" style="font-size:.78rem;font-weight:600;">Event Parameters (JSON)</label>
+                                <textarea id="eventParamsJson" class="form-control form-control-sm font-monospace"
+                                          rows="4" placeholder='{"order_id": "12345", "vendor": "ABC"}'></textarea>
+                                <small class="text-muted">Key-value pairs used as {{placeholder}} in the template.</small>
+                            </div>`;
+                } else {
+                    html = `<div class="alert alert-success py-2" style="font-size:.78rem;">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Click Send to immediately trigger this report.
+                            </div>`;
+                }
+
+                $('#eventParamsArea').html(html);
+                new bootstrap.Modal('#modalSend').show();
+            });
+
+            function getEventParams() {
+                const raw = $('#eventParamsJson').val();
+                if (!raw) return {};
+                try { return JSON.parse(raw); }
+                catch { Swal.fire('Error', 'Invalid JSON for event parameters.', 'error'); return null; }
+            }
+
+            // --- Preview ---
+            $('#btnPreview').click(async function () {
+                const params = getEventParams();
+                if (params === null) return;
+
+                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+                const res = await $.post('/MailReport/Preview',
+                    JSON.stringify({ ReportId: currentReportId, EventParams: params }),
+                    null, 'json').catch(e => ({ ok: false, message: e.statusText }));
+
+                $(this).prop('disabled', false).html('<i class="bi bi-eye me-1"></i> Preview');
+
+                if (!res.ok) { Swal.fire('Error', res.message, 'error'); return; }
+
+                const d = res.data;
+                $('#previewMeta').html(`
+                    <strong>Subject:</strong> ${d.subject} &nbsp;|&nbsp;
+                    <strong>TO:</strong> ${d.recipientsTo.join(', ')} &nbsp;|&nbsp;
+                    <strong>CC:</strong> ${d.recipientsCC.join(', ') || '—'}
+                    ${d.hasPdf ? '&nbsp;| <span class="badge bg-danger">PDF</span>' : ''}
+                    ${d.hasExcel ? '&nbsp;| <span class="badge bg-success">Excel</span>' : ''}
+                `);
+
+                const iframe = document.getElementById('previewFrame');
+                iframe.srcdoc = d.bodyHtml;
+                bootstrap.Modal.getOrCreateInstance('#modalSend').hide();
+                new bootstrap.Modal('#modalPreview').show();
+            });
+
+            // --- Send ---
+            $('#btnSendConfirm').click(async function () {
+                const params = getEventParams();
+                if (params === null) return;
+
+                const confirmed = await Swal.fire({
+                    title: 'Send this report?', icon: 'question',
+                    showCancelButton: true, confirmButtonText: 'Send',
+                    confirmButtonColor: '#0d6efd'
+                });
+                if (!confirmed.isConfirmed) return;
+
+                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Sending...');
+                const res = await $.post('/MailReport/SendManual',
+                    JSON.stringify({ ReportId: currentReportId, EventParams: params }),
+                    null, 'json').catch(e => ({ ok: false, message: e.statusText }));
+
+                $(this).prop('disabled', false).html('<i class="bi bi-send me-1"></i> Send');
+
+                if (res.ok) {
+                    bootstrap.Modal.getOrCreateInstance('#modalSend').hide();
+                    Swal.fire({ title: 'Sent!', text: `Log ID: ${res.logId}`, icon: 'success', timer: 2000, showConfirmButton: false });
+                } else {
+                    Swal.fire('Failed', res.message, 'error');
+                }
+            });
+
+            // --- Delete ---
+            $('.btnDelete').click(function () {
+                const id = $(this).data('id');
+                Swal.fire({ title:'Delete this report?', text:'All templates, sections and history will be deleted.',
+                    icon:'warning', showCancelButton:true, confirmButtonColor:'#d33',
+                    confirmButtonText:'Delete'
+                }).then(r => {
+                    if (r.isConfirmed) $.post('/MailReport/Delete', { id }, () => location.reload());
+                });
+            });
+
+            // Ajax JSON content-type
+            $.ajaxSetup({ contentType: 'application/json' });
+        });
+    </script>
+}

@@ -1,0 +1,182 @@
+﻿@model IEnumerable<TMSBilling.Models.VendorTruckEmail>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Vendor Truck Email";
+    var isAdmin = Context.Session.GetString("is_admin") == "true";
+}
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .page-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #344767;
+        margin: 0;
+    }
+
+    .badge-type {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 20px;
+        letter-spacing: 0.04em;
+    }
+
+    .badge-to {
+        background-color: #e8f4fd;
+        color: #1a73e8;
+        border: 1px solid #b8d9f8;
+    }
+
+    .badge-cc {
+        background-color: #fef3e2;
+        color: #e67e00;
+        border: 1px solid #fcd49a;
+    }
+
+    .badge-active {
+        font-size: 0.68rem;
+        padding: 2px 7px;
+        border-radius: 20px;
+    }
+
+    .tbl-email td, .tbl-email th {
+        font-size: 0.8rem;
+        vertical-align: middle;
+    }
+
+    .tbl-email th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        background-color: #f8f9fa;
+    }
+
+    .action-btn {
+        padding: 2px 7px;
+        font-size: 0.75rem;
+    }
+</style>
+
+<div class="page-header">
+    <h6 class="page-title">
+        <i class="bi bi-envelope me-1 text-primary"></i> Vendor Truck Email
+    </h6>
+    <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-primary" asp-action="Form">
+            <i class="bi bi-plus-lg me-1"></i> Add Email
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="/Vendor/Index">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-2">
+        <table class="table table-hover tbl-email mb-0" id="emailTable">
+            <thead>
+                <tr>
+                    <th>Vendor</th>
+                    @* <th>Truck ID</th> *@
+                    <th>Name</th>
+                    <th>Email Address</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Remark</th>
+                    <th style="width:90px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.sup_code</td>
+                        @* <td>@item.vehicle_no</td> *@
+                        <td>@item.email_name</td>
+                        <td>
+                            <a href="mailto:@item.email_address" class="text-decoration-none">
+                                @item.email_address
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge-type @(item.email_type == "TO" ? "badge-to" : "badge-cc")">
+                                @item.email_type
+                            </span>
+                        </td>
+                        <td>
+                            @if (item.is_active == 1)
+                            {
+                                <span class="badge badge-active bg-success-subtle text-success border border-success-subtle">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-active bg-secondary-subtle text-secondary border border-secondary-subtle">Inactive</span>
+                            }
+                        </td>
+                        <td class="text-muted">@item.remark</td>
+                        <td>
+                            <a asp-action="Form" asp-route-id="@item.ID" class="btn btn-sm btn-warning action-btn">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            @if (isAdmin)
+                            {
+                                <button class="btn btn-sm btn-danger action-btn btnDelete" data-id="@item.ID">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#emailTable').DataTable({
+                pageLength: 25,
+                columnDefs: [{ orderable: false, targets: -1 }]
+            });
+
+            $(".btnDelete").click(function () {
+                const id = $(this).data("id");
+                Swal.fire({
+                    title: "Delete this email?",
+                    text: "This action cannot be undone.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Delete",
+                    cancelButtonText: "Cancel",
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post("/VendorTruckEmail/Delete", { id: id })
+                            .done(() => {
+                                Swal.fire({
+                                    title: "Deleted",
+                                    text: "Record deleted successfully.",
+                                    icon: "success",
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => location.reload());
+                            })
+                            .fail(() => {
+                                Swal.fire("Error", "Failed to delete the record.", "error");
+                            });
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,933 @@
+﻿@model TMSBilling.Models.MailReportFormVM
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    bool isNew = Model.Report.ID == 0;
+    ViewData["Title"] = isNew ? "New Report" : "Edit Report";
+
+    var sectionsJson = System.Text.Json.JsonSerializer.Serialize(Model.Sections);
+    var recipientsJson = System.Text.Json.JsonSerializer.Serialize(Model.Recipients);
+}
+
+<style>
+    .tab-nav .nav-link {
+        font-size: .78rem;
+        padding: 6px 14px;
+        color: #555;
+    }
+
+        .tab-nav .nav-link.active {
+            font-weight: 600;
+            color: #0d6efd;
+        }
+
+    .form-label {
+        font-size: .76rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 2px;
+    }
+
+    .form-control, .form-select {
+        font-size: .81rem;
+    }
+
+    .section-card {
+        border: 1px solid #e0e7ff;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background: #fff;
+    }
+
+        .section-card .card-header {
+            background: #f0f4ff;
+            padding: 6px 12px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: .78rem;
+            font-weight: 600;
+        }
+
+        .section-card .card-body {
+            padding: 12px;
+        }
+
+    .recipient-row {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: .78rem;
+    }
+
+    .badge-type {
+        font-size: .68rem;
+        padding: 2px 7px;
+        border-radius: 10px;
+        font-weight: 700;
+    }
+
+    .badge-to {
+        background: #e8f4fd;
+        color: #1a73e8;
+    }
+
+    .badge-cc {
+        background: #fef3e2;
+        color: #e67e00;
+    }
+
+    .badge-bcc {
+        background: #f0e8fd;
+        color: #8b00ff;
+    }
+
+    .query-area {
+        font-family: monospace;
+        font-size: .77rem;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        border: none;
+        border-radius: 6px;
+        resize: vertical;
+    }
+
+    .test-result {
+        font-size: .73rem;
+    }
+
+    .placeholder-hint {
+        font-size: .7rem;
+        color: #888;
+        margin-top: 3px;
+    }
+
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        border-top: 1px solid #eee;
+        padding: 8px 0;
+        z-index: 10;
+    }
+    /* Column picker */
+    .col-picker-wrap {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 8px 10px;
+        min-height: 38px;
+        background: #fafafa;
+    }
+
+    .col-picker-hint {
+        font-size: .71rem;
+        color: #aaa;
+        margin-bottom: 6px;
+    }
+
+        .col-picker-hint.hidden {
+            display: none;
+        }
+
+    .col-picker-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .col-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: .72rem;
+        cursor: grab;
+        user-select: none;
+        border: 1px solid #dee2e6;
+        background: #fff;
+        transition: all .15s;
+    }
+
+        .col-tag.active {
+            background: #0d6efd;
+            color: #fff;
+            border-color: #0d6efd;
+        }
+
+        .col-tag.dragging {
+            opacity: .4;
+        }
+
+        .col-tag .col-tag-drag {
+            font-size: .65rem;
+            opacity: .5;
+            cursor: grab;
+        }
+
+        .col-tag input[type=checkbox] {
+            display: none;
+        }
+</style>
+
+<!-- Tabs -->
+<div class="d-flex align-items-center gap-2 mb-2">
+    <h6 style="font-size:.9rem;font-weight:700;margin:0;color:#344767;">
+        <i class="bi bi-envelope-paper me-1 text-primary"></i>
+        @ViewData["Title"]
+    </h6>
+    @if (!isNew)
+    {
+        <code class="text-muted" style="font-size:.73rem;">ID: @Model.Report.ID</code>
+    }
+</div>
+
+<ul class="nav nav-tabs tab-nav mb-3" id="mainTab">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabGeneral"><i class="bi bi-gear me-1"></i>General</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabTemplate"><i class="bi bi-code-square me-1"></i>Template</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabSections"><i class="bi bi-table me-1"></i>Data Sections</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRecipients"><i class="bi bi-people me-1"></i>Recipients</a></li>
+</ul>
+
+<div class="tab-content" id="mainTabContent">
+
+    <!-- ════════════ TAB 1: GENERAL ════════════ -->
+    <div class="tab-pane fade show active" id="tabGeneral">
+        <div class="row g-3" style="max-width:700px;">
+            <div class="col-md-4">
+                <label class="form-label">Report Code <span class="text-danger">*</span></label>
+                <input id="f_code" class="form-control form-control-sm text-uppercase"
+                       value="@Model.Report.report_code" placeholder="e.g. SPK_NOTICE" maxlength="100"
+                       @(isNew ? "" : "readonly") />
+                <div class="placeholder-hint">Unique identifier, no spaces.</div>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Report Name <span class="text-danger">*</span></label>
+                <input id="f_name" class="form-control form-control-sm"
+                       value="@Model.Report.report_name" placeholder="e.g. Surat Perintah Kirim" />
+            </div>
+            <div class="col-12">
+                <label class="form-label">Description</label>
+                <input id="f_desc" class="form-control form-control-sm"
+                       value="@Model.Report.report_desc" placeholder="Optional..." />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Trigger Type <span class="text-danger">*</span></label>
+                <select id="f_trigger" class="form-select form-select-sm">
+                    @if (Model.Report.trigger_type == "MANUAL")
+                    {
+                        <option value="MANUAL" selected>MANUAL</option>
+                    }
+                    else
+                    {
+                        <option value="MANUAL">MANUAL</option>
+                    }
+                    @if (Model.Report.trigger_type == "EVENT")
+                    {
+                        <option value="EVENT" selected>EVENT (Realtime)</option>
+                    }
+                    else
+                    {
+                        <option value="EVENT">EVENT (Realtime)</option>
+                    }
+                    @if (Model.Report.trigger_type == "SCHEDULED")
+                    {
+                        <option value="SCHEDULED" selected>SCHEDULED</option>
+                    }
+                    else
+                    {
+                        <option value="SCHEDULED">SCHEDULED</option>
+                    }
+                </select>
+            </div>
+
+            <!-- EVENT fields -->
+            <div class="col-md-8" id="eventFields" style="display:none;">
+                <label class="form-label">Event Key <span class="text-danger">*</span></label>
+                <input id="f_eventkey" class="form-control form-control-sm"
+                       value="@Model.Report.event_key"
+                       placeholder="e.g. order.created, spk.approved" />
+                <div class="placeholder-hint">Must match the key used in <code>TriggerEvent()</code> calls.</div>
+            </div>
+
+            <!-- SCHEDULED fields -->
+            <div id="schedFields" style="display:none;" class="col-12">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label">Frequency</label>
+                        <select id="f_freq" class="form-select form-select-sm">
+                            @if (Model.Report.schedule_freq == "DAILY")
+                            {
+                                <option value="DAILY" selected>Daily</option>
+                            }
+                            else
+                            {
+                                <option value="DAILY">Daily</option>
+                            }
+                            @if (Model.Report.schedule_freq == "WEEKLY")
+                            {
+                                <option value="WEEKLY" selected>Weekly</option>
+                            }
+                            else
+                            {
+                                <option value="WEEKLY">Weekly</option>
+                            }
+                            @if (Model.Report.schedule_freq == "MONTHLY")
+                            {
+                                <option value="MONTHLY" selected>Monthly</option>
+                            }
+                            else
+                            {
+                                <option value="MONTHLY">Monthly</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Send Time</label>
+                        <input type="time" id="f_time" class="form-control form-control-sm"
+                               value="@(Model.Report.schedule_time?.ToString(@"hh\:mm") ?? "08:00")" />
+                    </div>
+                    <div class="col-md-3" id="dowField" style="display:none;">
+                        <label class="form-label">Day of Week</label>
+                        <select id="f_dow" class="form-select form-select-sm">
+                            @foreach (var d in new[] { (1, "Monday"), (2, "Tuesday"), (3, "Wednesday"), (4, "Thursday"), (5, "Friday"), (6, "Saturday"), (7, "Sunday") })
+                            {
+                                @if (Model.Report.schedule_day_of_week == d.Item1)
+                                {
+                                    <option value="@d.Item1" selected>@d.Item2</option>
+                                }
+                                else
+                                {
+                                    <option value="@d.Item1">@d.Item2</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="domField" style="display:none;">
+                        <label class="form-label">Day of Month</label>
+                        <input type="number" id="f_dom" class="form-control form-control-sm"
+                               min="1" max="28" value="@(Model.Report.schedule_day_of_month ?? 1)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label d-block">Status</label>
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" id="f_active"
+                           @(Model.Report.is_active == 1 || isNew ? "checked" : "") />
+                    <label class="form-check-label" for="f_active" style="font-size:.8rem;">Active</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ TAB 2: TEMPLATE ════════════ -->
+    <div class="tab-pane fade" id="tabTemplate">
+        <div style="max-width:900px;">
+            <div class="mb-3">
+                <label class="form-label">Email Subject <span class="text-danger">*</span></label>
+                <input id="f_subject" class="form-control form-control-sm"
+                       value="@Model.Template.subject"
+                       placeholder="e.g. SPK #{{nomor_spk}} - {{vendor_name}}" />
+                <div class="placeholder-hint">Use <code>{{field_name}}</code> for dynamic values from query or event params.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Body Header (HTML)</label>
+                <div class="placeholder-hint mb-1">Content above the data tables. Supports <code>{{placeholder}}</code>.</div>
+                <textarea id="f_header" class="form-control query-area sec-query" rows="8">@Html.Raw(Model.Template.body_header)</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Body Footer (HTML)</label>
+                <div class="placeholder-hint mb-1">Content below the data tables (signature, notes, etc.).</div>
+                <textarea id="f_footer" class="form-control query-area sec-query" rows="8" >@Html.Raw(Model.Template.body_footer)</textarea>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <label class="form-label">Attachments</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="f_pdf"
+                                   @(Model.Template.attach_pdf == 1 ? "checked" : "") />
+                            <label class="form-check-label" style="font-size:.8rem;" for="f_pdf">
+                                <i class="bi bi-filetype-pdf text-danger me-1"></i> PDF
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="f_excel"
+                                   @(Model.Template.attach_excel == 1 ? "checked" : "") />
+                            <label class="form-check-label" style="font-size:.8rem;" for="f_excel">
+                                <i class="bi bi-filetype-xlsx text-success me-1"></i> Excel
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Attachment Filename</label>
+                    <input id="f_filename" class="form-control form-control-sm"
+                           value="@Model.Template.attach_filename"
+                           placeholder="e.g. SPK_{{nomor_spk}}_{{date}}" />
+                    <div class="placeholder-hint">Extension (.pdf/.xlsx) added automatically.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ TAB 3: DATA SECTIONS ════════════ -->
+    <div class="tab-pane fade" id="tabSections">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span style="font-size:.78rem;color:#555;">Define SQL queries for header, detail, and summary data in the email body.</span>
+            <button class="btn btn-sm btn-outline-primary" id="btnAddSection">
+                <i class="bi bi-plus-lg me-1"></i> Add Section
+            </button>
+        </div>
+        <div id="sectionList"></div>
+    </div>
+
+    <!-- ════════════ TAB 4: RECIPIENTS ════════════ -->
+    <div class="tab-pane fade" id="tabRecipients">
+        <div class="row g-2 mb-3 align-items-end" style="max-width:700px;">
+            <div class="col-md-4">
+                <label class="form-label">Source</label>
+                <select id="recSource" class="form-select form-select-sm">
+                    <option value="TRUCK_EMAIL">From Truck Email</option>
+                    <option value="MANUAL">Manual Entry</option>
+                </select>
+            </div>
+            <div class="col-md-5" id="truckEmailPicker">
+                <label class="form-label">Select Email</label>
+                <select id="recTruckEmail" class="form-select form-select-sm select2">
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+            <div id="manualFields" style="display:none;" class="col-12">
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <label class="form-label">Email Address</label>
+                        <input id="recEmail" class="form-control form-control-sm" type="email" placeholder="email@example.com" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Name</label>
+                        <input id="recName" class="form-control form-control-sm" placeholder="Display name" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type</label>
+                <select id="recType" class="form-select form-select-sm">
+                    <option value="TO">TO</option>
+                    <option value="CC">CC</option>
+                    <option value="BCC">BCC</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary" id="btnAddRecipient">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+        </div>
+
+        <div id="recipientList">
+            <div class="text-muted" style="font-size:.78rem;" id="emptyRecMsg">No recipients added yet.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Bar -->
+<div class="save-bar mt-3">
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+        <button class="btn btn-sm btn-primary" id="btnSave">
+            <i class="bi bi-check-lg me-1"></i> Save Report
+        </button>
+        <span id="saveStatus" class="text-muted align-self-center" style="font-size:.75rem;"></span>
+    </div>
+</div>
+
+<!-- Section Template (hidden) -->
+<div id="sectionTpl" style="display:none;">
+    <div class="section-card" data-idx="">
+        <div class="card-header">
+            <span class="sec-label-display">New Section</span>
+            <div class="d-flex gap-1">
+                <button class="btn btn-xs btn-outline-secondary btn-moveup" style="font-size:.65rem;padding:1px 5px;" title="Move up">↑</button>
+                <button class="btn btn-xs btn-outline-secondary btn-movedown" style="font-size:.65rem;padding:1px 5px;" title="Move down">↓</button>
+                <button class="btn btn-xs btn-outline-danger btn-delsec" style="font-size:.65rem;padding:1px 5px;">✕ Remove</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select class="form-select form-select-sm sec-type">
+                        <option value="HEADER">HEADER</option>
+                        <option value="DETAIL" selected>DETAIL</option>
+                        <option value="SUMMARY">SUMMARY</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Label</label>
+                    <input class="form-control form-control-sm sec-label" placeholder="e.g. Detail Invoice" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Display</label>
+                    <select class="form-select form-select-sm sec-display">
+                        <option value="TABLE">Table</option>
+                        <option value="KEY_VALUE">Key-Value</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">As Placeholder?</label>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input sec-placeholder" type="checkbox" />
+                        <label class="form-check-label" style="font-size:.75rem;">Yes</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Grand Total?</label>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input sec-grandtotal" type="checkbox" />
+                        <label class="form-check-label" style="font-size:.75rem;">Yes</label>
+                    </div>
+                </div>
+                <div class="col-md-3 sec-grandtotal-label-wrap" style="display:none;">
+                    <label class="form-label">Label Total</label>
+                    <input class="form-control form-control-sm sec-grandtotal-label" value="Grand Total" />
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">SQL Query <span class="text-danger">*</span></label>
+                <textarea class="form-control query-area sec-query" rows="5"
+                          placeholder="SELECT invoice_no, vendor, amount FROM tbl_invoice"></textarea>
+                <div class="placeholder-hint">SELECT only. No WHERE needed here — use the WHERE field below.</div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">WHERE Clause (dynamic)</label>
+                <input class="form-control form-control-sm sec-where font-monospace"
+                       placeholder="order_id = '{{event.order_id}}' AND status = 'ACTIVE'" style="font-size:.76rem;" />
+                <div class="placeholder-hint">Resolved at runtime. Use <code>{{param}}</code> from event params or placeholder sections. Example: <code>a.jobid = '{{order_no}}'</code></div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">
+                    Visible Columns
+                    <span class="text-muted fw-normal">(pilih & urutkan dari hasil Test Query)</span>
+                </label>
+                <!-- Hidden input yang menyimpan nilai akhir -->
+                <input type="hidden" class="sec-cols" />
+                <!-- Column picker UI -->
+                <div class="col-picker-wrap">
+                    <div class="col-picker-hint">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Klik <strong>Test Query</strong> dulu untuk load kolom. Lalu centang kolom yang ingin ditampilkan. Drag untuk ubah urutan.
+                    </div>
+                    <div class="col-picker-tags"></div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-1">
+                <button class="btn btn-xs btn-outline-info btn-test" style="font-size:.72rem;padding:2px 8px;">
+                    <i class="bi bi-play-circle me-1"></i> Test Query
+                </button>
+            </div>
+            <div class="test-result mt-2" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-bs5.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-bs5.min.js"></script>
+    <script>
+
+        $(document).ready(function(){
+
+            $('#f_header, #f_footer').summernote({
+                height: 280,
+                toolbar: [
+                    ['style',  ['bold', 'italic', 'underline', 'clear']],
+                    ['font',   ['strikethrough']],
+                    ['color',  ['color']],
+                    ['para',   ['ul', 'ol', 'paragraph']],
+                    ['table',  ['table']],
+                    ['insert', ['link']],
+                    ['view',   ['codeview', 'fullscreen']]
+                ],
+                placeholder: 'Tulis konten HTML di sini... gunakan {{placeholder}} untuk nilai dinamis.',
+                callbacks: {
+                    onInit: function () {
+                        // remove Summernote branding
+                        $(this).next('.note-editor').find('.note-status-output').hide();
+                    }
+                }
+            });
+
+        });
+
+        // ══════════════════════════════════════════════
+        // Init Summernote
+        // ══════════════════════════════════════════════
+        // $('#f_header, #f_footer').summernote({
+        //     height: 280,
+        //     toolbar: [
+        //         ['style',  ['bold', 'italic', 'underline', 'clear']],
+        //         ['font',   ['strikethrough']],
+        //         ['color',  ['color']],
+        //         ['para',   ['ul', 'ol', 'paragraph']],
+        //         ['table',  ['table']],
+        //         ['insert', ['link']],
+        //         ['view',   ['codeview', 'fullscreen']]
+        //     ],
+        //     placeholder: 'Tulis konten HTML di sini... gunakan {{placeholder}} untuk nilai dinamis.',
+        //     callbacks: {
+        //         onInit: function () {
+        //             remove Summernote branding
+        //             $(this).next('.note-editor').find('.note-status-output').hide();
+        //         }
+        //     }
+        // });
+
+        // ══════════════════════════════════════════════
+        // State
+        // ══════════════════════════════════════════════
+        let sections   = @Html.Raw(sectionsJson);
+        let recipients = @Html.Raw(recipientsJson);
+        let truckEmails = [];
+
+        // ══════════════════════════════════════════════
+        // Trigger type toggles
+        // ══════════════════════════════════════════════
+        function onTriggerChange() {
+            const v = $('#f_trigger').val();
+            $('#eventFields').toggle(v === 'EVENT');
+            $('#schedFields').toggle(v === 'SCHEDULED');
+        }
+        $('#f_trigger').on('change', onTriggerChange).trigger('change');
+
+        $('#f_freq').on('change', function () {
+            $('#dowField').toggle($(this).val() === 'WEEKLY');
+            $('#domField').toggle($(this).val() === 'MONTHLY');
+        }).trigger('change');
+
+        // ══════════════════════════════════════════════
+        // Sections rendering
+        // ══════════════════════════════════════════════
+        function renderSections() {
+            const container = $('#sectionList');
+            container.empty();
+            if (!sections.length) {
+                container.html('<p class="text-muted" style="font-size:.78rem;">No sections yet. Click "Add Section".</p>');
+                return;
+            }
+            sections.forEach((sec, i) => {
+                const el = $('#sectionTpl .section-card').first().clone();
+                el.attr('data-idx', i);
+                el.find('.sec-label-display').text(sec.section_label || 'Section ' + (i+1));
+                el.find('.sec-type').val(sec.section_type || 'DETAIL');
+                el.find('.sec-label').val(sec.section_label || '');
+                el.find('.sec-display').val(sec.display_mode || 'TABLE');
+                el.find('.sec-placeholder').prop('checked', sec.use_as_placeholder == 1);
+                el.find('.sec-grandtotal').prop('checked', sec.show_grand_total == 1);
+                el.find('.sec-grandtotal-label').val(sec.grand_total_label || 'Grand Total');
+                el.find('.sec-grandtotal-label-wrap').toggle(sec.show_grand_total == 1);
+                el.find('.sec-query').val(sec.sql_query || '');
+                el.find('.sec-where').val(sec.sql_where || '');
+                el.find('.sec-cols').val(sec.visible_columns || '');
+
+                // Restore saved visible columns as tags
+                if (sec.visible_columns) {
+                    const picker = el.find('.col-picker-tags');
+                    const hint   = el.find('.col-picker-hint');
+                    hint.addClass('hidden');
+                    sec.visible_columns.split(',').map(s => s.trim()).filter(Boolean).forEach(col => {
+                        const tag = $(`<div class="col-tag active" draggable="true" data-col="${col}"><span class="col-tag-drag">⠿</span><span>${col}</span></div>`);
+                        tag.on('click', function () { $(this).toggleClass('active'); syncColPicker(el); });
+                        picker.append(tag);
+                    });
+                }
+                el.find('.test-result').hide().empty();
+                container.append(el);
+            });
+        }
+
+        function collectSections() {
+            sections = [];
+            $('#sectionList .section-card').each(function (i) {
+                sections.push({
+                    section_type:       $(this).find('.sec-type').val(),
+                    section_label:      $(this).find('.sec-label').val(),
+                    display_mode:       $(this).find('.sec-display').val(),
+                    use_as_placeholder: $(this).find('.sec-placeholder').is(':checked') ? 1 : 0,
+                    show_grand_total:   $(this).find('.sec-grandtotal').is(':checked') ? 1 : 0,
+                    grand_total_label:  $(this).find('.sec-grandtotal-label').val() || 'Grand Total',
+                    sql_query:          $(this).find('.sec-query').val(),
+                    sql_where:          $(this).find('.sec-where').val(),
+                    visible_columns:    $(this).find('.sec-cols').val(),
+                    sort_order: i
+                });
+            });
+        }
+
+        $('#btnAddSection').click(function () {
+            collectSections();
+            sections.push({ section_type:'DETAIL', section_label:'New Section', display_mode:'TABLE',
+                            sql_query:'', sql_where:'', visible_columns:'', use_as_placeholder:0, sort_order: sections.length });
+            renderSections();
+        });
+
+        $(document).on('click', '.btn-delsec', function () {
+            const i = $(this).closest('.section-card').data('idx');
+            collectSections(); sections.splice(i, 1); renderSections();
+        });
+
+        $(document).on('click', '.btn-moveup', function () {
+            collectSections();
+            const i = $(this).closest('.section-card').data('idx');
+            if (i > 0) { [sections[i-1], sections[i]] = [sections[i], sections[i-1]]; renderSections(); }
+        });
+
+        $(document).on('click', '.btn-movedown', function () {
+            collectSections();
+            const i = $(this).closest('.section-card').data('idx');
+            if (i < sections.length - 1) { [sections[i+1], sections[i]] = [sections[i], sections[i+1]]; renderSections(); }
+        });
+
+        // Update label display on type
+        $(document).on('input', '.sec-label', function () {
+            $(this).closest('.section-card').find('.sec-label-display').text($(this).val() || 'Section');
+        });
+
+        // Toggle Grand Total label field
+        $(document).on('change', '.sec-grandtotal', function () {
+            $(this).closest('.section-card')
+                .find('.sec-grandtotal-label-wrap')
+                .toggle($(this).is(':checked'));
+        });
+
+        // Test query + populate column picker
+        $(document).on('click', '.btn-test', async function () {
+            const card = $(this).closest('.section-card');
+            const sql  = card.find('.sec-query').val();
+            const res  = card.find('.test-result');
+
+            if (!sql.trim()) { res.show().html('<span class="text-danger">Query is empty.</span>'); return; }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            const data = await $.ajax({ url:'/MailReport/TestQuery', method:'POST',
+                contentType:'application/json',
+                data: JSON.stringify({ Sql: sql }) });
+
+            $(this).prop('disabled', false).html('<i class="bi bi-play-circle me-1"></i> Test Query');
+
+            if (!data.ok) {
+                res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.72rem;">${data.message}</div>`);
+                return;
+            }
+
+            // ── Populate column picker ──
+            const picker   = card.find('.col-picker-tags');
+            const hint     = card.find('.col-picker-hint');
+            const hiddenIn = card.find('.sec-cols');
+            const existing = hiddenIn.val() ? hiddenIn.val().split(',').map(s => s.trim()) : [];
+
+            picker.empty();
+            hint.addClass('hidden');
+
+            data.columns.forEach(col => {
+                const isActive = existing.length === 0 || existing.includes(col);
+                const tag = $(`
+                    <div class="col-tag ${isActive ? 'active' : ''}" draggable="true" data-col="${col}">
+                        <span class="col-tag-drag">⠿</span>
+                        <span>${col}</span>
+                    </div>
+                `);
+                tag.on('click', function () {
+                    $(this).toggleClass('active');
+                    syncColPicker(card);
+                });
+                // Drag to reorder
+                tag[0].addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', col);
+                    tag.addClass('dragging');
+                });
+                tag[0].addEventListener('dragend', () => {
+                    tag.removeClass('dragging');
+                    syncColPicker(card);
+                });
+                tag[0].addEventListener('dragover', e => {
+                    e.preventDefault();
+                    const dragging = picker.find('.dragging');
+                    if (dragging.length && dragging[0] !== tag[0]) {
+                        const rect   = tag[0].getBoundingClientRect();
+                        const after  = e.clientX > rect.left + rect.width / 2;
+                        after ? tag.after(dragging) : tag.before(dragging);
+                    }
+                });
+                picker.append(tag);
+            });
+
+            syncColPicker(card);
+
+            // ── Show data preview ──
+            let tbl = `<div style="overflow-x:auto;max-height:180px;margin-top:8px;"><table class="table table-bordered table-sm mb-0" style="font-size:.71rem;white-space:nowrap;"><thead><tr>`;
+            data.columns.forEach(c => tbl += `<th>${c}</th>`);
+            tbl += `</tr></thead><tbody>`;
+            data.rows.forEach(r => {
+                tbl += '<tr>';
+                data.columns.forEach(c => tbl += `<td>${r[c] ?? ''}</td>`);
+                tbl += '</tr>';
+            });
+            tbl += `</tbody></table></div>`;
+            res.show().html(tbl);
+        });
+
+        function syncColPicker(card) {
+            const selected = card.find('.col-picker-tags .col-tag.active')
+                .map((_, el) => $(el).data('col')).get();
+            card.find('.sec-cols').val(selected.join(', '));
+        }
+
+        renderSections();
+
+        // ══════════════════════════════════════════════
+        // Recipients
+        // ══════════════════════════════════════════════
+        async function loadTruckEmails() {
+            truckEmails = await $.get('/MailReport/GetTruckEmails');
+            const sel = $('#recTruckEmail');
+            sel.empty().append('<option value="">-- Select Email --</option>');
+            truckEmails.forEach(e => {
+                const supCode   = e.sup_code   ?? e.supCode   ?? '';
+                const vehicleNo = e.vehicle_no ?? e.vehicleNo ?? '';
+                const email     = e.email_address ?? e.emailAddress ?? '';
+                const type      = e.email_type    ?? e.emailType    ?? '';
+                sel.append(`<option value="${e.id}">${supCode} | ${vehicleNo} | ${email} (${type})</option>`);
+            });
+            sel.trigger('change');
+        }
+
+        $('#recSource').on('change', function () {
+            const isManual = $(this).val() === 'MANUAL';
+            $('#truckEmailPicker').toggle(!isManual);
+            $('#manualFields').toggle(isManual);
+        }).trigger('change');
+
+        $('#btnAddRecipient').click(function () {
+            const source = $('#recSource').val();
+            const type   = $('#recType').val();
+
+            if (source === 'TRUCK_EMAIL') {
+                const id  = parseInt($('#recTruckEmail').val());
+                const te  = truckEmails.find(e => e.id === id);
+                if (!te) { Swal.fire('Warning','Please select an email.','warning'); return; }
+                recipients.push({ recipient_source:'TRUCK_EMAIL', truck_email_id: id,
+                    email_address: te.email_address ?? te.emailAddress,
+                    email_name:    te.email_name    ?? te.emailName ?? '',
+                    email_type: type, is_active: 1 });
+            } else {
+                const email = $('#recEmail').val().trim();
+                const name  = $('#recName').val().trim();
+                if (!email) { Swal.fire('Warning','Email address is required.','warning'); return; }
+                recipients.push({ recipient_source:'MANUAL', truck_email_id: null,
+                    email_address: email, email_name: name,
+                    email_type: type, is_active: 1 });
+            }
+            renderRecipients();
+        });
+
+        function renderRecipients() {
+            const c = $('#recipientList');
+            c.empty();
+            if (!recipients.length) { c.html('<div class="text-muted" style="font-size:.78rem;">No recipients added yet.</div>'); return; }
+            recipients.forEach((r, i) => {
+                const badge = r.email_type === 'TO' ? 'badge-to' : r.email_type === 'CC' ? 'badge-cc' : 'badge-bcc';
+                c.append(`<div class="recipient-row">
+                    <span class="badge-type ${badge}">${r.email_type}</span>
+                    <span style="flex:1;">
+                        ${r.email_name ? `<strong>${r.email_name}</strong> — ` : ''}
+                        ${r.email_address}
+                        ${r.recipient_source === 'TRUCK_EMAIL' ? '<span class="text-muted ms-1" style="font-size:.68rem;">(Truck Email)</span>' : ''}
+                    </span>
+                    <button class="btn btn-xs btn-outline-danger btn-delrec" style="font-size:.65rem;padding:1px 5px;" data-i="${i}">✕</button>
+                </div>`);
+            });
+        }
+
+        $(document).on('click', '.btn-delrec', function () {
+            recipients.splice($(this).data('i'), 1); renderRecipients();
+        });
+
+        renderRecipients();
+        loadTruckEmails();
+
+        // ══════════════════════════════════════════════
+        // SAVE
+        // ══════════════════════════════════════════════
+        $('#btnSave').click(async function () {
+            collectSections();
+
+            // Sync Summernote
+            const header = $('#f_header').summernote('code') ?? '';
+            const footer = $('#f_footer').summernote('code') ?? '';
+
+            const trigger = $('#f_trigger').val();
+            const payload = {
+                Report: {
+                    ID:                   @Model.Report.ID,
+                    report_code:          $('#f_code').val().trim().toUpperCase(),
+                    report_name:          $('#f_name').val().trim(),
+                    report_desc:          $('#f_desc').val().trim(),
+                    trigger_type:         trigger,
+                    event_key:            $('#f_eventkey').val().trim(),
+                    schedule_freq:        $('#f_freq').val(),
+                    schedule_time:        trigger === 'SCHEDULED' ? $('#f_time').val() + ':00' : null,
+                    schedule_day_of_week: trigger === 'SCHEDULED' && $('#f_freq').val() === 'WEEKLY' ? parseInt($('#f_dow').val()) : null,
+                    schedule_day_of_month: trigger === 'SCHEDULED' && $('#f_freq').val() === 'MONTHLY' ? parseInt($('#f_dom').val()) : null,
+                    is_active:            $('#f_active').is(':checked') ? 1 : 0
+                },
+                Template: {
+                    subject:         $('#f_subject').val().trim(),
+                    body_header:     header,
+                    body_footer:     footer,
+                    attach_pdf:      $('#f_pdf').is(':checked') ? 1 : 0,
+                    attach_excel:    $('#f_excel').is(':checked') ? 1 : 0,
+                    attach_filename: $('#f_filename').val().trim()
+                },
+                Sections: sections,
+                Recipients: recipients
+            };
+
+            if (!payload.Report.report_code || !payload.Report.report_name || !payload.Template.subject) {
+                Swal.fire('Validation', 'Report Code, Name, and Subject are required.', 'warning'); return;
+            }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+            $('#saveStatus').text('');
+
+            const res = await $.ajax({ url:'/MailReport/Save', method:'POST',
+                contentType:'application/json', data: JSON.stringify(payload) });
+
+            $(this).prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i> Save Report');
+
+            if (res.ok) {
+                Swal.fire({ title:'Saved!', icon:'success', timer:1500, showConfirmButton:false })
+                    .then(() => window.location.href = '/MailReport/Index');
+            } else {
+                Swal.fire('Error', res.message, 'error');
+            }
+        });
+    </script>
+}

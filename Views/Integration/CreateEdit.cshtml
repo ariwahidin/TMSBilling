@@ -1,0 +1,807 @@
+@model TMSBilling.Controllers.IntegrationFormViewModel
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    bool isEdit = Model.Integration.Id > 0;
+    ViewData["Title"] = isEdit ? "Edit Integrasi" : "Tambah Integrasi";
+}
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="Index" class="btn btn-link text-muted ps-0">
+            <i class="bi bi-arrow-left me-1"></i>Kembali
+        </a>
+        <h5 class="mb-0 ms-2 fw-bold">@ViewData["Title"]</h5>
+    </div>
+
+    <form asp-action="@(isEdit ? "Edit" : "Create")" method="post" id="integrationForm">
+        @Html.AntiForgeryToken()
+        @if (isEdit) { <input type="hidden" asp-for="Integration.Id" /> }
+
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general" type="button">
+                    <i class="bi bi-gear me-1"></i>Umum
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-connection" type="button">
+                    <i class="bi bi-plug me-1"></i>Koneksi
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-schedule" type="button">
+                    <i class="bi bi-calendar me-1"></i>Jadwal
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-email" type="button">
+                    <i class="bi bi-envelope me-1"></i>Email Notifikasi
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-attachments" type="button">
+                    <i class="bi bi-paperclip me-1"></i>Attachments
+                    @if (Model.Attachments?.Any() == true)
+                    {
+                        <span class="badge bg-primary rounded-pill ms-1">@Model.Attachments.Count</span>
+                    }
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab: Umum -->
+        <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-general">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Nama Integrasi <span class="text-danger">*</span></label>
+                            <input asp-for="Integration.Name" class="form-control" placeholder="Contoh: Order Loaded → Google Sheets">
+                            <span asp-validation-for="Integration.Name" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Status</label>
+                            <div class="form-check form-switch mt-2">
+                                <input asp-for="Integration.IsActive" class="form-check-input" type="checkbox">
+                                <label class="form-check-label">Aktif</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Event Key <span class="text-danger">*</span></label>
+                            <input asp-for="Integration.EventKey" class="form-control" placeholder="order.loaded">
+                            <small class="text-muted">Key yang dipanggil dari <code>DispatchAsync("event.key", ...)</code></small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Channel Type <span class="text-danger">*</span></label>
+                            <select asp-for="Integration.ChannelType" class="form-select" id="channelTypeSelect">
+                                <option value="">-- Pilih --</option>
+                                <option value="google_sheets">📊 Google Sheets</option>
+                                <option value="sftp">🔒 SFTP</option>
+                                <option value="ftp">📁 FTP</option>
+                                <option value="api">🌐 API</option>
+                                <option value="file">📄 File</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Source Type</label>
+                            <select asp-for="Integration.SourceType" class="form-select" id="sourceTypeSelect">
+                                <option value="event">Event (dari payload)</option>
+                                <option value="query">SQL Query</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Timing</label>
+                            <select asp-for="Integration.Timing" class="form-select" id="timingSelect">
+                                <option value="realtime">⚡ Realtime</option>
+                                <option value="scheduled">📅 Scheduled</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Deskripsi</label>
+                            <textarea asp-for="Integration.Description" class="form-control" rows="2"
+                                      placeholder="Opsional: deskripsi singkat integrasi ini"></textarea>
+                        </div>
+
+                        <!-- SQL Query section (shown when source = query) -->
+                        <div class="col-12" id="querySection" style="display:none">
+                            <label class="form-label fw-semibold">
+                                SQL Query <span class="text-danger">*</span>
+                                <span class="badge bg-warning text-dark ms-1 small">Hanya SELECT</span>
+                            </label>
+                            <div class="border rounded overflow-hidden">
+                                <textarea asp-for="Integration.Query" id="queryEditor" class="form-control font-monospace"
+                                          rows="6" placeholder="SELECT order_no, status, updated_by FROM ShippingOrders WHERE ..."></textarea>
+                            </div>
+                            <span asp-validation-for="Integration.Query" class="text-danger small"></span>
+                            <div class="mt-2 d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-info" id="btnValidateQuery">
+                                    <i class="bi bi-check-circle me-1"></i>Validasi
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnPreviewQuery">
+                                    <i class="bi bi-play me-1"></i>Preview (20 baris)
+                                </button>
+                            </div>
+                            <!-- Preview Result -->
+                            <div id="queryPreviewResult" class="mt-3" style="display:none">
+                                <div class="alert alert-info small py-2" id="queryPreviewInfo"></div>
+                                <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                                    <table class="table table-sm table-bordered small mb-0" id="queryPreviewTable"></table>
+                                </div>
+                            </div>
+                            <div id="queryValidationAlert" class="mt-2" style="display:none"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Koneksi -->
+        <div class="tab-pane fade" id="tab-connection">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+
+                    <!-- SFTP / FTP -->
+                    <div id="conn-sftp-ftp" style="display:none">
+                        <h6 class="fw-bold mb-3">Konfigurasi SFTP/FTP</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label">Host</label>
+                                <input asp-for="Connection.Host" class="form-control" placeholder="sftp.example.com"></div>
+                            <div class="col-md-2"><label class="form-label">Port</label>
+                                <input asp-for="Connection.Port" class="form-control" placeholder="22"></div>
+                            <div class="col-md-4"><label class="form-label">Username</label>
+                                <input asp-for="Connection.Username" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Password</label>
+                                <input asp-for="Connection.Password" type="password" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Remote Path</label>
+                                <input asp-for="Connection.RemotePath" class="form-control" placeholder="/uploads/orders"></div>
+                            <div class="col-12" id="privateKeySection">
+                                <label class="form-label">Private Key (SFTP)</label>
+                                <textarea asp-for="Connection.PrivateKey" class="form-control font-monospace" rows="4"
+                                          placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;..."></textarea>
+                            </div>
+                            <div class="col-md-4"><label class="form-label">Format File</label>
+                                <select asp-for="Connection.FileFormat" class="form-select">
+                                    <option value="csv">CSV</option>
+                                    <option value="xlsx">Excel (.xlsx)</option>
+                                    <option value="json">JSON</option>
+                                    <option value="txt">TXT</option>
+                                </select></div>
+                            <div class="col-md-8"><label class="form-label">Nama File Template</label>
+                                <input asp-for="Connection.FileNameTemplate" class="form-control"
+                                       placeholder="ORDER_{{date}}_{{order_no}}.csv"></div>
+                        </div>
+                    </div>
+
+                    <!-- API -->
+                    <div id="conn-api" style="display:none">
+                        <h6 class="fw-bold mb-3">Konfigurasi API</h6>
+                        <div class="row g-3">
+                            <div class="col-md-2"><label class="form-label">Method</label>
+                                <select asp-for="Connection.ApiMethod" class="form-select">
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="GET">GET</option>
+                                    <option value="PATCH">PATCH</option>
+                                </select></div>
+                            <div class="col-md-10"><label class="form-label">URL Endpoint</label>
+                                <input asp-for="Connection.ApiUrl" class="form-control" placeholder="https://api.example.com/webhook"></div>
+                            <div class="col-md-12"><label class="form-label">Bearer Token / API Key</label>
+                                <input asp-for="Connection.ApiToken" type="password" class="form-control"></div>
+                            <div class="col-12"><label class="form-label">Custom Headers (JSON)</label>
+                                <textarea asp-for="Connection.ApiHeaders" class="form-control font-monospace" rows="3"
+                                          placeholder='{"X-Custom-Header": "value"}'></textarea></div>
+                        </div>
+                    </div>
+
+                    <!-- File -->
+                    <div id="conn-file" style="display:none">
+                        <h6 class="fw-bold mb-3">Konfigurasi File Output</h6>
+                        <div class="row g-3">
+                            <div class="col-12"><label class="form-label">Output Directory</label>
+                                <input asp-for="Connection.FileOutputPath" class="form-control"
+                                       placeholder="C:\Exports\Orders atau /var/exports/orders"></div>
+                            <div class="col-md-4"><label class="form-label">Format File</label>
+                                <select asp-for="Connection.FileFormat" class="form-select">
+                                    <option value="csv">CSV</option>
+                                    <option value="xlsx">Excel (.xlsx)</option>
+                                    <option value="json">JSON</option>
+                                    <option value="txt">TXT</option>
+                                </select></div>
+                            <div class="col-md-8"><label class="form-label">Nama File Template</label>
+                                <input asp-for="Connection.FileNameTemplate" class="form-control"
+                                       placeholder="ORDER_{{date}}_{{order_no}}.csv">
+                                <small class="text-muted">Placeholder: {{date}}, {{datetime}}, {{order_no}}, dll</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Google Sheets -->
+                    <div id="conn-google-sheets" style="display:none">
+                        <h6 class="fw-bold mb-3">Konfigurasi Google Sheets</h6>
+                        <div class="row g-3">
+                            <div class="col-md-8"><label class="form-label">Spreadsheet ID</label>
+                                <input asp-for="Connection.SpreadsheetId" class="form-control"
+                                       placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"></div>
+                            <div class="col-md-4"><label class="form-label">Sheet Name</label>
+                                <input asp-for="Connection.SheetName" class="form-control" placeholder="Sheet1"></div>
+                            <div class="col-md-4"><label class="form-label">Header Row</label>
+                                <input asp-for="Connection.HeaderRow" type="number" class="form-control" value="1"></div>
+                            <div class="col-md-4"><label class="form-label">Key Column</label>
+                                <input asp-for="Connection.KeyColumn" class="form-control" placeholder="ORDER NO">
+                                <small class="text-muted">Kosongkan untuk auto-detect</small></div>
+                            <div class="col-md-4"><label class="form-label">Schedule Mode</label>
+                                <select asp-for="Connection.ScheduleMode" class="form-select">
+                                    <option value="upsert">Upsert (Insert/Update by key)</option>
+                                    <option value="overwrite">Overwrite (Clear + tulis ulang)</option>
+                                    <option value="append">Append (tambah di bawah)</option>
+                                    <option value="new_sheet">New Sheet (tab per tanggal)</option>
+                                </select></div>
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Credentials JSON (Service Account)
+                                    <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank"
+                                       class="ms-2 small text-primary">Cara mendapatkan →</a>
+                                </label>
+                                <textarea asp-for="Connection.CredentialsJson" class="form-control font-monospace" rows="8"
+                                          placeholder='{"type": "service_account", "project_id": "...", ...}'></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder -->
+                    <div id="conn-placeholder" class="text-center text-muted py-5">
+                        <i class="bi bi-plug fs-1 d-block mb-2 opacity-25"></i>
+                        Pilih <strong>Channel Type</strong> di tab Umum untuk menampilkan konfigurasi koneksi
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Jadwal -->
+        <div class="tab-pane fade" id="tab-schedule">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div id="scheduleSection" style="display:none">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Frekuensi</label>
+                                <select asp-for="Integration.ScheduleFreq" class="form-select" id="schedFreq">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Jam</label>
+                                <input asp-for="Integration.ScheduleHour" type="number" min="0" max="23" class="form-control" placeholder="0-23">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Menit</label>
+                                <input asp-for="Integration.ScheduleMinute" type="number" min="0" max="59" class="form-control" placeholder="0-59">
+                            </div>
+
+                            <!-- Weekly: day of week -->
+                            <div class="col-md-4" id="weeklySection" style="display:none">
+                                <label class="form-label fw-semibold">Hari</label>
+                                <select asp-for="Integration.ScheduleDayOfWeek" class="form-select">
+                                    <option value="0">Minggu</option>
+                                    <option value="1">Senin</option>
+                                    <option value="2">Selasa</option>
+                                    <option value="3">Rabu</option>
+                                    <option value="4">Kamis</option>
+                                    <option value="5">Jumat</option>
+                                    <option value="6">Sabtu</option>
+                                </select>
+                            </div>
+
+                            <!-- Monthly: day of month -->
+                            <div class="col-md-4" id="monthlySection" style="display:none">
+                                <label class="form-label fw-semibold">Tanggal (1-31)</label>
+                                <input asp-for="Integration.ScheduleDayOfMonth" type="number" min="1" max="31" class="form-control">
+                            </div>
+
+                            <div class="col-12">
+                                <div class="alert alert-info small py-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <span id="schedulePreview">Isi frekuensi, jam, dan menit untuk melihat preview jadwal.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="scheduleDisabledMsg" class="text-center text-muted py-5">
+                        <i class="bi bi-calendar fs-1 d-block mb-2 opacity-25"></i>
+                        Ubah <strong>Timing</strong> ke <em>Scheduled</em> di tab Umum untuk mengaktifkan jadwal
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Email Notifikasi -->
+        <div class="tab-pane fade" id="tab-email">
+            <div class="row g-3">
+
+                <!-- LEFT: Editor panel -->
+                <div class="col-lg-7">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-envelope-paper me-2 text-primary"></i>Konfigurasi Email</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+
+                                <!-- Toggle kirim -->
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-uppercase text-muted">Kapan Kirim Email</label>
+                                    <div class="d-flex gap-4 mt-1">
+                                        <div class="form-check">
+                                            <input asp-for="Integration.SendEmailOnSuccess" class="form-check-input" type="checkbox">
+                                            <label class="form-check-label">
+                                                <span class="badge bg-success bg-opacity-10 text-success">✅ Sukses</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input asp-for="Integration.SendEmailOnFailure" class="form-check-input" type="checkbox">
+                                            <label class="form-check-label">
+                                                <span class="badge bg-danger bg-opacity-10 text-danger">❌ Gagal</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input asp-for="Integration.EmailIncludeDataTable" class="form-check-input" type="checkbox" id="chkIncludeTable">
+                                            <label class="form-check-label">
+                                                <span class="badge bg-info bg-opacity-10 text-info">📋 Sertakan Tabel Data</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Subject -->
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Subject
+                                        <span class="text-muted fw-normal small ms-1">(kosong = default otomatis)</span>
+                                    </label>
+                                    <input asp-for="Integration.EmailSubjectTemplate" id="emailSubjectInput"
+                                           class="form-control"
+                                           placeholder="[TMS] ✅ {{integration_name}} — {{row_count}} data berhasil">
+                                </div>
+
+                                <!-- Body -->
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label fw-semibold mb-0">Body Template (HTML)
+                                            <span class="text-muted fw-normal small ms-1">(kosong = default otomatis)</span>
+                                        </label>
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-muted" id="btnResetBody" title="Reset ke template default">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Default
+                                        </button>
+                                    </div>
+                                    <textarea asp-for="Integration.EmailBodyTemplate" id="emailBodyInput"
+                                              class="form-control font-monospace" rows="9"
+                                              placeholder="Kosongkan untuk template default.&#10;Gunakan {{__data_table__}} untuk menyisipkan tabel data.&#10;Gunakan {{__summary__}} untuk ringkasan.&#10;Gunakan {{__error_box__}} untuk kotak error."></textarea>
+                                </div>
+
+                                <!-- Footer -->
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label fw-semibold mb-0">Footer Template (HTML)
+                                            <span class="text-muted fw-normal small ms-1">(kosong = default otomatis)</span>
+                                        </label>
+                                    </div>
+                                    <textarea asp-for="Integration.EmailFooterTemplate" id="emailFooterInput"
+                                              class="form-control font-monospace" rows="3"
+                                              placeholder="Kosongkan untuk footer default (timestamp + keterangan admin)."></textarea>
+                                </div>
+
+                                <!-- Penerima -->
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Penerima Email</label>
+                                    <div id="recipientList">
+                                        @if (Model.Recipients != null)
+                                        {
+                                            @for (int i = 0; i < Model.Recipients.Count; i++)
+                                            {
+                                                <div class="d-flex gap-2 mb-2 recipient-row">
+                                                    <select name="Recipients[@i].RecipientType" class="form-select" style="width:80px">
+                                                        @* <option value="to" @(Model.Recipients[i].RecipientType == "to" ? "selected" : "")>To</option>
+                                                        <option value="cc" @(Model.Recipients[i].RecipientType == "cc" ? "selected" : "")>CC</option>
+                                                        <option value="bcc" @(Model.Recipients[i].RecipientType == "bcc" ? "selected" : "")>BCC</option> *@
+                                                            @{
+                                                                var type = Model.Recipients[i].RecipientType?.ToLower();
+                                                            }
+
+                                                            <option value="to" selected="@(type == "to")">To</option>
+                                                            <option value="cc" selected="@(type == "cc")">CC</option>
+                                                            <option value="bcc" selected="@(type == "bcc")">BCC</option>
+                                                    </select>
+                                                    <input type="text" name="Recipients[@i].Name" class="form-control" placeholder="Nama" value="@Model.Recipients[i].Name">
+                                                    <input type="email" name="Recipients[@i].Email" class="form-control" placeholder="email@domain.com" value="@Model.Recipients[i].Email">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm remove-recipient"><i class="bi bi-x"></i></button>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btnAddRecipient">
+                                        <i class="bi bi-plus me-1"></i>Tambah Penerima
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Variables + Preview panel -->
+                <div class="col-lg-5">
+
+                    <!-- Variable Panel -->
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-braces me-2 text-warning"></i>Variabel Tersedia</h6>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLoadPlaceholders">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="placeholderPanel" style="max-height:280px; overflow-y:auto;">
+                                <div class="text-center text-muted py-4 small" id="placeholderLoading">
+                                    <i class="bi bi-info-circle me-1"></i>Klik Refresh untuk memuat variabel
+                                </div>
+                                <div id="placeholderList" style="display:none"></div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light py-2 px-3">
+                            <small class="text-muted">Klik variabel untuk insert ke cursor aktif di editor</small>
+                        </div>
+                    </div>
+
+                    <!-- Preview Panel -->
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2 text-success"></i>Preview Email</h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <select id="previewAs" class="form-select form-select-sm" style="width:110px">
+                                        <option value="success">✅ Sukses</option>
+                                        <option value="failed">❌ Gagal</option>
+                                    </select>
+                                    <button type="button" class="btn btn-success btn-sm" id="btnPreviewEmail">
+                                        <i class="bi bi-play me-1"></i>Preview
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="emailPreviewContainer" style="height:380px; overflow:auto; border-radius:0 0 8px 8px;">
+                                <div class="text-center text-muted py-5 small" id="previewPlaceholder">
+                                    <i class="bi bi-envelope fs-2 d-block mb-2 opacity-25"></i>
+                                    Klik <strong>Preview</strong> untuk melihat tampilan email
+                                </div>
+                                <iframe id="emailPreviewFrame" style="width:100%; height:380px; border:none; display:none;"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        </div><!-- end tab-content -->
+
+        <!-- Tab: Attachments -->
+        <div class="tab-pane fade" id="tab-attachments">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <partial name="_AttachmentsTab" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div>
+        </div><!-- end outer tab-content wrapper -->
+
+        <!-- Save Button -->
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a asp-action="Index" class="btn btn-light">Batal</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>@(isEdit ? "Simpan Perubahan" : "Buat Integrasi")
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+@{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+<script>
+// ── Channel Type → Show/hide connection panel ─────────────────────────────
+const channelPanels = {
+    'sftp': 'conn-sftp-ftp',
+    'ftp': 'conn-sftp-ftp',
+    'api': 'conn-api',
+    'file': 'conn-file',
+    'google_sheets': 'conn-google-sheets'
+};
+
+function updateChannelPanel() {
+    const val = document.getElementById('channelTypeSelect').value;
+    Object.values(channelPanels).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    document.getElementById('conn-placeholder').style.display = 'none';
+    document.getElementById('private-key-section')?.setAttribute('style', 'display:none');
+
+    if (val && channelPanels[val]) {
+        document.getElementById(channelPanels[val]).style.display = 'block';
+        if (val === 'sftp') {
+            const pk = document.getElementById('privateKeySection');
+            if (pk) pk.style.display = 'block';
+        } else if (val === 'ftp') {
+            const pk = document.getElementById('privateKeySection');
+            if (pk) pk.style.display = 'none';
+        }
+    } else {
+        document.getElementById('conn-placeholder').style.display = 'block';
+    }
+}
+
+document.getElementById('channelTypeSelect').addEventListener('change', updateChannelPanel);
+updateChannelPanel();
+
+// ── Source Type → Show/hide query section ────────────────────────────────
+function updateSourceType() {
+    const val = document.getElementById('sourceTypeSelect').value;
+    document.getElementById('querySection').style.display = val === 'query' ? 'block' : 'none';
+}
+document.getElementById('sourceTypeSelect').addEventListener('change', updateSourceType);
+updateSourceType();
+
+// ── Timing → Show/hide schedule section ──────────────────────────────────
+function updateTiming() {
+    const val = document.getElementById('timingSelect').value;
+    document.getElementById('scheduleSection').style.display = val === 'scheduled' ? 'block' : 'none';
+    document.getElementById('scheduleDisabledMsg').style.display = val === 'scheduled' ? 'none' : 'block';
+}
+document.getElementById('timingSelect').addEventListener('change', updateTiming);
+updateTiming();
+
+// ── Schedule Freq → Show/hide weekly/monthly fields ──────────────────────
+document.getElementById('schedFreq').addEventListener('change', function() {
+    document.getElementById('weeklySection').style.display = this.value === 'weekly' ? 'block' : 'none';
+    document.getElementById('monthlySection').style.display = this.value === 'monthly' ? 'block' : 'none';
+    updateSchedulePreview();
+});
+
+function updateSchedulePreview() {
+    const freq = document.getElementById('schedFreq').value;
+    const hour = document.querySelector('[name="Integration.ScheduleHour"]').value;
+    const minute = document.querySelector('[name="Integration.ScheduleMinute"]').value;
+    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    let text = '';
+    if (freq === 'daily') text = `Setiap hari jam ${hour}:${String(minute).padStart(2,'0')}`;
+    else if (freq === 'weekly') {
+        const dow = document.querySelector('[name="Integration.ScheduleDayOfWeek"]')?.value ?? 1;
+        text = `Setiap ${days[dow]} jam ${hour}:${String(minute).padStart(2,'0')}`;
+    } else if (freq === 'monthly') {
+        const dom = document.querySelector('[name="Integration.ScheduleDayOfMonth"]')?.value ?? 1;
+        text = `Setiap tanggal ${dom} jam ${hour}:${String(minute).padStart(2,'0')}`;
+    }
+    if (text) document.getElementById('schedulePreview').textContent = `🗓️ Jadwal: ${text}`;
+}
+
+// ── Query Preview ─────────────────────────────────────────────────────────
+document.getElementById('btnValidateQuery')?.addEventListener('click', async function() {
+    const query = document.getElementById('queryEditor').value;
+    const res = await fetch('/Integration/ValidateQuery', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({query})
+    });
+    const data = await res.json();
+    const alertEl = document.getElementById('queryValidationAlert');
+    alertEl.style.display = 'block';
+    alertEl.className = `alert alert-${data.isValid ? 'success' : 'danger'} small py-2`;
+    alertEl.innerHTML = `<i class="bi bi-${data.isValid ? 'check' : 'x'}-circle me-1"></i>${data.isValid ? 'Query valid ✓' : data.error}`;
+});
+
+document.getElementById('btnPreviewQuery')?.addEventListener('click', async function() {
+    const query = document.getElementById('queryEditor').value;
+    const btn = this;
+    btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass me-1"></i>Loading...';
+
+    const res = await fetch('/Integration/PreviewQuery', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({query})
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-play me-1"></i>Preview (20 baris)';
+
+    const resultEl = document.getElementById('queryPreviewResult');
+    resultEl.style.display = 'block';
+
+    if (!data.success) {
+        document.getElementById('queryPreviewInfo').innerHTML = `<i class="bi bi-x-circle me-1"></i>${data.error}`;
+        document.getElementById('queryPreviewTable').innerHTML = '';
+        return;
+    }
+
+    document.getElementById('queryPreviewInfo').innerHTML =
+        `<i class="bi bi-table me-1"></i>Menampilkan ${Math.min(data.rows.length, 20)} dari ${data.rowCount} baris | ${data.columns.length} kolom`;
+
+    const table = document.getElementById('queryPreviewTable');
+    let html = '<thead class="table-dark"><tr>' + data.columns.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+    data.rows.forEach(row => {
+        html += '<tr>' + data.columns.map(c => `<td>${row[c] ?? ''}</td>`).join('') + '</tr>';
+    });
+    html += '</tbody>';
+    table.innerHTML = html;
+});
+
+// ── Recipients ────────────────────────────────────────────────────────────
+let recipientCount = @(Model.Recipients?.Count ?? 0);
+
+document.getElementById('btnAddRecipient').addEventListener('click', function() {
+    const i = recipientCount++;
+    const div = document.createElement('div');
+    div.className = 'd-flex gap-2 mb-2 recipient-row';
+    div.innerHTML = `
+        <select name="Recipients[${i}].RecipientType" class="form-select" style="width:80px">
+            <option value="to">To</option>
+            <option value="cc">CC</option>
+            <option value="bcc">BCC</option>
+        </select>
+        <input type="text" name="Recipients[${i}].Name" class="form-control" placeholder="Nama">
+        <input type="email" name="Recipients[${i}].Email" class="form-control" placeholder="email@domain.com">
+        <button type="button" class="btn btn-outline-danger btn-sm remove-recipient"><i class="bi bi-x"></i></button>
+    `;
+    document.getElementById('recipientList').appendChild(div);
+});
+
+document.getElementById('recipientList').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-recipient'))
+        e.target.closest('.recipient-row').remove();
+});
+
+// ── Email: Track active editor (subject / body / footer) ─────────────────
+let activeEmailEditor = null;
+
+['emailSubjectInput', 'emailBodyInput', 'emailFooterInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('focus', () => { activeEmailEditor = el; });
+});
+
+// ── Email: Insert placeholder at cursor ──────────────────────────────────
+function insertPlaceholder(key) {
+    const text = `{{${key}}}`;
+    const el = activeEmailEditor || document.getElementById('emailBodyInput');
+    if (!el) return;
+
+    const start = el.selectionStart ?? el.value.length;
+    const end   = el.selectionEnd ?? el.value.length;
+    el.value = el.value.substring(0, start) + text + el.value.substring(end);
+    el.selectionStart = el.selectionEnd = start + text.length;
+    el.focus();
+}
+
+// ── Email: Load Placeholders ──────────────────────────────────────────────
+async function loadPlaceholders() {
+    const btn = document.getElementById('btnLoadPlaceholders');
+    const listEl = document.getElementById('placeholderList');
+    const loadingEl = document.getElementById('placeholderLoading');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass me-1"></i>Loading...';
+    loadingEl.style.display = 'block';
+    listEl.style.display = 'none';
+
+    const payload = buildEmailPreviewPayload();
+
+    try {
+        const res = await fetch('/Integration/GetEmailPlaceholders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const placeholders = await res.json();
+
+        const categories = { system: '⚙️ Sistem', special: '✨ Special Blocks', data: '📊 Data / Query' };
+        const grouped = {};
+
+        placeholders.forEach(p => {
+            if (!grouped[p.category]) grouped[p.category] = [];
+            grouped[p.category].push(p);
+        });
+
+        let html = '';
+        for (const [cat, items] of Object.entries(grouped)) {
+            html += `<div class="px-3 pt-2 pb-1">
+                <div class="text-uppercase text-muted small fw-bold mb-1" style="font-size:10px; letter-spacing:.5px;">
+                    ${categories[cat] ?? cat}
+                </div>`;
+            items.forEach(p => {
+                html += `
+                <div class="d-flex align-items-start gap-2 py-1 border-bottom" style="cursor:pointer;"
+                     onclick="insertPlaceholder('${p.key}')" title="${p.description}">
+                    <code class="badge bg-warning text-dark fw-normal" style="font-size:11px; white-space:nowrap;">
+                        {{${p.key}}}
+                    </code>
+                    <div>
+                        <div class="small text-dark" style="line-height:1.3;">${p.description}</div>
+                        <div class="text-muted" style="font-size:10px;">${p.example}</div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        listEl.innerHTML = html;
+        loadingEl.style.display = 'none';
+        listEl.style.display = 'block';
+
+    } catch (e) {
+        loadingEl.innerHTML = `<span class="text-danger small">Gagal memuat: ${e.message}</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh';
+    }
+}
+
+document.getElementById('btnLoadPlaceholders')?.addEventListener('click', loadPlaceholders);
+
+// ── Email: Preview ────────────────────────────────────────────────────────
+document.getElementById('btnPreviewEmail')?.addEventListener('click', async function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass me-1"></i>Loading...';
+
+    const payload = buildEmailPreviewPayload();
+
+    try {
+        const res = await fetch('/Integration/PreviewEmail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const html = await res.text();
+
+        const frame = document.getElementById('emailPreviewFrame');
+        const placeholder = document.getElementById('previewPlaceholder');
+
+        placeholder.style.display = 'none';
+        frame.style.display = 'block';
+
+        // Write HTML into iframe
+        frame.srcdoc = html;
+
+    } catch (e) {
+        alert('Gagal memuat preview: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play me-1"></i>Preview';
+    }
+});
+
+function buildEmailPreviewPayload() {
+    return {
+        integrationId:  @(Model.Integration.Id),
+        integrationName: document.querySelector('[name="Integration.Name"]')?.value,
+        eventKey:       document.querySelector('[name="Integration.EventKey"]')?.value,
+        channelType:    document.getElementById('channelTypeSelect')?.value,
+        subjectTemplate: document.getElementById('emailSubjectInput')?.value,
+        bodyTemplate:   document.getElementById('emailBodyInput')?.value,
+        footerTemplate: document.getElementById('emailFooterInput')?.value,
+        includeDataTable: document.getElementById('chkIncludeTable')?.checked ?? true,
+        query:          document.getElementById('queryEditor')?.value,
+        previewAs:      document.getElementById('previewAs')?.value ?? 'success',
+    };
+}
+
+// ── Email: Reset Body ke default ──────────────────────────────────────────
+document.getElementById('btnResetBody')?.addEventListener('click', function() {
+    if (confirm('Reset body template ke kosong? (akan pakai default otomatis saat kirim email)')) {
+        document.getElementById('emailBodyInput').value = '';
+        document.getElementById('emailFooterInput').value = '';
+    }
+});
+</script>
+}

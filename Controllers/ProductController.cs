@@ -208,28 +208,55 @@ public class ProductController : Controller
             "application/json"
         );
 
+        //var model = new ProductTypeStore();
+        bool ok;
+        JsonElement json = default;
+
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _apiSettings.Token.Replace("Bearer ", ""));
 
-        HttpResponseMessage response;
+        //HttpResponseMessage response;
 
         if (model.Id == Guid.Empty) // create
         {
-            response = await _httpClient.PostAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product", jsonContent);
+            //response = await _httpClient.PostAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product", jsonContent);
+            (ok, json) = await _apiService.SendRequestAsync(
+            HttpMethod.Post,
+            $"/order/api/web/v1/product",
+            model
+        );
+
         }
         else // update
         {
-            response = await _httpClient.PutAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product/{model.Id}", jsonContent);
+            //response = await _httpClient.PutAsync($"{_apiSettings.BaseUrl}/order/api/web/v1/product/{model.Id}", jsonContent);
+            (ok, json) = await _apiService.SendRequestAsync(
+            HttpMethod.Patch,
+            $"/order/api/web/v1/product/{model.Id}",
+            model
+            );
         }
 
-        var apiResponse = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
+        if (!ok)
         {
-            return Json(new { success = false, message = $"API Error: {response.StatusCode}", detail = apiResponse });
+            return BadRequest(new
+            {
+                success = false,
+                message = "Gagal kirim ke API CREATE product",
+                detail = json
+            });
         }
 
-        return Json(new { success = true, data = apiResponse });
+        return Json(new { success = true, data = json });
+
+        //var apiResponse = await response.Content.ReadAsStringAsync();
+
+        //if (!response.IsSuccessStatusCode)
+        //{
+        //    return Json(new { success = false, message = $"API Error: {response.StatusCode}", detail = apiResponse });
+        //}
+
+        //return Json(new { success = true, data = apiResponse });
     }
 
     [HttpDelete]

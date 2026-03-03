@@ -159,5 +159,82 @@ namespace TMSBilling.Services
             if (!log.IsSuccess)
                 throw new InvalidOperationException(log.ErrorMessage);
         }
+
+        public async Task SendAsync(EmailMessage msg)
+        {
+            var settings = await _emailSettingsRepository.GetActiveSettingsAsync()
+                ?? throw new InvalidOperationException("Konfigurasi SMTP belum tersedia.");
+
+            var log = new EmailLog
+            {
+                JobId = null,
+                ToEmail = string.Join(",", msg.To),
+                CcEmail = msg.CC.Count > 0 ? string.Join(",", msg.CC) : null,
+                FromEmail = settings.FromEmail,
+                Subject = msg.Subject,
+                TriggerType = "report_mailer",
+                TriggerStatus = "STARTED",
+                SentAt = DateTime.Now,
+                IsSuccess = false,
+                SentByUserId = null
+            };
+
+            try
+            {
+                var decryptedPassword = _encryptionService.Decrypt(settings.Password);
+
+                using var smtp = new SmtpClient();
+
+                var secureOption = settings.SmtpPort == 465
+                    ? SecureSocketOptions.SslOnConnect
+                    : SecureSocketOptions.StartTls;
+
+                await smtp.ConnectAsync(settings.SmtpHost, settings.SmtpPort, secureOption);
+                await smtp.AuthenticateAsync(settings.Username, decryptedPassword);
+
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(settings.DisplayName, settings.FromEmail));
+
+                foreach (var to in msg.To.Where(e => !string.IsNullOrWhiteSpace(e)))
+                    message.To.Add(MailboxAddress.Parse(to.Trim()));
+
+                foreach (var cc in msg.CC.Where(e => !string.IsNullOrWhiteSpace(e)))
+                    message.Cc.Add(MailboxAddress.Parse(cc.Trim()));
+
+                foreach (var bcc in msg.BCC.Where(e => !string.IsNullOrWhiteSpace(e)))
+                    message.Bcc.Add(MailboxAddress.Parse(bcc.Trim()));
+
+                message.Subject = msg.Subject;
+
+                // Build body + attachments menggunakan MimeKit BodyBuilder
+                var builder = new BodyBuilder { HtmlBody = msg.Body };
+
+                foreach (var att in msg.Attachments)
+                    builder.Attachments.Add(att.FileName, att.Data,
+                        ContentType.Parse(att.ContentType));
+
+                message.Body = builder.ToMessageBody();
+
+                await smtp.SendAsync(message);
+                await smtp.DisconnectAsync(true);
+
+                log.IsSuccess = true;
+            }
+            catch (Exception ex)
+            {
+                log.IsSuccess = false;
+                log.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                _context.EmailLogs.Add(log);
+                await _context.SaveChangesAsync();
+            }
+
+            if (!log.IsSuccess)
+                throw new InvalidOperationException(log.ErrorMessage);
+        }
     }
+
+
 }

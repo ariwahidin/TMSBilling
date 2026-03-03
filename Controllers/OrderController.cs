@@ -842,6 +842,7 @@ namespace TMSBilling.Controllers
                     string? truckSizeHeader = headerSheet.Cell(row, 12).GetString();
                     string? remarkHeader = headerSheet.Cell(row, 9).GetString();
                     string? packingType = headerSheet.Cell(row, 21).GetString();
+                    string? isB2C = headerSheet.Cell(row, 22).GetString();
 
 
                     if (pickupDate == null || pickupDate <= DateTime.Now)
@@ -885,10 +886,14 @@ namespace TMSBilling.Controllers
 
                     var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName && d.CustomerName == customer);
 
-                    if (geofenceDestination == null)
-                    {
-                        errors.Add(new { row, section = "header", field = "Alamat tujuan", message = $"'{destName}' tidak ditemukan" });
+                    if (isB2C != "1") {
+                        if (geofenceDestination == null)
+                        {
+                            errors.Add(new { row, section = "header", field = "Alamat tujuan", message = $"'{destName}' tidak ditemukan" });
+                        }
                     }
+
+                   
 
                     var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == customer);
 
@@ -964,6 +969,9 @@ namespace TMSBilling.Controllers
                         mceasy_origin_name = originName,
                         mceasy_dest_name = destName,
                         packing_type = packingType,
+                        is_b2c = isB2C == "1" ? "1" : "0",
+                        user_def_1 = originName,
+                        user_def_2 = destName,
                     };
                 }
                 catch (Exception ex)
@@ -1087,7 +1095,7 @@ namespace TMSBilling.Controllers
                 }
 
                 var dest = _context.Geofences.FirstOrDefault(d => d.FenceName == header.mceasy_dest_name);
-                if (dest == null)
+                if (dest == null && header.is_b2c != "1")
                 {
                     return NotFound(new { success = false, message = $"Destination '{header.mceasy_dest_name}' not found." });
                 }
@@ -1109,15 +1117,6 @@ namespace TMSBilling.Controllers
                             HttpMethod.Delete,
                             $"/order/api/web/v1/delivery-order/{orderExisting.mceasy_order_id}"
                         );
-                        //if (!okDelete)
-                        //{
-                        //    return BadRequest(new
-                        //    {
-                        //        success = false,
-                        //        message = "Failed deleting order",
-                        //        detail = jsonDelete
-                        //    });
-                        //}
                         var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", orderExisting.id_seq);
                         var rows2 = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER_DTL WHERE id_seq_order = {0}", orderExisting.id_seq);
                         var rows3 = _context.Database.ExecuteSqlRaw("DELETE FROM MC_ORDER WHERE id = {0}", orderExisting.mceasy_order_id);
@@ -1136,7 +1135,7 @@ namespace TMSBilling.Controllers
                 }
 
 
-                if (customerGroup.API_FLAG == 1)
+                if (customerGroup.API_FLAG == 1 && header.is_b2c != "1")
                 {
                    
                     var payload = new
@@ -1567,21 +1566,27 @@ namespace TMSBilling.Controllers
                 return NotFound(new { success = false, message = "Order cannot be delete" });
             }
 
-            var (ok, json) = await _apiService.SendRequestAsync(
-                HttpMethod.Delete,
-                $"/order/api/web/v1/delivery-order/{order.mceasy_order_id}"
-            );
-            if (!ok)
+
+            if (order.is_b2c != "1")
             {
-                return BadRequest(new
+
+                var (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Delete,
+                    $"/order/api/web/v1/delivery-order/{order.mceasy_order_id}"
+                );
+                if (!ok)
                 {
-                    success = false,
-                    message = "Failed deleting order",
-                    detail = json
-                });
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Failed deleting order",
+                        detail = json
+                    });
+                }
+
             }
 
-            Console.WriteLine("DELETE ORDER : {0}", id);
+                Console.WriteLine("DELETE ORDER : {0}", id);
             var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", id);
             var rows2 = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER_DTL WHERE id_seq_order = {0}", id);
             Console.WriteLine("Rows delete affected: " + rows);
@@ -1591,7 +1596,6 @@ namespace TMSBilling.Controllers
                 {
                     success = false,
                     message = "Failed deleting order from database",
-                    detail = json
                 });
             }
 
@@ -1704,7 +1708,7 @@ namespace TMSBilling.Controllers
 
                         var customerGroup = _context.CustomerGroups.FirstOrDefault(v => v.SUB_CODE == order.sub_custid);
 
-                        if (customerGroup != null && customerGroup.API_FLAG == 1) {
+                        if (customerGroup != null && customerGroup.API_FLAG == 1 && order.is_b2c != "1") {
 
                             var payload = new
                             {
