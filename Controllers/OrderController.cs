@@ -947,32 +947,52 @@ namespace TMSBilling.Controllers
 
                     }
 
-                    header = new Order
+
+                    var ship_to_name = "";
+                    var ship_to_address = "";
+                    var ship_to_city = destArea;
+
+
+                    if (isB2C == "1")
                     {
-                        inv_no = invoiceNo,
-                        wh_code = whCode,
-                        sub_custid = customer,
-                        cnee_code = destName,
-                        delivery_date = expectedDelivery,
-                        pickup_date = pickupDate,
-                        origin_id = originArea,
-                        dest_area = destArea,
-                        uom = uomHeader,
-                        do_rcv_date = doRcvDate,
-                        do_rcv_time = doRcvTime,
-                        moda_req = modaHeader,
-                        serv_req = serviceHeader,
-                        truck_size = truckSizeHeader,
-                        remark = remarkHeader,
-                        mceasy_origin_address_id = geofenceOrigin?.GeofenceId,
-                        mceasy_destination_address_id = geofenceDestination?.GeofenceId,
-                        mceasy_origin_name = originName,
-                        mceasy_dest_name = destName,
-                        packing_type = packingType,
-                        is_b2c = isB2C == "1" ? "1" : "0",
-                        user_def_1 = originName,
-                        user_def_2 = destName,
-                    };
+                        var parts = destName.Split(" - ", 2, StringSplitOptions.TrimEntries);
+                        ship_to_name = parts[0]; // "Joelly"
+                        ship_to_address = parts[1]; // "Capitol Park Residence, ..."
+                    }
+                    else {
+                        ship_to_name = geofenceDestination.FenceName;
+                        ship_to_address= geofenceDestination.Address;
+                    }
+
+
+
+                        header = new Order
+                        {
+                            inv_no = invoiceNo,
+                            wh_code = whCode,
+                            sub_custid = customer,
+                            cnee_code = destName,
+                            delivery_date = expectedDelivery,
+                            pickup_date = pickupDate,
+                            origin_id = originArea,
+                            dest_area = destArea,
+                            uom = uomHeader,
+                            do_rcv_date = doRcvDate,
+                            do_rcv_time = doRcvTime,
+                            moda_req = modaHeader,
+                            serv_req = serviceHeader,
+                            truck_size = truckSizeHeader,
+                            remark = remarkHeader,
+                            mceasy_origin_address_id = geofenceOrigin?.GeofenceId,
+                            mceasy_destination_address_id = geofenceDestination?.GeofenceId,
+                            mceasy_origin_name = originName,
+                            mceasy_dest_name = destName,
+                            packing_type = packingType,
+                            is_b2c = isB2C == "1" ? "1" : "0",
+                            ship_to_name = ship_to_name,
+                            ship_to_address = ship_to_address,
+                            ship_to_city = destArea
+                        };
                 }
                 catch (Exception ex)
                 {

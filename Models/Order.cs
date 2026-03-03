@@ -102,11 +102,15 @@ namespace TMSBilling.Models
 
         [StringLength(100)]
         public string? packing_type { get; set; }
-
         public string? user_def_1 { get; set; }
         public string? user_def_2 { get; set; }
         public string? user_def_3 { get; set; }
-
+        public string? origin_name { get; set; }
+        public string? origin_address {  get; set; }
+        public string? origin_city { get; set; }
+        public string? ship_to_name { get; set; }
+        public string? ship_to_address { get; set; }
+        public string? ship_to_city { get; set; }
         public string? is_b2c { get; set; } = "0";
     }
 

@@ -261,55 +261,6 @@ namespace TMSBilling.Controllers
             return View(log);
         }
 
-        //// ─────────────────────────────────────────
-        //// AJAX: Validate query (test run)
-        //// ─────────────────────────────────────────
-        //[HttpPost]
-        //public async Task<IActionResult> TestQuery([FromBody] TestQueryRequest req)
-        //{
-        //    try
-        //    {
-        //        // Wrap in top 10 to avoid big result
-        //        var sql = $"SELECT TOP 10 * FROM ({req.Sql.Trim().TrimEnd(';')}) AS __test__";
-
-        //        // Safety check
-        //        var up = System.Text.RegularExpressions.Regex
-        //            .Replace(sql.ToUpper(), @"\s+", " ");
-        //        var blocked = new[] { " INSERT ", " UPDATE ", " DELETE ", " DROP ",
-        //                              " TRUNCATE ", " EXEC ", " EXECUTE ", " ALTER " };
-        //        if (blocked.Any(up.Contains))
-        //            return Json(new { ok = false, message = "Only SELECT queries are allowed." });
-
-        //        using var conn = new Microsoft.Data.SqlClient.SqlConnection(
-        //            _db.Database.GetConnectionString());
-        //        await conn.OpenAsync();
-        //        using var cmd = new Microsoft.Data.SqlClient.SqlCommand(sql, conn)
-        //        { CommandTimeout = 15 };
-
-        //        using var reader = await cmd.ExecuteReaderAsync();
-        //        var cols = Enumerable.Range(0, reader.FieldCount)
-        //            .Select(i => reader.GetName(i)).ToList();
-
-        //        var rows = new List<Dictionary<string, string>>();
-        //        while (await reader.ReadAsync() && rows.Count < 10)
-        //        {
-        //            var row = new Dictionary<string, string>();
-        //            foreach (var col in cols)
-        //                row[col] = reader[col]?.ToString() ?? "";
-        //            rows.Add(row);
-        //        }
-
-        //        return Json(new { ok = true, columns = cols, rows });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return Json(new { ok = false, message = ex.Message });
-        //    }
-        //}
-
-
-        // ─────────────────────────────────────────
-        // AJAX: Validate query (test run)
         // ─────────────────────────────────────────
         [HttpPost]
         public async Task<IActionResult> TestQuery([FromBody] TestQueryRequest req)
