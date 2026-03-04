@@ -17,10 +17,11 @@ namespace TMSBilling.Services
 {
     public interface IExcelLayoutService
     {
-        Task<bool> HasCustomLayoutAsync(int reportId);
-        Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams);
-        Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId);
-        Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm);
+        // owner_type: "mailreport" | "reportbuilder"
+        Task<bool> HasCustomLayoutAsync(int reportId, string ownerType = "mailreport");
+        Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams, string ownerType = "mailreport");
+        Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId, string ownerType = "mailreport");
+        Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm, string ownerType = "mailreport");
     }
 
     public class ExcelLayoutService : IExcelLayoutService
@@ -42,27 +43,27 @@ namespace TMSBilling.Services
         // ──────────────────────────────────────────────
         // HasCustomLayoutAsync
         // ──────────────────────────────────────────────
-        public async Task<bool> HasCustomLayoutAsync(int reportId)
+        public async Task<bool> HasCustomLayoutAsync(int reportId, string ownerType = "mailreport")
         {
             var layout = await _db.MailReportExcelLayouts
                 .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.report_id == reportId);
+                .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
             return layout != null && layout.use_custom_layout == 1;
         }
 
         // ──────────────────────────────────────────────
         // LoadForFormAsync
         // ──────────────────────────────────────────────
-        public async Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId)
+        public async Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId, string ownerType = "mailreport")
         {
             var layout = await _db.MailReportExcelLayouts
                 .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.report_id == reportId);
+                .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
 
             if (layout == null)
                 return new MailReportExcelLayoutVM
                 {
-                    Layout = new MailReportExcelLayout { report_id = reportId },
+                    Layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType },
                     Sheets = new List<MailReportExcelSheetVM>()
                 };
 
@@ -93,27 +94,28 @@ namespace TMSBilling.Services
         // ──────────────────────────────────────────────
         // SaveFromFormAsync
         // ──────────────────────────────────────────────
-        public async Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm)
+        public async Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm, string ownerType = "mailreport")
         {
-            // Upsert layout header
+            // Upsert layout header — filter by owner_type supaya tidak nabrak
             var layout = await _db.MailReportExcelLayouts
-                .FirstOrDefaultAsync(l => l.report_id == reportId);
+                .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
 
             if (layout == null)
             {
-                layout = new MailReportExcelLayout { report_id = reportId };
+                layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType };
                 _db.MailReportExcelLayouts.Add(layout);
             }
 
             layout.use_custom_layout = vm.Layout.use_custom_layout;
             layout.report_title = vm.Layout.report_title;
+            layout.report_subtitle = vm.Layout.report_subtitle;
             layout.title_bg_color = vm.Layout.title_bg_color ?? "FFFFFF";
             layout.title_font_color = vm.Layout.title_font_color ?? "000000";
             layout.title_font_size = vm.Layout.title_font_size > 0 ? vm.Layout.title_font_size : 14;
 
             await _db.SaveChangesAsync();
 
-            // Replace sheets + sections (cascade delete handles sections)
+            // Replace sheets + sections
             var oldSheets = _db.MailReportExcelSheets.Where(s => s.layout_id == layout.ID);
             _db.MailReportExcelSheets.RemoveRange(oldSheets);
             await _db.SaveChangesAsync();
@@ -142,12 +144,13 @@ namespace TMSBilling.Services
         }
 
         // ──────────────────────────────────────────────
-        // BuildAsync — entry point utama
+        // BuildAsync
         // ──────────────────────────────────────────────
-        public async Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams)
+        public async Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams, string ownerType = "mailreport")
         {
-            var vm = await LoadForFormAsync(reportId);
+            var vm = await LoadForFormAsync(reportId, ownerType);
             var resolvedTitle = Resolve(vm.Layout.report_title ?? "", eventParams);
+            var resolvedSubtitle = Resolve(vm.Layout.report_subtitle ?? "", eventParams);
 
             using var wb = new XLWorkbook();
 
@@ -155,7 +158,7 @@ namespace TMSBilling.Services
             {
                 var sheetName = SanitizeSheetName(Resolve(sheetVM.Sheet.sheet_name, eventParams));
                 var ws = wb.Worksheets.Add(sheetName);
-                await BuildSheetAsync(ws, sheetVM, vm.Layout, resolvedTitle, eventParams);
+                await BuildSheetAsync(ws, sheetVM, vm.Layout, resolvedTitle, resolvedSubtitle, eventParams);
             }
 
             if (!wb.Worksheets.Any())
@@ -174,25 +177,49 @@ namespace TMSBilling.Services
             MailReportExcelSheetVM sheetVM,
             MailReportExcelLayout layout,
             string resolvedTitle,
+            string resolvedSubtitle,
             Dictionary<string, string> eventParams)
         {
             int currentRow = 1;
+            int totalCols = sheetVM.Sections
+                .SelectMany(s => (s.visible_columns ?? "").Split(',').Where(c => !string.IsNullOrWhiteSpace(c)))
+                .Count();
+            totalCols = Math.Max(totalCols, 5); // minimal 5 kolom untuk merge
 
-            // Report title di pojok kiri atas
+            // ── Report Title ──────────────────────────────
             if (!string.IsNullOrWhiteSpace(resolvedTitle))
             {
-                var cell = ws.Cell(currentRow, 1);
-                cell.Value = resolvedTitle;
-                cell.Style.Font.Bold = true;
-                cell.Style.Font.FontSize = layout.title_font_size;
-                SetFontColor(cell.Style.Font, layout.title_font_color ?? "000000");
+                var titleRange = ws.Range(currentRow, 1, currentRow, totalCols);
+                titleRange.Merge();
+                titleRange.FirstCell().Value = resolvedTitle;
+                titleRange.Style.Font.Bold = true;
+                titleRange.Style.Font.FontSize = layout.title_font_size;
+                titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                SetFontColor(titleRange.Style.Font, layout.title_font_color ?? "000000");
                 if (!string.IsNullOrWhiteSpace(layout.title_bg_color) && layout.title_bg_color != "FFFFFF")
-                    SetFill(cell.Style.Fill, layout.title_bg_color);
-                currentRow += 2;
+                    SetFill(titleRange.Style.Fill, layout.title_bg_color);
+                currentRow++;
             }
 
-            // Kelompokkan sections berdasarkan group_id + layout
+            // ── Sub Title ─────────────────────────────────
+            if (!string.IsNullOrWhiteSpace(resolvedSubtitle))
+            {
+                var subRange = ws.Range(currentRow, 1, currentRow, totalCols);
+                subRange.Merge();
+                subRange.FirstCell().Value = resolvedSubtitle;
+                subRange.Style.Font.Italic = true;
+                subRange.Style.Font.FontSize = Math.Max(layout.title_font_size - 2, 9);
+                subRange.Style.Font.FontColor = XLColor.FromHtml("#555555");
+                subRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                currentRow++;
+            }
+
+            if (!string.IsNullOrWhiteSpace(resolvedTitle) || !string.IsNullOrWhiteSpace(resolvedSubtitle))
+                currentRow++; // 1 baris kosong setelah header
+
             var groups = GroupSections(sheetVM.Sections.OrderBy(s => s.sort_order).ToList());
+
+            int? freezeRow = null; // baris yang akan di-freeze
 
             foreach (var group in groups)
             {
@@ -200,23 +227,46 @@ namespace TMSBilling.Services
 
                 if (group.Count == 1 || group[0].layout != "side_by_side")
                 {
-                    // Vertical
                     foreach (var sec in group)
                     {
                         var dt = await RunQueryAsync(sec, eventParams);
+                        // Catat posisi header row pertama untuk freeze
+                        if (freezeRow == null && sec.display_mode != "KEY_VALUE" && dt.Rows.Count > 0)
+                        {
+                            int headerRow = currentRow;
+                            if (!string.IsNullOrWhiteSpace(sec.section_title)) headerRow++;
+                            freezeRow = headerRow + 1; // freeze setelah header
+                        }
                         currentRow = RenderSection(ws, sec, dt, currentRow, 1, eventParams);
                         currentRow += sec.bottom_gap > 0 ? sec.bottom_gap : 2;
                     }
                 }
                 else
                 {
-                    // Side by side
                     currentRow = await RenderSideBySideAsync(ws, group, currentRow, eventParams);
                     currentRow += bottomGap;
                 }
             }
 
-            ws.Columns().AdjustToContents();
+            // ── Auto column width dengan max cap ──────────
+            foreach (var col in ws.ColumnsUsed())
+            {
+                col.AdjustToContents();
+                if (col.Width > 50) col.Width = 50; // max 50 chars width
+            }
+
+            // ── Freeze panes — beku di bawah header row ──
+            if (freezeRow.HasValue && freezeRow.Value > 1)
+                ws.SheetView.FreezeRows(freezeRow.Value - 1);
+
+            // ── Auto filter pada header row pertama ───────
+            if (freezeRow.HasValue)
+            {
+                var headerRowNum = freezeRow.Value - 1;
+                var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 1;
+                if (lastCol > 1)
+                    ws.Range(headerRowNum, 1, headerRowNum, lastCol).SetAutoFilter();
+            }
         }
 
         // ──────────────────────────────────────────────
@@ -266,9 +316,7 @@ namespace TMSBilling.Services
                 var dt = await RunQueryAsync(sec, eventParams);
                 var endRow = RenderSection(ws, sec, dt, startRow, currentCol, eventParams);
                 maxRow = Math.Max(maxRow, endRow);
-
-                var colCount = GetVisibleColumns(sec, dt).Count;
-                colCount = Math.Max(colCount, 1);
+                var colCount = Math.Max(GetVisibleColumns(sec, dt).Count, 1);
                 currentCol += colCount + (sec.side_gap > 0 ? sec.side_gap : 1);
             }
 
@@ -276,8 +324,7 @@ namespace TMSBilling.Services
         }
 
         // ──────────────────────────────────────────────
-        // RenderSection — render 1 tabel ke worksheet
-        // Returns baris terakhir yang ditulis
+        // RenderSection
         // ──────────────────────────────────────────────
         private int RenderSection(
             IXLWorksheet ws,
@@ -325,7 +372,6 @@ namespace TMSBilling.Services
                     keyCell.Style.Font.Bold = true;
                     keyCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F9FC");
                     keyCell.Style.Border.OutsideBorder = XLBorderStyleValues.Hair;
-
                     var valCell = ws.Cell(row, startCol + 1);
                     valCell.Value = FormatCell(dt.Rows[0][col.ColumnName], col);
                     valCell.Style.Border.OutsideBorder = XLBorderStyleValues.Hair;
@@ -344,7 +390,7 @@ namespace TMSBilling.Services
                 .Where(c => dt.Columns.Contains(c) && numericTypes.Contains(dt.Columns[c]!.DataType))
                 .ToHashSet();
 
-            // Header row
+            // Header
             for (int c = 0; c < visibleCols.Count; c++)
             {
                 var hCell = ws.Cell(row, startCol + c);
@@ -390,17 +436,15 @@ namespace TMSBilling.Services
                     }
                 }
 
-                // Alternate row shading
                 if ((row - dataRowStart) % 2 == 1)
                 {
-                    var rowRange = ws.Range(row, startCol, row, startCol + visibleCols.Count - 1);
-                    rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F9FC");
+                    ws.Range(row, startCol, row, startCol + visibleCols.Count - 1)
+                      .Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F9FC");
                 }
-
                 row++;
             }
 
-            // Grand Total row
+            // Grand Total
             if (sec.show_grand_total == 1)
             {
                 var label = sec.grand_total_label ?? "TOTAL";
@@ -416,7 +460,6 @@ namespace TMSBilling.Services
 
                     if (!labelPlaced && !numericCols.Contains(colName))
                     {
-                        // Kolom pertama non-numerik → label
                         cell.Value = label;
                         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
                         labelPlaced = true;
@@ -459,6 +502,8 @@ namespace TMSBilling.Services
             }
 
             sql = Resolve(sql, eventParams);
+
+            _logger.LogInformation("ExcelLayout SQL [{Label}]:\n{Sql}", sec.section_label, sql);
 
             try
             {
@@ -511,7 +556,9 @@ namespace TMSBilling.Services
             if (col.DataType == typeof(DateTime))
             {
                 var dt = (DateTime)val;
-                return dt.TimeOfDay == TimeSpan.Zero ? dt.ToString("yyyy-MM-dd") : dt.ToString("yyyy-MM-dd HH:mm");
+                return dt.TimeOfDay == TimeSpan.Zero
+                    ? dt.ToString("yyyy-MM-dd")
+                    : dt.ToString("yyyy-MM-dd HH:mm");
             }
             if (col.DataType == typeof(TimeSpan))
                 return ((TimeSpan)val).ToString(@"hh\:mm\:ss");
@@ -528,7 +575,11 @@ namespace TMSBilling.Services
                 ["datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 ["year"] = DateTime.Now.ToString("yyyy"),
                 ["month"] = DateTime.Now.ToString("MM"),
-                ["month_name"] = DateTime.Now.ToString("MMMM")
+                ["month_name"] = DateTime.Now.ToString("MMMM"),
+                ["today"] = DateTime.Now.ToString("yyyy-MM-dd"),
+                ["month_start"] = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"),
+                ["month_end"] = new DateTime(DateTime.Now.Year, DateTime.Now.Month,
+                                      DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month)).ToString("yyyy-MM-dd")
             };
             return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
                 merged.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
@@ -538,20 +589,44 @@ namespace TMSBilling.Services
         {
             sql = sql.TrimEnd(';', ' ');
             var upper = Regex.Replace(sql.ToUpper(), @"\s+", " ");
+
             bool hasWhere = false;
+            int orderByPos = -1;
             int depth = 0;
-            for (int i = 0; i < upper.Length - 5; i++)
+
+            for (int i = 0; i < upper.Length; i++)
             {
-                if (upper[i] == '(') depth++;
-                else if (upper[i] == ')') depth--;
-                else if (depth == 0 && upper.Substring(i, 5) == "WHERE")
+                if (upper[i] == '(') { depth++; continue; }
+                if (upper[i] == ')') { depth--; continue; }
+                if (depth != 0) continue;
+
+                if (!hasWhere && i + 5 <= upper.Length && upper.Substring(i, 5) == "WHERE")
                 {
                     bool prev = i == 0 || !char.IsLetterOrDigit(upper[i - 1]);
                     bool next = i + 5 >= upper.Length || !char.IsLetterOrDigit(upper[i + 5]);
-                    if (prev && next) { hasWhere = true; break; }
+                    if (prev && next) hasWhere = true;
+                }
+
+                if (orderByPos == -1 && i + 8 <= upper.Length && upper.Substring(i, 8) == "ORDER BY")
+                {
+                    bool prev = i == 0 || !char.IsLetterOrDigit(upper[i - 1]);
+                    bool next = i + 8 >= upper.Length || !char.IsLetterOrDigit(upper[i + 8]);
+                    if (prev && next) orderByPos = i;
                 }
             }
-            return hasWhere ? sql + $" AND ({where})" : sql + $" WHERE {where}";
+
+            if (hasWhere)
+            {
+                if (orderByPos > 0)
+                    return sql.Substring(0, orderByPos).TrimEnd() + $" AND ({where}) " + sql.Substring(orderByPos);
+                return sql + $" AND ({where})";
+            }
+            else
+            {
+                if (orderByPos > 0)
+                    return sql.Substring(0, orderByPos).TrimEnd() + $" WHERE {where} " + sql.Substring(orderByPos);
+                return sql + $" WHERE {where}";
+            }
         }
 
         private bool IsSafe(string sql)
@@ -566,13 +641,13 @@ namespace TMSBilling.Services
         private void SetFill(IXLFill fill, string? hex)
         {
             try { if (!string.IsNullOrWhiteSpace(hex)) fill.BackgroundColor = XLColor.FromHtml("#" + hex.TrimStart('#')); }
-            catch { /* ignore invalid color */ }
+            catch { /* ignore */ }
         }
 
         private void SetFontColor(IXLFont font, string? hex)
         {
             try { if (!string.IsNullOrWhiteSpace(hex)) font.FontColor = XLColor.FromHtml("#" + hex.TrimStart('#')); }
-            catch { /* ignore invalid color */ }
+            catch { /* ignore */ }
         }
 
         private string SanitizeSheetName(string name)

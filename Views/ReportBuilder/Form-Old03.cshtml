@@ -1,0 +1,838 @@
+@model TMSBilling.Models.ReportBuilderFormVM
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = Model.Report.ID == 0 ? "New Report" : "Edit Report";
+    var isNew  = Model.Report.ID == 0;
+    var roles  = ViewBag.Roles as List<string> ?? new List<string>();
+}
+
+<div class="page-header mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">
+                <i class="bi bi-tools me-2 text-primary"></i>
+                @(isNew ? "New Report Definition" : Model.Report.report_name)
+            </h4>
+            <small class="text-muted">
+                <a href="/ReportBuilder">Report Builder</a> / @(isNew ? "New" : "Edit")
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            @if (!isNew)
+            {
+                <a href="/Report/Generate/@Model.Report.ID" target="_blank"
+                   class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-play-circle me-1"></i>Preview as User
+                </a>
+            }
+            <button class="btn btn-sm btn-primary" id="btnSave">
+                <i class="bi bi-check-lg me-1"></i>Save Report
+            </button>
+            <a href="/ReportBuilder" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</div>
+
+<!-- Nav Tabs -->
+<ul class="nav nav-tabs mb-3" id="rbTab">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tabInfo">
+            <i class="bi bi-info-circle me-1"></i>Info
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabParams">
+            <i class="bi bi-sliders me-1"></i>Parameters
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabLayout" id="tabLayoutBtn">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel Layout
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabPermissions">
+            <i class="bi bi-shield-check me-1"></i>Permissions
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content" id="rbTabContent">
+
+    <!-- ════════ TAB 1: INFO ════════ -->
+    <div class="tab-pane fade show active" id="tabInfo">
+        <div class="row g-3" style="max-width:900px;">
+            <div class="col-md-4">
+                <label class="form-label">Report Code <span class="text-danger">*</span></label>
+                <input id="f_code" class="form-control form-control-sm font-monospace"
+                       value="@Model.Report.report_code"
+                       placeholder="e.g. DAILY_DELIVERY"
+                       @(isNew ? "" : "readonly") />
+                <div class="placeholder-hint">Unik, huruf besar, underscore. Tidak bisa diubah setelah save.</div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Report Name <span class="text-danger">*</span></label>
+                <input id="f_name" class="form-control form-control-sm"
+                       value="@Model.Report.report_name"
+                       placeholder="e.g. Daily Delivery Report" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <input id="f_cat" class="form-control form-control-sm"
+                       value="@Model.Report.category"
+                       placeholder="e.g. Delivery, Finance" />
+            </div>
+            <div class="col-12">
+                <label class="form-label">Description</label>
+                <input id="f_desc" class="form-control form-control-sm"
+                       value="@Model.Report.report_desc"
+                       placeholder="Short description..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Icon</label>
+                <input id="f_icon" class="form-control form-control-sm font-monospace"
+                       value="@(Model.Report.icon ?? "bi-file-earmark-bar-graph")"
+                       placeholder="bi-file-earmark-bar-graph" />
+                <div class="placeholder-hint">Bootstrap Icons class</div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Filename Template</label>
+                <input id="f_filename" class="form-control form-control-sm font-monospace"
+                       value="@Model.Report.filename_template"
+                       placeholder="e.g. Daily_Delivery_{{date_from}}_{{date_to}}" />
+                <div class="placeholder-hint">Support {{placeholder}}. Extension otomatis ditambah.</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Default Output</label>
+                <select id="f_default_out" class="form-select form-select-sm">
+                    <option value="excel" selected="@(Model.Report.default_output == "excel" ? "selected" : null)">Excel</option>
+                    <option value="csv"   selected="@(Model.Report.default_output == "csv"   ? "selected" : null)">CSV</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Allowed Outputs</label>
+                <div class="d-flex flex-column gap-1 mt-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="out_excel"
+                               @((Model.Report.allowed_outputs ?? "excel").Contains("excel") ? "checked" : "") />
+                        <label class="form-check-label" style="font-size:.8rem;" for="out_excel">Excel</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="out_csv"
+                               @((Model.Report.allowed_outputs ?? "").Contains("csv") ? "checked" : "") />
+                        <label class="form-check-label" style="font-size:.8rem;" for="out_csv">CSV</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Active</label>
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" id="f_active"
+                           @(Model.Report.is_active == 1 ? "checked" : "") />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ TAB 2: PARAMETERS ════════ -->
+    <div class="tab-pane fade" id="tabParams">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold" style="font-size:.83rem;">Parameter Definitions</span>
+            <button class="btn btn-sm btn-outline-primary" id="btnAddParam">
+                <i class="bi bi-plus-lg me-1"></i>Add Parameter
+            </button>
+        </div>
+        <div class="placeholder-hint mb-3">
+            Parameter yang didefinisikan di sini akan muncul sebagai form input di halaman user.
+            <code>param_key</code> harus cocok dengan <code>{{placeholder}}</code> di SQL query section.
+        </div>
+        <div id="paramList"></div>
+    </div>
+
+    <!-- ════════ TAB 3: EXCEL LAYOUT ════════ -->
+    <div class="tab-pane fade" id="tabLayout">
+
+        <div id="layoutLoading" class="text-muted py-3" style="font-size:.8rem;">
+            <span class="spinner-border spinner-border-sm me-1"></span>Loading layout...
+        </div>
+
+        <div id="layoutContent" style="display:none;">
+
+            <!-- Toggle -->
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="el_use_custom" />
+                    <label class="form-check-label fw-semibold" for="el_use_custom" style="font-size:.83rem;">
+                        Use Custom Excel Layout
+                    </label>
+                </div>
+                <div class="placeholder-hint">Aktifkan untuk pakai layout kustom.</div>
+            </div>
+
+            <div id="elMainConfig" style="display:none;">
+                <div class="row g-2 mb-3" style="max-width:900px;">
+                    <div class="col-md-5">
+                        <label class="form-label">Report Title</label>
+                        <input id="el_title" class="form-control form-control-sm"
+                               placeholder="e.g. Daily Report Periode {{date}}" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Title BG</label>
+                        <input type="color" id="el_title_bg" class="form-control form-control-sm form-control-color" value="#FFFFFF" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Title Font</label>
+                        <input type="color" id="el_title_fg" class="form-control form-control-sm form-control-color" value="#000000" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Font Size</label>
+                        <input type="number" id="el_title_size" class="form-control form-control-sm" min="8" max="36" value="14" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold" style="font-size:.83rem;">
+                        <i class="bi bi-layers me-1 text-success"></i>Sheets
+                    </span>
+                    <button class="btn btn-sm btn-outline-success" id="btnAddSheet">
+                        <i class="bi bi-plus-lg me-1"></i>Add Sheet
+                    </button>
+                </div>
+                <div id="elSheetList" class="accordion mb-3"></div>
+            </div>
+
+            <div class="pt-2 border-top">
+                <button class="btn btn-sm btn-success" id="btnSaveExcelLayout">
+                    <i class="bi bi-check-lg me-1"></i>Save Excel Layout
+                </button>
+                <span id="elSaveStatus" class="ms-2" style="font-size:.75rem;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ TAB 4: PERMISSIONS ════════ -->
+    <div class="tab-pane fade" id="tabPermissions">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold" style="font-size:.83rem;">Access Permissions</span>
+            <button class="btn btn-sm btn-outline-primary" id="btnAddPerm">
+                <i class="bi bi-plus-lg me-1"></i>Add Permission
+            </button>
+        </div>
+        <div class="placeholder-hint mb-3">
+            Tentukan role mana yang boleh mengakses report ini.
+            Gunakan <code>ALL</code> untuk semua role.
+        </div>
+        <div id="permList"></div>
+    </div>
+
+</div>
+
+<style>
+.col-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    font-size: .72rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background .1s, border-color .1s;
+}
+.col-tag.active {
+    background: #e8f0fe;
+    border-color: #4a90e2;
+    color: #1a56db;
+    font-weight: 600;
+}
+.col-tag.dragging { opacity: .4; }
+.col-tag-drag { font-size:.75rem; color:#aaa; cursor:grab; }
+</style>
+
+@section Scripts {
+<script>
+const reportId   = @Model.Report.ID;
+const isNew      = reportId === 0;
+const availRoles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(roles));
+
+let params = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Params));
+let perms  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Permissions));
+
+// ══════════════════════════════════════════════
+// PARAMS TAB
+// ══════════════════════════════════════════════
+function renderParams() {
+    const c = $('#paramList').empty();
+    if (!params.length) {
+        c.html('<p class="text-muted" style="font-size:.78rem;">Belum ada parameter. Klik "Add Parameter".</p>');
+        return;
+    }
+    params.forEach((p, i) => c.append(buildParamCard(p, i)));
+}
+
+function buildParamCard(p, i) {
+    const typeOpts = ['date','text','number','select','multiselect','hidden','daterange']
+        .map(t => `<option value="${t}" ${p.param_type===t?'selected':''}>${t}</option>`).join('');
+    const srcOpts = ['static','query']
+        .map(t => `<option value="${t}" ${p.options_source===t?'selected':''}>${t}</option>`).join('');
+    const showOpts = ['select','multiselect'].includes(p.param_type) ? '' : 'display:none;';
+
+    return $(`
+        <div class="border rounded mb-2 p-3" style="font-size:.78rem;" data-pi="${i}">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="fw-semibold flex-grow-1 p-lbl-disp">${p.param_label||'Param '+(i+1)}</span>
+                <button class="btn btn-outline-secondary p-up"   style="font-size:.6rem;padding:1px 4px;">↑</button>
+                <button class="btn btn-outline-secondary p-down" style="font-size:.6rem;padding:1px 4px;">↓</button>
+                <button class="btn btn-outline-danger    p-del"  style="font-size:.6rem;padding:1px 5px;">✕</button>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Key *</label>
+                    <input class="form-control form-control-sm font-monospace p-key" value="${p.param_key||''}" placeholder="date_from" />
+                    <div class="placeholder-hint">{{placeholder}} di SQL</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" style="font-size:.7rem;">Label *</label>
+                    <input class="form-control form-control-sm p-label" value="${p.param_label||''}" placeholder="e.g. Tanggal Awal" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Type</label>
+                    <select class="form-select form-select-sm p-type">${typeOpts}</select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Default Value</label>
+                    <input class="form-control form-control-sm p-default" value="${p.default_value||''}" placeholder="{{today}}" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label" style="font-size:.7rem;">Col Width</label>
+                    <input type="number" class="form-control form-control-sm p-colwidth" min="1" max="12" value="${p.col_width||3}" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label" style="font-size:.7rem;">Required</label>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input p-required" type="checkbox" ${p.is_required===1?'checked':''} />
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label" style="font-size:.7rem;">Hidden</label>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input p-hidden" type="checkbox" ${p.is_hidden===1?'checked':''} />
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2 p-opts-wrap" style="${showOpts}">
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Options Source</label>
+                    <select class="form-select form-select-sm p-opts-src">${srcOpts}</select>
+                </div>
+                <div class="col-md-5 p-opts-static-wrap" ${p.options_source==='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Options (static)</label>
+                    <input class="form-control form-control-sm p-opts-static" value="${p.param_options||''}"
+                           placeholder="ACTIVE,INACTIVE  atau  1=Active,2=Inactive" />
+                </div>
+                <div class="col-md-7 p-opts-query-wrap" ${p.options_source!=='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Options Query</label>
+                    <textarea class="form-control form-control-sm query-area p-opts-query" rows="2"
+                              placeholder="SELECT id, name FROM tbl ORDER BY name">${p.param_options||''}</textarea>
+                </div>
+                <div class="col-md-2 p-opts-query-wrap" ${p.options_source!=='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Value Col</label>
+                    <input class="form-control form-control-sm p-opts-valcol" value="${p.options_value_col||''}" placeholder="id" />
+                </div>
+                <div class="col-md-2 p-opts-query-wrap" ${p.options_source!=='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Text Col</label>
+                    <input class="form-control form-control-sm p-opts-txtcol" value="${p.options_text_col||''}" placeholder="name" />
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+$(document).on('change', '.p-type', function () {
+    $(this).closest('[data-pi]').find('.p-opts-wrap')
+        .toggle(['select','multiselect'].includes($(this).val()));
+});
+$(document).on('change', '.p-opts-src', function () {
+    const isQ = $(this).val() === 'query';
+    const c   = $(this).closest('[data-pi]');
+    c.find('.p-opts-static-wrap').toggle(!isQ);
+    c.find('.p-opts-query-wrap').toggle(isQ);
+});
+$(document).on('input', '.p-label', function () {
+    $(this).closest('[data-pi]').find('.p-lbl-disp').text($(this).val() || 'Param');
+});
+
+$('#btnAddParam').on('click', () => {
+    collectParams();
+    params.push({ param_key:'', param_label:'', param_type:'text', col_width:3,
+                  is_required:0, is_hidden:0, options_source:'static' });
+    renderParams();
+});
+$(document).on('click', '.p-del',  function () { const i = $(this).closest('[data-pi]').data('pi'); collectParams(); params.splice(i,1); renderParams(); });
+$(document).on('click', '.p-up',   function () { const i = $(this).closest('[data-pi]').data('pi'); collectParams(); if(i>0) [params[i-1],params[i]]=[params[i],params[i-1]]; renderParams(); });
+$(document).on('click', '.p-down', function () { const i = $(this).closest('[data-pi]').data('pi'); collectParams(); if(i<params.length-1) [params[i+1],params[i]]=[params[i],params[i+1]]; renderParams(); });
+
+function collectParams() {
+    params = [];
+    $('#paramList [data-pi]').each(function () {
+        const src = $(this).find('.p-opts-src').val();
+        params.push({
+            param_key:         $(this).find('.p-key').val(),
+            param_label:       $(this).find('.p-label').val(),
+            param_type:        $(this).find('.p-type').val(),
+            default_value:     $(this).find('.p-default').val(),
+            col_width:         parseInt($(this).find('.p-colwidth').val()) || 3,
+            is_required:       $(this).find('.p-required').is(':checked') ? 1 : 0,
+            is_hidden:         $(this).find('.p-hidden').is(':checked') ? 1 : 0,
+            options_source:    src,
+            param_options:     src==='query' ? $(this).find('.p-opts-query').val() : $(this).find('.p-opts-static').val(),
+            options_value_col: $(this).find('.p-opts-valcol').val(),
+            options_text_col:  $(this).find('.p-opts-txtcol').val()
+        });
+    });
+}
+
+// ══════════════════════════════════════════════
+// PERMISSIONS TAB
+// ══════════════════════════════════════════════
+function renderPerms() {
+    const c = $('#permList').empty();
+    if (!perms.length) {
+        c.html('<p class="text-muted" style="font-size:.78rem;">Belum ada permission. Report tidak akan bisa diakses user.</p>');
+        return;
+    }
+    perms.forEach((p, i) => {
+        const opts = ['ALL', ...availRoles].map(r => `<option value="${r}" ${p.role_name===r?'selected':''}>${r}</option>`).join('');
+        c.append($(`
+            <div class="d-flex align-items-center gap-2 mb-2" data-prmi="${i}" style="max-width:400px;">
+                <select class="form-select form-select-sm prm-role">${opts}</select>
+                <button class="btn btn-sm btn-outline-danger prm-del" style="font-size:.68rem;padding:2px 8px;">✕</button>
+            </div>
+        `));
+    });
+}
+$('#btnAddPerm').on('click', () => { collectPerms(); perms.push({ role_name:'ALL' }); renderPerms(); });
+$(document).on('click', '.prm-del', function () {
+    const i = $(this).closest('[data-prmi]').data('prmi');
+    collectPerms(); perms.splice(i,1); renderPerms();
+});
+function collectPerms() {
+    perms = [];
+    $('#permList [data-prmi]').each(function () {
+        perms.push({ role_name: $(this).find('.prm-role').val() });
+    });
+}
+
+// ══════════════════════════════════════════════
+// EXCEL LAYOUT TAB
+// ══════════════════════════════════════════════
+let elData       = { layout: {}, sheets: [] };
+let layoutLoaded = false;
+
+$('#tabLayoutBtn').on('shown.bs.tab', async function () {
+    if (layoutLoaded) return;
+    if (isNew) {
+        $('#layoutLoading').hide();
+        $('#layoutContent').show();
+        onElToggle();
+        return;
+    }
+    try {
+        const res = await $.get(`/ReportBuilder/GetLayout?reportId=${reportId}`);
+        if (!res.ok) throw new Error(res.message);
+
+        layoutLoaded = true;
+        elData = res.data || { layout:{}, sheets:[] };
+
+        const L = elData.layout || {};
+        $('#el_use_custom').prop('checked', L.use_custom_layout === 1);
+        $('#el_title').val(L.report_title || '');
+        $('#el_title_bg').val('#' + (L.title_bg_color || 'FFFFFF'));
+        $('#el_title_fg').val('#' + (L.title_font_color || '000000'));
+        $('#el_title_size').val(L.title_font_size || 14);
+
+        elRenderSheets();
+        onElToggle();
+        $('#layoutLoading').hide();
+        $('#layoutContent').show();
+    } catch(e) {
+        $('#layoutLoading').html(`<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>${e.message}</span>`);
+    }
+});
+
+$('#el_use_custom').on('change', onElToggle);
+function onElToggle() {
+    $('#elMainConfig').toggle($('#el_use_custom').is(':checked'));
+}
+
+// ── Sheet Render ──
+function elRenderSheets() {
+    const c = $('#elSheetList').empty();
+    if (!elData.sheets?.length) {
+        c.html('<p class="text-muted" style="font-size:.77rem;">Belum ada sheet. Klik "Add Sheet".</p>');
+        return;
+    }
+    elData.sheets.forEach((sv, si) => c.append(elBuildSheetCard(sv, si)));
+}
+
+function elBuildSheetCard(sv, si) {
+    const cid  = `elSheet_${si}`;
+    const name = elEsc(sv.sheet?.sheet_name || `Sheet ${si+1}`);
+    const card = $(`
+        <div class="accordion-item border mb-2 rounded" data-si="${si}">
+            <div class="accordion-header d-flex align-items-center px-3 py-2 rounded-top gap-2" style="background:#f0f4ff;">
+                <button class="accordion-button collapsed p-0 bg-transparent border-0 shadow-none flex-grow-1"
+                        type="button" data-bs-toggle="collapse" data-bs-target="#${cid}"
+                        style="font-size:.8rem;font-weight:600;">
+                    <i class="bi bi-table me-2 text-success"></i>
+                    <span class="el-sheet-label">${name}</span>
+                </button>
+                <button class="btn btn-outline-danger el-del-sheet" style="font-size:.62rem;padding:1px 6px;">✕</button>
+            </div>
+            <div class="accordion-collapse collapse" id="${cid}">
+                <div class="accordion-body pt-2 pb-3 px-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-5">
+                            <label class="form-label">Sheet Name</label>
+                            <input class="form-control form-control-sm el-sheet-name" value="${name}" />
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span style="font-size:.75rem;color:#555;font-weight:600;">Sections</span>
+                        <button class="btn el-add-section" style="font-size:.68rem;padding:2px 8px;border:1px solid #6c757d;border-radius:4px;">
+                            <i class="bi bi-plus-lg"></i> Add Section
+                        </button>
+                    </div>
+                    <div class="el-section-list"></div>
+                </div>
+            </div>
+        </div>
+    `);
+    const secList = card.find('.el-section-list');
+    (sv.sections || []).forEach((sec, idx) => secList.append(elBuildSecCard(sec, si, idx)));
+    if (!sv.sections?.length)
+        secList.html('<p class="text-muted" style="font-size:.73rem;">Belum ada section.</p>');
+    return card;
+}
+
+function elBuildSecCard(sec, si, secIdx) {
+    const lOpts = ['vertical','side_by_side'].map(v => `<option value="${v}" ${sec.layout===v?'selected':''}>${v}</option>`).join('');
+    const dOpts = ['TABLE','KEY_VALUE'].map(v => `<option value="${v}" ${sec.display_mode===v?'selected':''}>${v}</option>`).join('');
+    const gtS   = sec.show_grand_total === 1 ? '' : 'display:none;';
+
+    const card = $(`
+        <div class="border rounded mb-2 p-2" style="font-size:.77rem;" data-secidx="${secIdx}">
+            <div class="d-flex align-items-center gap-1 mb-2">
+                <span class="fw-semibold flex-grow-1 el-sec-lbl-disp">${elEsc(sec.section_label)||'Section '+(secIdx+1)}</span>
+                <button class="btn btn-outline-secondary el-sec-up"   style="font-size:.58rem;padding:1px 4px;">↑</button>
+                <button class="btn btn-outline-secondary el-sec-down" style="font-size:.58rem;padding:1px 4px;">↓</button>
+                <button class="btn btn-outline-danger    el-sec-del"  style="font-size:.58rem;padding:1px 5px;">✕</button>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-3"><label class="form-label" style="font-size:.7rem;">Label</label>
+                    <input class="form-control form-control-sm el-sec-label" value="${elEsc(sec.section_label)}" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.7rem;">Layout</label>
+                    <select class="form-select form-select-sm el-sec-layout">${lOpts}</select></div>
+                <div class="col-md-1"><label class="form-label" style="font-size:.7rem;">Group</label>
+                    <input type="number" class="form-control form-control-sm el-sec-group" min="0" value="${sec.group_id||0}" /></div>
+                <div class="col-md-1"><label class="form-label" style="font-size:.7rem;">SideGap</label>
+                    <input type="number" class="form-control form-control-sm el-sec-sidegap" min="0" value="${sec.side_gap??1}" /></div>
+                <div class="col-md-1"><label class="form-label" style="font-size:.7rem;">BotGap</label>
+                    <input type="number" class="form-control form-control-sm el-sec-botgap" min="0" value="${sec.bottom_gap??2}" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.7rem;">Display</label>
+                    <select class="form-select form-select-sm el-sec-display">${dOpts}</select></div>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-4"><label class="form-label" style="font-size:.7rem;">Section Title</label>
+                    <input class="form-control form-control-sm el-sec-title" value="${elEsc(sec.section_title)}"
+                           placeholder="e.g. Dashboard : {{date}}" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.7rem;">Title BG</label>
+                    <input type="color" class="form-control form-control-sm form-control-color el-sec-titlebg"
+                           value="#${sec.title_bg_color||'FFD700'}" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.7rem;">Title Font</label>
+                    <input type="color" class="form-control form-control-sm form-control-color el-sec-titlefg"
+                           value="#${sec.title_font_color||'000000'}" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.7rem;">Header BG</label>
+                    <input type="color" class="form-control form-control-sm form-control-color el-sec-headerbg"
+                           value="#${sec.header_bg_color||'FFD700'}" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.7rem;">Header Font</label>
+                    <input type="color" class="form-control form-control-sm form-control-color el-sec-headerfg"
+                           value="#${sec.header_font_color||'000000'}" /></div>
+            </div>
+            <div class="row g-2 mb-2 align-items-center">
+                <div class="col-auto">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input el-sec-gt" type="checkbox" ${sec.show_grand_total===1?'checked':''} />
+                        <label class="form-check-label" style="font-size:.75rem;">Grand Total</label>
+                    </div>
+                </div>
+                <div class="col-md-2 el-gt-wrap" style="${gtS}">
+                    <input class="form-control form-control-sm el-sec-gt-label" value="${elEsc(sec.grand_total_label)||'TOTAL'}" /></div>
+                <div class="col-md-2 el-gt-wrap" style="${gtS}">
+                    <input type="color" class="form-control form-control-sm form-control-color el-sec-totalbg"
+                           value="#${sec.total_bg_color||'FFD700'}" /></div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label" style="font-size:.7rem;">SQL Query * <span class="text-muted" style="font-size:.65rem;">— tulis lengkap termasuk WHERE, ORDER BY</span></label>
+                <textarea class="form-control query-area el-sec-query" rows="10"
+                          placeholder="SELECT col1, col2 FROM tbl&#10;WHERE col = '{{param}}'">${elEsc(sec.sql_query)}</textarea>
+            </div>
+            <div class="mb-2">
+                <label class="form-label" style="font-size:.7rem;">Visible Columns
+                    <span class="text-muted" style="font-size:.65rem;">— klik untuk toggle, drag untuk urutan</span>
+                </label>
+                <input type="hidden" class="el-sec-cols" value="${elEsc(sec.visible_columns)}" />
+                <div class="col-picker-wrap border rounded p-2" style="min-height:36px;background:#fafafa;">
+                    <div class="col-picker-hint text-muted" style="font-size:.72rem;${sec.visible_columns?'display:none;'''}">
+                        <i class="bi bi-info-circle me-1"></i>Klik Test Query untuk load kolom.
+                    </div>
+                    <div class="col-picker-tags el-tags d-flex flex-wrap gap-1"></div>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-outline-info el-test" style="font-size:.7rem;padding:2px 8px;">
+                    <i class="bi bi-play-circle me-1"></i>Test Query
+                </button>
+            </div>
+            <div class="el-test-res mt-2" style="display:none;"></div>
+        </div>
+    `);
+
+    if (sec.visible_columns) {
+        const tags = card.find('.el-tags');
+        card.find('.col-picker-hint').addClass('hidden');
+        sec.visible_columns.split(',').map(s=>s.trim()).filter(Boolean)
+            .forEach(col => tags.append(elMakeTag(col, true, card)));
+    }
+    return card;
+}
+
+function elMakeTag(col, active, card) {
+    const el = document.createElement('div');
+    el.className = 'col-tag' + (active ? ' active' : '');
+    el.draggable = true;
+    el.dataset.col = col;
+    el.innerHTML = `<span class="col-tag-drag">⠿</span><span>${col}</span>`;
+
+    // Toggle aktif/nonaktif
+    el.addEventListener('click', () => {
+        el.classList.toggle('active');
+        elSyncCols(card);
+    });
+
+    // Drag & drop reorder
+    el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', col);
+        setTimeout(() => el.classList.add('dragging'), 0);
+    });
+    el.addEventListener('dragend', () => {
+        el.classList.remove('dragging');
+        elSyncCols(card);
+    });
+    el.addEventListener('dragover', e => {
+        e.preventDefault();
+        const dragging = card.find('.el-tags .dragging')[0];
+        if (dragging && dragging !== el) {
+            const r = el.getBoundingClientRect();
+            if (e.clientX > r.left + r.width / 2) {
+                el.after(dragging);
+            } else {
+                el.before(dragging);
+            }
+        }
+    });
+
+    return el;
+}
+function elSyncCols(card) {
+    card.find('.el-sec-cols').val(
+        card.find('.el-tags .col-tag.active').map((_,el) => $(el).data('col')).get().join(', ')
+    );
+}
+
+$(document).on('click', '.el-test', async function () {
+    const card = $(this).closest('[data-secidx]');
+    const sql  = card.find('.el-sec-query').val();
+    const res  = card.find('.el-test-res');
+    if (!sql.trim()) { res.show().html('<span class="text-danger">Query kosong.</span>'); return; }
+    $(this).prop('disabled',true).html('<span class="spinner-border spinner-border-sm"></span>');
+    const data = await $.ajax({ url:'/ReportBuilder/TestQuery', method:'POST',
+        contentType:'application/json', data:JSON.stringify({Sql:sql}) });
+    $(this).prop('disabled',false).html('<i class="bi bi-play-circle me-1"></i>Test Query');
+    if (!data.ok) { res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.7rem;">${data.message}</div>`); return; }
+    const tags = card.find('.el-tags').empty();
+    card.find('.col-picker-hint').addClass('hidden');
+    const ex = (card.find('.el-sec-cols').val()||'').split(',').map(s=>s.trim()).filter(Boolean);
+    data.columns.forEach(col => tags.append(elMakeTag(col, !ex.length||ex.includes(col), card)));
+    elSyncCols(card);
+    let tbl = `<div style="overflow-x:auto;max-height:150px;"><table class="table table-bordered table-sm mb-0" style="font-size:.68rem;white-space:nowrap;"><thead><tr>`;
+    data.columns.forEach(c => tbl += `<th>${c}</th>`);
+    tbl += `</tr></thead><tbody>`;
+    data.rows.forEach(r => { tbl += '<tr>'; data.columns.forEach(c => tbl += `<td>${r[c]??''}</td>`); tbl += '</tr>'; });
+    tbl += `</tbody></table></div>`;
+    res.show().html(tbl);
+});
+
+$(document).on('change', '.el-sec-gt', function () {
+    $(this).closest('[data-secidx]').find('.el-gt-wrap').toggle($(this).is(':checked'));
+});
+$(document).on('input', '.el-sec-label', function () {
+    $(this).closest('[data-secidx]').find('.el-sec-lbl-disp').text($(this).val()||'Section');
+});
+$(document).on('input', '.el-sheet-name', function () {
+    $(this).closest('[data-si]').find('.el-sheet-label').text($(this).val()||'Sheet');
+});
+
+$('#btnAddSheet').on('click', () => {
+    elCollect();
+    elData.sheets.push({ sheet:{ sheet_name:`Sheet ${elData.sheets.length+1}` }, sections:[] });
+    elRenderSheets();
+    $(`#elSheet_${elData.sheets.length-1}`).addClass('show');
+});
+$(document).on('click', '.el-del-sheet', function (e) {
+    e.stopPropagation();
+    const si = $(this).closest('[data-si]').data('si');
+    elCollect(); elData.sheets.splice(si,1); elRenderSheets();
+});
+$(document).on('click', '.el-add-section', function () {
+    const si = $(this).closest('[data-si]').data('si');
+    elCollect();
+    elData.sheets[si].sections.push({
+        section_label:'New Section', sql_query:'', sql_where:'', visible_columns:'',
+        layout:'vertical', group_id:0, side_gap:1, bottom_gap:2, display_mode:'TABLE',
+        section_title:'', title_bg_color:'FFD700', title_font_color:'000000',
+        header_bg_color:'FFD700', header_font_color:'000000',
+        show_grand_total:0, grand_total_label:'TOTAL', total_bg_color:'FFD700'
+    });
+    elRenderSheets(); $(`#elSheet_${si}`).addClass('show');
+});
+$(document).on('click', '.el-sec-del', function () {
+    const si  = $(this).closest('[data-si]').data('si');
+    const idx = $(this).closest('[data-secidx]').data('secidx');
+    elCollect(); elData.sheets[si].sections.splice(idx,1); elRenderSheets();
+    $(`#elSheet_${si}`).addClass('show');
+});
+$(document).on('click', '.el-sec-up', function () {
+    const si = $(this).closest('[data-si]').data('si');
+    const i  = $(this).closest('[data-secidx]').data('secidx');
+    elCollect(); const s = elData.sheets[si].sections;
+    if (i>0) [s[i-1],s[i]]=[s[i],s[i-1]];
+    elRenderSheets(); $(`#elSheet_${si}`).addClass('show');
+});
+$(document).on('click', '.el-sec-down', function () {
+    const si = $(this).closest('[data-si]').data('si');
+    const i  = $(this).closest('[data-secidx]').data('secidx');
+    elCollect(); const s = elData.sheets[si].sections;
+    if (i<s.length-1) [s[i+1],s[i]]=[s[i],s[i+1]];
+    elRenderSheets(); $(`#elSheet_${si}`).addClass('show');
+});
+
+function elCollect() {
+    elData.layout = {
+        use_custom_layout: $('#el_use_custom').is(':checked') ? 1 : 0,
+        report_title:      $('#el_title').val(),
+        title_bg_color:    ($('#el_title_bg').val()||'#FFFFFF').replace('#',''),
+        title_font_color:  ($('#el_title_fg').val()||'#000000').replace('#',''),
+        title_font_size:   parseInt($('#el_title_size').val()) || 14
+    };
+    elData.sheets = [];
+    $('#elSheetList [data-si]').each(function () {
+        const sections = [];
+        $(this).find('[data-secidx]').each(function () {
+            sections.push({
+                section_label:     $(this).find('.el-sec-label').val(),
+                sql_query:         $(this).find('.el-sec-query').val(),
+                sql_where:         '',
+                visible_columns:   $(this).find('.el-sec-cols').val(),
+                layout:            $(this).find('.el-sec-layout').val(),
+                group_id:          parseInt($(this).find('.el-sec-group').val())||0,
+                side_gap:          parseInt($(this).find('.el-sec-sidegap').val())||1,
+                bottom_gap:        parseInt($(this).find('.el-sec-botgap').val())||2,
+                display_mode:      $(this).find('.el-sec-display').val(),
+                section_title:     $(this).find('.el-sec-title').val(),
+                title_bg_color:    ($(this).find('.el-sec-titlebg').val()||'#FFD700').replace('#',''),
+                title_font_color:  ($(this).find('.el-sec-titlefg').val()||'#000000').replace('#',''),
+                header_bg_color:   ($(this).find('.el-sec-headerbg').val()||'#FFD700').replace('#',''),
+                header_font_color: ($(this).find('.el-sec-headerfg').val()||'#000000').replace('#',''),
+                show_grand_total:  $(this).find('.el-sec-gt').is(':checked') ? 1 : 0,
+                grand_total_label: $(this).find('.el-sec-gt-label').val()||'TOTAL',
+                total_bg_color:    ($(this).find('.el-sec-totalbg').val()||'#FFD700').replace('#','')
+            });
+        });
+        elData.sheets.push({ sheet:{ sheet_name: $(this).find('.el-sheet-name').val() }, sections });
+    });
+}
+
+$('#btnSaveExcelLayout').on('click', async function () {
+    if (reportId === 0) { Swal.fire('Info','Simpan report utama dulu.','info'); return; }
+    elCollect();
+    $(this).prop('disabled',true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+    const res = await $.ajax({ url:'/ReportBuilder/SaveLayout', method:'POST',
+        contentType:'application/json',
+        data: JSON.stringify({ reportId, layout: elData }) });
+    $(this).prop('disabled',false).html('<i class="bi bi-check-lg me-1"></i>Save Excel Layout');
+    if (res.ok) {
+        $('#elSaveStatus').html('<span class="text-success">✓ Saved</span>');
+        setTimeout(() => $('#elSaveStatus').text(''), 3000);
+    } else {
+        Swal.fire('Error', res.message, 'error');
+    }
+});
+
+function elEsc(v) {
+    if (!v) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ══════════════════════════════════════════════
+// SAVE REPORT
+// ══════════════════════════════════════════════
+$('#btnSave').on('click', async function () {
+    const code = $('#f_code').val().trim();
+    const name = $('#f_name').val().trim();
+    if (!code || !name) { Swal.fire('Validation','Code & Name wajib diisi.','warning'); return; }
+
+    collectParams();
+    collectPerms();
+
+    const outputs = [];
+    if ($('#out_excel').is(':checked')) outputs.push('excel');
+    if ($('#out_csv').is(':checked'))   outputs.push('csv');
+
+    const vm = {
+        report: {
+            iD:               reportId,
+            report_code:      code,
+            report_name:      name,
+            report_desc:      $('#f_desc').val(),
+            category:         $('#f_cat').val(),
+            icon:             $('#f_icon').val(),
+            filename_template: $('#f_filename').val(),
+            default_output:   $('#f_default_out').val(),
+            allowed_outputs:  outputs.join(','),
+            is_active:        $('#f_active').is(':checked') ? 1 : 0
+        },
+        params,
+        permissions: perms
+    };
+
+    $(this).prop('disabled',true).html('<span class="spinner-border spinner-border-sm"></span>');
+    const res = await $.ajax({ url:'/ReportBuilder/Save', method:'POST',
+        contentType:'application/json', data: JSON.stringify(vm) });
+    $(this).prop('disabled',false).html('<i class="bi bi-check-lg me-1"></i>Save Report');
+
+    if (res.ok) {
+        if (isNew) window.location.href = `/ReportBuilder/Form/${res.id}`;
+        else Swal.fire({ icon:'success', title:'Saved', timer:1200, showConfirmButton:false });
+    } else {
+        Swal.fire('Error', res.message, 'error');
+    }
+});
+
+// Init
+renderParams();
+renderPerms();
+</script>
+}

@@ -374,6 +374,11 @@ namespace TMSBilling.Data
         public DbSet<MailReportExcelSheet> MailReportExcelSheets { get; set; }
         public DbSet<MailReportExcelSection> MailReportExcelSections { get; set; }
 
+        public DbSet<ReportDefinition> ReportDefinitions { get; set; }
+        public DbSet<ReportParam> ReportParams { get; set; }
+        public DbSet<ReportPermission> ReportPermissions { get; set; }
+        public DbSet<ReportRunLog> ReportRunLogs { get; set; }
+
         protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Integration>(e =>
@@ -519,13 +524,25 @@ namespace TMSBilling.Data
             modelBuilder.Entity<OrderNotInJob>().HasNoKey().ToView(null);
 
             // ── Excel Layout (baru) ──────────────────────────────────────────
+            //modelBuilder.Entity<MailReportExcelLayout>(e =>
+            //{
+            //    e.HasOne(x => x.Report)
+            //        .WithOne()
+            //        .HasForeignKey<MailReportExcelLayout>(x => x.report_id)
+            //        .OnDelete(DeleteBehavior.Cascade);
+            //    e.HasIndex(x => x.report_id).IsUnique();
+            //});
+
             modelBuilder.Entity<MailReportExcelLayout>(e =>
             {
                 e.HasOne(x => x.Report)
-                    .WithOne()
-                    .HasForeignKey<MailReportExcelLayout>(x => x.report_id)
+                    .WithMany()                          // ← ubah WithOne() jadi WithMany()
+                    .HasForeignKey(x => x.report_id)    // ← hapus generic type parameter
                     .OnDelete(DeleteBehavior.Cascade);
-                e.HasIndex(x => x.report_id).IsUnique();
+
+                // Unique per report_id + owner_type
+                // 1 report boleh punya 1 layout mailreport dan 1 layout reportbuilder
+                e.HasIndex(x => new { x.report_id, x.owner_type }).IsUnique();
             });
 
             modelBuilder.Entity<MailReportExcelSheet>(e =>
@@ -544,6 +561,43 @@ namespace TMSBilling.Data
                     .HasForeignKey(x => x.sheet_id)
                     .OnDelete(DeleteBehavior.Cascade);
                 e.HasIndex(x => x.sheet_id);
+            });
+
+
+            modelBuilder.Entity<ReportDefinition>(e =>
+            {
+                e.HasIndex(x => x.report_code).IsUnique();
+                e.HasIndex(x => x.category);
+                e.HasIndex(x => x.is_active);
+            });
+
+            modelBuilder.Entity<ReportParam>(e =>
+            {
+                e.HasOne(x => x.Report)
+                    .WithMany(x => x.Params)
+                    .HasForeignKey(x => x.report_id)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => x.report_id);
+            });
+
+            modelBuilder.Entity<ReportPermission>(e =>
+            {
+                e.HasOne(x => x.Report)
+                    .WithMany(x => x.Permissions)
+                    .HasForeignKey(x => x.report_id)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => x.report_id);
+                e.HasIndex(x => x.role_name);
+            });
+
+            modelBuilder.Entity<ReportRunLog>(e =>
+            {
+                e.HasOne(x => x.Report)
+                    .WithMany()
+                    .HasForeignKey(x => x.report_id)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => new { x.report_id, x.run_at });
+                e.HasIndex(x => x.run_by);
             });
         }
     }

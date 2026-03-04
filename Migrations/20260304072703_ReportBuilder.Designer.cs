@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260304072703_ReportBuilder")]
+    partial class ReportBuilder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2089,17 +2092,8 @@ namespace TMSBilling.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<string>("owner_type")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<int>("report_id")
                         .HasColumnType("int");
-
-                    b.Property<string>("report_subtitle")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("report_title")
                         .HasMaxLength(300)
@@ -2121,7 +2115,7 @@ namespace TMSBilling.Migrations
 
                     b.HasKey("ID");
 
-                    b.HasIndex("report_id", "owner_type")
+                    b.HasIndex("report_id")
                         .IsUnique();
 
                     b.ToTable("RPT_EXCEL_LAYOUT");
@@ -4403,8 +4397,8 @@ namespace TMSBilling.Migrations
             modelBuilder.Entity("TMSBilling.Models.MailReportExcelLayout", b =>
                 {
                     b.HasOne("TMSBilling.Models.MailReport", "Report")
-                        .WithMany()
-                        .HasForeignKey("report_id")
+                        .WithOne()
+                        .HasForeignKey("TMSBilling.Models.MailReportExcelLayout", "report_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

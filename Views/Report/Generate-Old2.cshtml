@@ -1,0 +1,307 @@
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Generate Report";
+    var report    = ViewBag.Report as TMSBilling.Models.ReportDefinition;
+    var paramDefs = ViewBag.ParamDefs as List<TMSBilling.Models.ReportParam> ?? new();
+    var outputs   = (report?.allowed_outputs ?? "excel").Split(',').Select(s => s.Trim()).ToList();
+}
+
+<div class="page-header mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">
+                <i class="bi @(report?.icon ?? "bi-file-earmark-bar-graph") me-2 text-success"></i>
+                @report?.report_name
+            </h4>
+            <small class="text-muted">
+                <a href="/Report">Reports</a> /
+                @report?.category /
+                @report?.report_name
+            </small>
+        </div>
+        <a href="/Report" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header py-2 px-3" style="background:#f0f4ff;">
+                <span class="fw-semibold" style="font-size:.83rem;">
+                    <i class="bi bi-sliders me-1 text-primary"></i>Parameters
+                </span>
+            </div>
+            <div class="card-body p-3">
+
+                @if (!paramDefs.Any())
+                {
+                    <div class="text-muted" style="font-size:.8rem;">
+                        <i class="bi bi-info-circle me-1"></i>Report ini tidak memerlukan parameter.
+                    </div>
+                }
+                else
+                {
+                    <!-- Dynamic parameter form -->
+                    <div class="row g-3" id="paramForm">
+                        @foreach (var p in paramDefs)
+                        {
+                            <div class="col-md-@p.col_width">
+                                <label class="form-label" style="font-size:.8rem;">
+                                    @p.param_label
+                                    @if (p.is_required == 1) { <span class="text-danger">*</span> }
+                                </label>
+
+                                @switch (p.param_type)
+                                {
+                                    case "date":
+                                        <input type="date" class="form-control form-control-sm param-input"
+                                               data-key="@p.param_key"
+                                               data-required="@p.is_required"
+                                               value="@(p.default_value?.Replace("{{today}}", DateTime.Now.ToString("yyyy-MM-dd"))
+                                                           .Replace("{{month_start}}", new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"))
+                                                           .Replace("{{month_end}}", new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month)).ToString("yyyy-MM-dd")))" />
+                                        break;
+
+                                    case "daterange":
+                                        <div class="input-group input-group-sm">
+                                            <input type="date" class="form-control param-input"
+                                                   data-key="@(p.param_key)_from" placeholder="From" />
+                                            <span class="input-group-text">–</span>
+                                            <input type="date" class="form-control param-input"
+                                                   data-key="@(p.param_key)_to" placeholder="To" />
+                                        </div>
+                                        break;
+
+                                    case "number":
+                                        <input type="number" class="form-control form-control-sm param-input"
+                                               data-key="@p.param_key"
+                                               data-required="@p.is_required"
+                                               placeholder="@p.placeholder"
+                                               value="@p.default_value" />
+                                        break;
+
+                                    case "select":
+                                        <select class="form-select form-select-sm param-input param-select"
+                                                data-key="@p.param_key"
+                                                data-report-id="@report?.ID"
+                                                data-param-key="@p.param_key"
+                                                data-source="@p.options_source">
+                                            <option value="">-- Pilih --</option>
+                                            @if (p.options_source == "static" && !string.IsNullOrEmpty(p.param_options))
+                                            {
+                                                foreach (var opt in p.param_options.Split(','))
+                                                {
+                                                    var parts = opt.Trim().Split('=');
+                                                    var val   = parts[0].Trim();
+                                                    var lbl   = parts.Length > 1 ? parts[1].Trim() : val;
+                                                    <option value="@val" selected="@(p.default_value == val ? "selected" : null)">
+                                                        @lbl
+                                                    </option>
+
+                                                }
+                                            }
+                                        </select>
+                                        break;
+
+                                    case "multiselect":
+                                        <select class="form-select form-select-sm param-input"
+                                                data-key="@p.param_key"
+                                                data-source="@p.options_source"
+                                                data-report-id="@report?.ID"
+                                                data-param-key="@p.param_key"
+                                                multiple size="4">
+                                            @if (p.options_source == "static" && !string.IsNullOrEmpty(p.param_options))
+                                            {
+                                                foreach (var opt in p.param_options.Split(','))
+                                                {
+                                                    var parts = opt.Trim().Split('=');
+                                                    <option value="@parts[0].Trim()">
+                                                        @(parts.Length > 1 ? parts[1].Trim() : parts[0].Trim())
+                                                    </option>
+                                                }
+                                            }
+                                        </select>
+                                        break;
+
+                                    default: // text
+                                        <input type="text" class="form-control form-control-sm param-input"
+                                               data-key="@p.param_key"
+                                               data-required="@p.is_required"
+                                               placeholder="@p.placeholder"
+                                               value="@p.default_value" />
+                                        break;
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Output format selector -->
+                <div class="border-top mt-3 pt-3">
+                    <label class="form-label" style="font-size:.8rem;">Output Format</label>
+                    <div class="d-flex gap-2 flex-wrap" id="outputSelector">
+                        @foreach (var fmt in outputs)
+                        {
+                            var (icon, label, cls) = fmt switch {
+                                "excel" => ("bi-file-earmark-excel", "Excel", "btn-success"),
+                                "csv"   => ("bi-file-earmark-text", "CSV", "btn-info"),
+                                "pdf"   => ("bi-file-earmark-pdf", "PDF", "btn-danger"),
+                                _       => ("bi-file-earmark", fmt.ToUpper(), "btn-secondary")
+                            };
+                            var isDefault = fmt == (report?.default_output ?? "excel");
+                            <button class="btn btn-sm output-btn @(isDefault ? cls : "btn-outline-" + cls.Replace("btn-",""))"
+                                    data-fmt="@fmt" data-cls="@cls"
+                                    onclick="selectOutput(this)">
+                                <i class="bi @icon me-1"></i>@label
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Generate button -->
+                <div class="mt-3">
+                    <button class="btn btn-primary" id="btnGenerate">
+                        <i class="bi bi-download me-1"></i>Generate & Download
+                    </button>
+                    <span id="genStatus" class="ms-2 text-muted" style="font-size:.78rem;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent history -->
+        <div class="card mt-3 shadow-sm">
+            <div class="card-header py-2 px-3" style="background:#f9f9f9;">
+                <span class="fw-semibold" style="font-size:.8rem;">
+                    <i class="bi bi-clock-history me-1 text-muted"></i>My Recent Downloads
+                </span>
+            </div>
+            <div id="recentHistory" class="card-body p-0">
+                <div class="text-muted p-3" style="font-size:.75rem;">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const reportId      = @(report?.ID ?? 0);
+let selectedFormat  = '@(outputs.FirstOrDefault() ?? "excel")';
+
+function selectOutput(btn) {
+    selectedFormat = $(btn).data('fmt');
+    $('#outputSelector .output-btn').each(function () {
+        const cls = $(this).data('cls');
+        if ($(this).data('fmt') === selectedFormat) {
+            $(this).removeClass('btn-outline-' + cls.replace('btn-','')).addClass(cls);
+        } else {
+            $(this).removeClass(cls).addClass('btn-outline-' + cls.replace('btn-',''));
+        }
+    });
+}
+
+// Load dynamic select options (query source)
+async function loadSelectOptions() {
+    const selects = $('select.param-input[data-source="query"]');
+    for (const el of selects.toArray()) {
+        const sel = $(el);
+        const res = await $.ajax({
+            url: '/Report/GetParamOptions', method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                reportId: reportId,
+                paramKey: sel.data('param-key'),
+                currentValues: collectParams()
+            })
+        });
+        if (res.ok) {
+            sel.empty().append('<option value="">-- Pilih --</option>');
+            res.data.forEach(o => sel.append(`<option value="${o.value}">${o.text}</option>`));
+        }
+    }
+}
+
+function collectParams() {
+    const p = {};
+    $('.param-input').each(function () {
+        const key = $(this).data('key');
+        if (!key) return;
+        if ($(this).is('select[multiple]')) {
+            const vals = $(this).val() || [];
+            p[key] = vals.join(',');
+        } else {
+            p[key] = $(this).val() || '';
+        }
+    });
+    return p;
+}
+
+$('#btnGenerate').on('click', async function () {
+    // Validate required
+    let valid = true;
+    $('.param-input[data-required="1"]').each(function () {
+        if (!$(this).val()) {
+            $(this).addClass('is-invalid');
+            valid = false;
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+    if (!valid) { $('#genStatus').html('<span class="text-danger">Lengkapi field yang wajib diisi.</span>'); return; }
+
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Generating...');
+    $('#genStatus').html('<span class="text-muted">Mohon tunggu...</span>');
+
+    try {
+        const params = collectParams();
+        const req    = { reportId, params, outputFormat: selectedFormat };
+
+        const response = await fetch('/Report/Download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Generate failed');
+        }
+
+        const contentType = response.headers.get('Content-Type') || '';
+        if (contentType.includes('json')) {
+            const err = await response.json();
+            throw new Error(err.message || 'Generate failed');
+        }
+
+        const blob     = await response.blob();
+        const filename = response.headers.get('Content-Disposition')
+            ?.split('filename=')[1]?.replace(/"/g, '')
+            ?? `report.${selectedFormat}`;
+
+        const url  = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href  = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        $('#genStatus').html('<span class="text-success"><i class="bi bi-check-circle me-1"></i>Downloaded!</span>');
+        loadRecentHistory();
+    } catch (ex) {
+        $('#genStatus').html(`<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>${ex.message}</span>`);
+    } finally {
+        $(this).prop('disabled', false).html('<i class="bi bi-download me-1"></i>Generate & Download');
+    }
+});
+
+async function loadRecentHistory() {
+    const res = await $.get(`/Report/HistoryPartial?reportId=${reportId}`);
+    $('#recentHistory').html(res);
+}
+
+// Init
+loadSelectOptions();
+loadRecentHistory();
+</script>
+}

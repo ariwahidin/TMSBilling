@@ -1,0 +1,502 @@
+@model TMSBilling.Models.ReportBuilderFormVM
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = Model.Report.ID == 0 ? "New Report" : "Edit Report";
+    var isNew   = Model.Report.ID == 0;
+    var roles   = ViewBag.Roles as List<string> ?? new List<string>();
+}
+
+<div class="page-header mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">
+                <i class="bi bi-tools me-2 text-primary"></i>
+                @(isNew ? "New Report Definition" : Model.Report.report_name)
+            </h4>
+            <small class="text-muted"><a href="/ReportBuilder">Report Builder</a> / @(isNew ? "New" : "Edit")</small>
+        </div>
+        <div class="d-flex gap-2">
+            @if (!isNew)
+            {
+                <a href="/Report/Generate/@Model.Report.ID" target="_blank"
+                   class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-play-circle me-1"></i>Preview as User
+                </a>
+            }
+            <button class="btn btn-sm btn-primary" id="btnSave">
+                <i class="bi bi-check-lg me-1"></i>Save Report
+            </button>
+            <a href="/ReportBuilder" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</div>
+
+<!-- Nav Tabs -->
+<ul class="nav nav-tabs mb-3" id="rbTab">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tabInfo">
+            <i class="bi bi-info-circle me-1"></i>Info
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabParams">
+            <i class="bi bi-sliders me-1"></i>Parameters
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabLayout" id="tabLayoutBtn">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel Layout
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabPermissions">
+            <i class="bi bi-shield-check me-1"></i>Permissions
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content" id="rbTabContent">
+
+    <!-- ════════ TAB 1: INFO ════════ -->
+    <div class="tab-pane fade show active" id="tabInfo">
+        <div class="row g-3" style="max-width:900px;">
+            <div class="col-md-4">
+                <label class="form-label">Report Code <span class="text-danger">*</span></label>
+                <input id="f_code" class="form-control form-control-sm font-monospace"
+                       value="@Model.Report.report_code"
+                       placeholder="e.g. DAILY_DELIVERY" @(isNew ? "" : "readonly") />
+                <div class="placeholder-hint">Unik, huruf besar, underscore. Tidak bisa diubah setelah save.</div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Report Name <span class="text-danger">*</span></label>
+                <input id="f_name" class="form-control form-control-sm" value="@Model.Report.report_name"
+                       placeholder="e.g. Daily Delivery Report" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <input id="f_cat" class="form-control form-control-sm" value="@Model.Report.category"
+                       placeholder="e.g. Delivery, Finance" />
+            </div>
+            <div class="col-12">
+                <label class="form-label">Description</label>
+                <input id="f_desc" class="form-control form-control-sm" value="@Model.Report.report_desc"
+                       placeholder="Short description..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Icon</label>
+                <input id="f_icon" class="form-control form-control-sm font-monospace"
+                       value="@(Model.Report.icon ?? "bi-file-earmark-bar-graph")"
+                       placeholder="bi-file-earmark-bar-graph" />
+                <div class="placeholder-hint">Bootstrap Icons class</div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Filename Template</label>
+                <input id="f_filename" class="form-control form-control-sm font-monospace"
+                       value="@Model.Report.filename_template"
+                       placeholder="e.g. Daily_Delivery_{{date_from}}_{{date_to}}" />
+                <div class="placeholder-hint">Support {{placeholder}}. Extension otomatis ditambah.</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Default Output</label>
+                <select id="f_default_out" class="form-select form-select-sm">
+                    <option value="excel" selected="@(Model.Report.default_output == "excel" ? "selected" : null)">Excel</option>
+                    <option value="csv" selected="@(Model.Report.default_output == "csv" ? "selected" : null)">CSV</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Allowed Outputs</label>
+                <div class="d-flex flex-column gap-1 mt-1">
+                    <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="out_excel"
+                               @((Model.Report.allowed_outputs ?? "excel").Contains("excel") ? "checked" : "") />
+                        <label class="form-check-label" style="font-size:.8rem;" for="out_excel">Excel</label>
+                    </div>
+                    <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="out_csv"
+                               @((Model.Report.allowed_outputs ?? "").Contains("csv") ? "checked" : "") />
+                        <label class="form-check-label" style="font-size:.8rem;" for="out_csv">CSV</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Active</label>
+                <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" id="f_active"
+                           @(Model.Report.is_active == 1 ? "checked" : "") />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ TAB 2: PARAMETERS ════════ -->
+    <div class="tab-pane fade" id="tabParams">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold" style="font-size:.83rem;">Parameter Definitions</span>
+            <button class="btn btn-sm btn-outline-primary" id="btnAddParam">
+                <i class="bi bi-plus-lg me-1"></i>Add Parameter
+            </button>
+        </div>
+        <div class="placeholder-hint mb-3">
+            Parameter yang didefinisikan di sini akan muncul sebagai form input di halaman user.
+            <code>param_key</code> harus cocok dengan <code>{{placeholder}}</code> di SQL query section.
+        </div>
+
+        <div id="paramList">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- ════════ TAB 3: EXCEL LAYOUT ════════ -->
+    <div class="tab-pane fade" id="tabLayout">
+        <div id="layoutLoading" class="text-muted py-3" style="font-size:.8rem;">
+            <span class="spinner-border spinner-border-sm me-1"></span>Loading layout...
+        </div>
+        <div id="layoutContent" style="display:none;">
+            <!-- Reuse ExcelLayoutService UI — will be injected by JS -->
+            <div id="elLayoutContainer">
+                <!-- Excel Layout UI di-render oleh JavaScript setelah data load -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ TAB 4: PERMISSIONS ════════ -->
+    <div class="tab-pane fade" id="tabPermissions">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold" style="font-size:.83rem;">Access Permissions</span>
+            <button class="btn btn-sm btn-outline-primary" id="btnAddPerm">
+                <i class="bi bi-plus-lg me-1"></i>Add Permission
+            </button>
+        </div>
+        <div class="placeholder-hint mb-3">
+            Tentukan role mana yang boleh mengakses report ini.
+            Gunakan <code>ALL</code> untuk semua role.
+        </div>
+        <div id="permList"></div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+const reportId  = @Model.Report.ID;
+const isNew     = reportId === 0;
+const availRoles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(roles));
+
+// ══════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════
+let params = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Params));
+let perms  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Permissions));
+
+// ══════════════════════════════════════════════
+// PARAMS TAB
+// ══════════════════════════════════════════════
+function renderParams() {
+    const c = $('#paramList').empty();
+    if (!params.length) {
+        c.html('<p class="text-muted" style="font-size:.78rem;">Belum ada parameter. Klik "Add Parameter".</p>');
+        return;
+    }
+    params.forEach((p, i) => c.append(buildParamCard(p, i)));
+}
+
+function buildParamCard(p, i) {
+    const typeOpts = ['date','text','number','select','multiselect','hidden','daterange']
+        .map(t => `<option value="${t}" ${p.param_type===t?'selected':''}>${t}</option>`).join('');
+    const srcOpts = ['static','query']
+        .map(t => `<option value="${t}" ${p.options_source===t?'selected':''}>${t}</option>`).join('');
+    const showOpts = ['select','multiselect'].includes(p.param_type) ? '' : 'display:none;';
+
+    return $(`
+        <div class="border rounded mb-2 p-3" style="font-size:.78rem;" data-pi="${i}">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="fw-semibold flex-grow-1 p-lbl-disp">${p.param_label || 'Param '+(i+1)}</span>
+                <button class="btn btn-xs btn-outline-secondary p-up"   style="font-size:.6rem;padding:1px 4px;">↑</button>
+                <button class="btn btn-xs btn-outline-secondary p-down" style="font-size:.6rem;padding:1px 4px;">↓</button>
+                <button class="btn btn-xs btn-outline-danger    p-del"  style="font-size:.6rem;padding:1px 5px;">✕</button>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Key <span class="text-danger">*</span></label>
+                    <input class="form-control form-control-sm font-monospace p-key"
+                           value="${p.param_key||''}" placeholder="date_from" />
+                    <div class="placeholder-hint">{{placeholder}} di SQL</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" style="font-size:.7rem;">Label <span class="text-danger">*</span></label>
+                    <input class="form-control form-control-sm p-label" value="${p.param_label||''}"
+                           placeholder="e.g. Tanggal Awal" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Type</label>
+                    <select class="form-select form-select-sm p-type">${typeOpts}</select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Default Value</label>
+                    <input class="form-control form-control-sm p-default"
+                           value="${p.default_value||''}"
+                           placeholder="{{today}}, {{month_start}}" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label" style="font-size:.7rem;">Col Width</label>
+                    <input type="number" class="form-control form-control-sm p-colwidth"
+                           min="1" max="12" value="${p.col_width||3}" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label" style="font-size:.7rem;">Required</label>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input p-required" type="checkbox"
+                               ${p.is_required===1?'checked':''} />
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label" style="font-size:.7rem;">Hidden</label>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input p-hidden" type="checkbox"
+                               ${p.is_hidden===1?'checked':''} />
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2 p-opts-wrap" style="${showOpts}">
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size:.7rem;">Options Source</label>
+                    <select class="form-select form-select-sm p-opts-src">${srcOpts}</select>
+                </div>
+                <div class="col-md-5 p-opts-static-wrap" ${p.options_source==='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Options (static)</label>
+                    <input class="form-control form-control-sm p-opts-static"
+                           value="${p.param_options||''}"
+                           placeholder="ACTIVE,INACTIVE  atau  1=Active,2=Inactive" />
+                </div>
+                <div class="col-md-7 p-opts-query-wrap" ${p.options_source!=='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Options Query</label>
+                    <textarea class="form-control form-control-sm query-area p-opts-query" rows="2"
+                              placeholder="SELECT id, name FROM tbl_vendor ORDER BY name">${p.param_options||''}</textarea>
+                </div>
+                <div class="col-md-2 p-opts-query-wrap" ${p.options_source!=='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Value Col</label>
+                    <input class="form-control form-control-sm p-opts-valcol"
+                           value="${p.options_value_col||''}" placeholder="id" />
+                </div>
+                <div class="col-md-2 p-opts-query-wrap" ${p.options_source!=='query'?'style="display:none"':''}>
+                    <label class="form-label" style="font-size:.7rem;">Text Col</label>
+                    <input class="form-control form-control-sm p-opts-txtcol"
+                           value="${p.options_text_col||''}" placeholder="name" />
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+// Type change → show/hide options
+$(document).on('change', '.p-type', function () {
+    const card = $(this).closest('[data-pi]');
+    const show = ['select','multiselect'].includes($(this).val());
+    card.find('.p-opts-wrap').toggle(show);
+});
+
+// Options source change
+$(document).on('change', '.p-opts-src', function () {
+    const card = $(this).closest('[data-pi]');
+    const isQ  = $(this).val() === 'query';
+    card.find('.p-opts-static-wrap').toggle(!isQ);
+    card.find('.p-opts-query-wrap').toggle(isQ);
+});
+
+// Label display
+$(document).on('input', '.p-label', function () {
+    $(this).closest('[data-pi]').find('.p-lbl-disp').text($(this).val() || 'Param');
+});
+
+$('#btnAddParam').on('click', () => {
+    collectParams();
+    params.push({ param_key:'', param_label:'', param_type:'text', col_width:3,
+                  is_required:0, is_hidden:0, options_source:'static' });
+    renderParams();
+});
+
+$(document).on('click', '.p-del', function () {
+    const i = $(this).closest('[data-pi]').data('pi');
+    collectParams(); params.splice(i, 1); renderParams();
+});
+
+$(document).on('click', '.p-up', function () {
+    const i = $(this).closest('[data-pi]').data('pi');
+    collectParams(); if (i > 0) [params[i-1],params[i]] = [params[i],params[i-1]]; renderParams();
+});
+
+$(document).on('click', '.p-down', function () {
+    const i = $(this).closest('[data-pi]').data('pi');
+    collectParams(); if (i < params.length-1) [params[i+1],params[i]] = [params[i],params[i+1]]; renderParams();
+});
+
+function collectParams() {
+    const newP = [];
+    $('#paramList [data-pi]').each(function () {
+        const src = $(this).find('.p-opts-src').val();
+        newP.push({
+            param_key:        $(this).find('.p-key').val(),
+            param_label:      $(this).find('.p-label').val(),
+            param_type:       $(this).find('.p-type').val(),
+            default_value:    $(this).find('.p-default').val(),
+            col_width:        parseInt($(this).find('.p-colwidth').val()) || 3,
+            is_required:      $(this).find('.p-required').is(':checked') ? 1 : 0,
+            is_hidden:        $(this).find('.p-hidden').is(':checked') ? 1 : 0,
+            options_source:   src,
+            param_options:    src === 'query'
+                                ? $(this).find('.p-opts-query').val()
+                                : $(this).find('.p-opts-static').val(),
+            options_value_col: $(this).find('.p-opts-valcol').val(),
+            options_text_col:  $(this).find('.p-opts-txtcol').val()
+        });
+    });
+    params = newP;
+}
+
+// ══════════════════════════════════════════════
+// PERMISSIONS TAB
+// ══════════════════════════════════════════════
+function renderPerms() {
+    const c = $('#permList').empty();
+    if (!perms.length) {
+        c.html('<p class="text-muted" style="font-size:.78rem;">Belum ada permission. Report tidak akan bisa diakses user.</p>');
+        return;
+    }
+    perms.forEach((p, i) => {
+        const roleOpts = ['ALL', ...availRoles]
+            .map(r => `<option value="${r}" ${p.role_name===r?'selected':''}>${r}</option>`).join('');
+        c.append($(`
+            <div class="d-flex align-items-center gap-2 mb-2" data-prmi="${i}" style="max-width:400px;">
+                <select class="form-select form-select-sm prm-role">${roleOpts}</select>
+                <button class="btn btn-sm btn-outline-danger prm-del" style="font-size:.68rem;padding:2px 8px;">✕</button>
+            </div>
+        `));
+    });
+}
+
+$('#btnAddPerm').on('click', () => {
+    collectPerms();
+    perms.push({ role_name: 'ALL' });
+    renderPerms();
+});
+
+$(document).on('click', '.prm-del', function () {
+    const i = $(this).closest('[data-prmi]').data('prmi');
+    collectPerms(); perms.splice(i, 1); renderPerms();
+});
+
+function collectPerms() {
+    perms = [];
+    $('#permList [data-prmi]').each(function () {
+        perms.push({ role_name: $(this).find('.prm-role').val() });
+    });
+}
+
+// ══════════════════════════════════════════════
+// EXCEL LAYOUT TAB — load via AJAX
+// ══════════════════════════════════════════════
+let layoutLoaded = false;
+$('#tabLayoutBtn').on('shown.bs.tab', async () => {
+    if (layoutLoaded || isNew) {
+        if (isNew) {
+            $('#layoutLoading').hide();
+            $('#layoutContent').show();
+        }
+        return;
+    }
+    await loadBuilderLayout();
+});
+
+async function loadBuilderLayout() {
+    const res = await $.get(`/ReportBuilder/GetLayout?reportId=${reportId}`);
+    if (!res.ok) {
+        $('#layoutLoading').html(`<span class="text-danger">${res.message}</span>`);
+        return;
+    }
+    layoutLoaded = true;
+    elData   = res.data;
+    // populateElUI();
+    loadBuilderLayout();
+    $('#layoutLoading').hide();
+    $('#layoutContent').show();
+}
+
+async function loadBuilderLayout() {
+    const res = await $.get(`/ReportBuilder/GetLayout?reportId=${reportId}`);
+    if (!res.ok) {
+        $('#layoutLoading').html(`<span class="text-danger">${res.message}</span>`);
+        return;
+    }
+    layoutLoaded = true;
+    elData = res.data;  // simpan ke state
+
+    // Populate header fields
+    const L = elData.layout || {};
+    $('#el_use_custom').prop('checked', L.use_custom_layout === 1);
+    $('#el_title').val(L.report_title || '');
+    $('#el_title_bg').val('#' + (L.title_bg_color || 'FFFFFF'));
+    $('#el_title_fg').val('#' + (L.title_font_color || '000000'));
+    $('#el_title_size').val(L.title_font_size || 14);
+
+    elRenderSheets();   // render sheet list
+    onElToggle();       // toggle visibility
+
+    $('#layoutLoading').hide();
+    $('#layoutContent').show();
+}
+
+// ══════════════════════════════════════════════
+// SAVE REPORT
+// ══════════════════════════════════════════════
+$('#btnSave').on('click', async function () {
+    const code = $('#f_code').val().trim();
+    const name = $('#f_name').val().trim();
+    if (!code || !name) { Swal.fire('Validation', 'Code & Name wajib diisi.', 'warning'); return; }
+
+    collectParams();
+    collectPerms();
+
+    const outputs = [];
+    if ($('#out_excel').is(':checked')) outputs.push('excel');
+    if ($('#out_csv').is(':checked'))   outputs.push('csv');
+
+    const vm = {
+        report: {
+            id:               reportId,
+            report_code:      code,
+            report_name:      name,
+            report_desc:      $('#f_desc').val(),
+            category:         $('#f_cat').val(),
+            icon:             $('#f_icon').val(),
+            filename_template: $('#f_filename').val(),
+            default_output:   $('#f_default_out').val(),
+            allowed_outputs:  outputs.join(','),
+            is_active:        $('#f_active').is(':checked') ? 1 : 0
+        },
+        params,
+        permissions: perms
+    };
+
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+    const res = await $.ajax({ url:'/ReportBuilder/Save', method:'POST',
+        contentType:'application/json', data: JSON.stringify(vm) });
+
+    $(this).prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Save Report');
+
+    if (res.ok) {
+        if (isNew) window.location.href = `/ReportBuilder/Form/${res.id}`;
+        else Swal.fire({ icon:'success', title:'Saved', timer:1200, showConfirmButton:false });
+    } else {
+        Swal.fire('Error', res.message, 'error');
+    }
+});
+
+// Init
+renderParams();
+renderPerms();
+</script>
+
+
+
+}

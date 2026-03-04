@@ -1,0 +1,132 @@
+@model List<TMSBilling.Models.ReportDefinition>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Report Builder";
+    var grouped = Model.GroupBy(r => r.category ?? "General").OrderBy(g => g.Key);
+}
+
+<div class="page-header mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0"><i class="bi bi-tools me-2 text-primary"></i>Report Builder</h4>
+            <small class="text-muted">Define reports, parameters & layouts for user access</small>
+        </div>
+        <a href="/ReportBuilder/Form" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>New Report
+        </a>
+    </div>
+</div>
+
+@foreach (var group in grouped)
+{
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header py-2 px-3" style="background:#f0f4ff;">
+            <span class="fw-semibold" style="font-size:.83rem;">
+                <i class="bi bi-folder2-open me-1 text-primary"></i>@group.Key
+            </span>
+            <span class="badge bg-secondary ms-2" style="font-size:.68rem;">@group.Count()</span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0" style="font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:30px;"></th>
+                        <th>Report Name</th>
+                        <th>Code</th>
+                        <th>Outputs</th>
+                        <th>Params</th>
+                        <th>Status</th>
+                        <th style="width:120px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in group.OrderBy(x => x.report_name))
+                    {
+                        <tr>
+                            <td class="text-center">
+                                <i class="bi @(r.icon ?? "bi-file-earmark-bar-graph") text-primary"></i>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">@r.report_name</span>
+                                @if (!string.IsNullOrEmpty(r.report_desc))
+                                {
+                                    <div class="text-muted" style="font-size:.72rem;">@r.report_desc</div>
+                                }
+                            </td>
+                            <td><code style="font-size:.75rem;">@r.report_code</code></td>
+                            <td>
+                                @foreach (var fmt in (r.allowed_outputs ?? "excel").Split(','))
+                                {
+                                    var badge = fmt.Trim() switch {
+                                        "excel" => "bg-success",
+                                        "csv"   => "bg-info text-dark",
+                                        "pdf"   => "bg-danger",
+                                        _       => "bg-secondary"
+                                    };
+                                    <span class="badge @badge me-1" style="font-size:.65rem;">@fmt.Trim().ToUpper()</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border" style="font-size:.7rem;">
+                                    @r.Params.Count params
+                                </span>
+                            </td>
+                            <td>
+                                @if (r.is_active == 1)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success" style="font-size:.68rem;">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary" style="font-size:.68rem;">Inactive</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a href="/ReportBuilder/Form/@r.ID" class="btn btn-xs btn-outline-primary me-1"
+                                   style="font-size:.68rem;padding:2px 8px;">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <a href="/ReportBuilder/Log?reportId=@r.ID" class="btn btn-xs btn-outline-secondary me-1"
+                                   style="font-size:.68rem;padding:2px 8px;">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                                <button class="btn btn-xs btn-outline-danger"
+                                        style="font-size:.68rem;padding:2px 8px;"
+                                        onclick="deleteReport(@r.ID, '@r.report_name')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+        No reports defined yet. <a href="/ReportBuilder/Form">Create one</a>.
+    </div>
+}
+
+@section Scripts {
+<script>
+function deleteReport(id, name) {
+    Swal.fire({
+        title: 'Delete Report?',
+        text: `"${name}" akan dihapus permanen.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Delete'
+    }).then(r => {
+        if (r.isConfirmed) {
+            $.post(`/ReportBuilder/Delete/${id}`, () => location.reload());
+        }
+    });
+}
+</script>
+}
