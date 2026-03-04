@@ -31,19 +31,22 @@ namespace TMSBilling.Services
         private readonly ILogger<MailReportService> _logger;
         private readonly string _connStr;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IExcelLayoutService _excelLayout;
 
         public MailReportService(
             AppDbContext db,
             IEmailService email,
             ILogger<MailReportService> logger,
             IConfiguration config,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            IExcelLayoutService excelLayout)
         {
             _db = db;
             _email = email;
             _logger = logger;
             _connStr = config.GetConnectionString("DefaultConnection")!;
             _scopeFactory = scopeFactory;
+            _excelLayout = excelLayout;
         }
 
         // ──────────────────────────────────────────────
@@ -168,11 +171,31 @@ namespace TMSBilling.Services
                 // Build attachments
                 var attachments = new List<EmailAttachment>();
 
+                //if (template.attach_excel == 1)
+                //{
+                //    var excelBytes = await BuildExcelAsync(sections, request.EventParams);
+                //    var fname = ResolvePlaceholders(template.attach_filename ?? "Report_{{date}}", request.EventParams)
+                //                    .Replace("{{date}}", DateTime.Now.ToString("yyyyMMdd"));
+                //    attachments.Add(new EmailAttachment
+                //    {
+                //        FileName = fname.EndsWith(".xlsx") ? fname : fname + ".xlsx",
+                //        ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                //        Data = excelBytes
+                //    });
+                //}
+
                 if (template.attach_excel == 1)
                 {
-                    var excelBytes = await BuildExcelAsync(sections, request.EventParams);
-                    var fname = ResolvePlaceholders(template.attach_filename ?? "Report_{{date}}", request.EventParams)
-                                    .Replace("{{date}}", DateTime.Now.ToString("yyyyMMdd"));
+                    // Pilih builder: custom layout (baru) atau default (lama)
+                    byte[] excelBytes = await _excelLayout.HasCustomLayoutAsync(request.ReportId)
+                        ? await _excelLayout.BuildAsync(request.ReportId, request.EventParams)
+                        : await BuildExcelAsync(sections, request.EventParams);
+
+                    var fname = ResolvePlaceholders(
+                        template.attach_filename ?? "Report_{{date}}",
+                        request.EventParams)
+                        .Replace("{{date}}", DateTime.Now.ToString("yyyyMMdd"));
+
                     attachments.Add(new EmailAttachment
                     {
                         FileName = fname.EndsWith(".xlsx") ? fname : fname + ".xlsx",

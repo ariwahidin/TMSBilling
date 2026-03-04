@@ -124,13 +124,16 @@ namespace TMSBilling.Controllers
 					        CASE 
 						        WHEN a.status_job = 'DRAFT' THEN 'Draf'
 						        WHEN a.status_job = 'STARTED' THEN 'Perjalanan'
+                                WHEN a.status_job = 'CLOSED' THEN 'Closed'
+                                WHEN a.status_job = 'CANCELLED' THEN 'Cancel'
 						        ELSE NULL
 					        END
 			        END AS MCStatus,
                     a.vendor_plan AS VendorPlan,
                     COALESCE(tj.total_do, 0) AS TotalDo,
                     a.driver_name as DriverName,
-                    a.serv_type as ServiceType
+                    a.serv_type as ServiceType,
+                    a.is_integration as IsIntegration
                 FROM TRC_JOB_H a
                 LEFT JOIN tj ON a.jobid = tj.jobid
                 LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
@@ -194,6 +197,8 @@ namespace TMSBilling.Controllers
 
             // ✅ Default selalu diset dulu
             vm.Header.job_type = "NORMAL";
+            vm.Header.status_job = "DRAFT";
+
 
             if (!string.IsNullOrEmpty(jobid))
             {
@@ -1001,6 +1006,7 @@ namespace TMSBilling.Controllers
                 jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 jobHeader.entry_date = DateTime.Now;
                 //jobHeader.starting_point = Header.starting_point;
+                jobHeader.is_integration = 0;
                 jobHeader.status_job = "DRAFT";
 
                 _context.JobHeaders.Add(jobHeader);
@@ -1328,23 +1334,6 @@ namespace TMSBilling.Controllers
                         Volume = item.TotalVolume
                     }).ToList();
 
-                    // Ambil detail job (job detail / job lines)
-                    // Karena belum ada tabel detail, pakai dummy dulu
-                    //var details = new List<SuratPerintahKirimDetailViewModel>
-                    //{
-                    //    new SuratPerintahKirimDetailViewModel
-                    //    {
-                    //        No            = 1,
-                    //        ShipToParty   = customerGroup?.MAIN_CUST ?? "-",
-                    //        City          = customerGroup?.SUB_CODE ?? "-",
-                    //        DateUnloading = job.deliv_date,
-                    //        DeliveryNo    = job.jobid ?? "-",
-                    //        TotalBox      = 0,   // dummy
-                    //        TotalQty      = 0,   // dummy
-                    //        Volume        = 0    // dummy
-                    //    }
-                    //};
-
                     // Susun ViewModel
                     var emailModel = new SuratPerintahKirimViewModel
                     {
@@ -1361,11 +1350,6 @@ namespace TMSBilling.Controllers
                         Remarks = null,
                         Details = details
                     };
-
-
-                    // Ambil dari CustomerMain berdasarkan MAIN_CUST di TRC_CUSTOMER
-                    //var customerMain = _context.CustomerMains
-                    //    .FirstOrDefault(cm => cm.MAIN_CUST == customer.MAIN_CUST);
 
                     // ← Simpan nilai MAIN_CUST ke variable dulu sebelum query CustomerMain
                     var mainCustCode = customerGroup?.MAIN_CUST;
@@ -1418,40 +1402,9 @@ namespace TMSBilling.Controllers
                             sentByUserId: currentUser?.Id
                         );
                     }
-
-
-                    // Susun To & CC
-
-                    //var toEmails = new List<string>
-                    //{
-                    //    "ari.wahidin@id.yusen-logistics.com",
-                    //    //"email2@contoh.com",
-                    //    //"email3@contoh.com"
-                    //};
-
-                    //var ccEmails = new List<string>
-                    //{
-                    //    //"wahyudi.wahyu@id.yusen-logistics.com",
-                    //    //"andri.sutrisna@id.yusen-logistics.com"
-                    //    "ari.wahidin@id.yusen-logistics.com",
-                    //    "ari.wahidin@id.yusen-logistics.com",
-                    //};
-
-                    // Kirim hanya jika ada penerima
-                    //if (toEmails.Any())
-                    //{
-                    //    // SendSuratPerintahKirimAsync
-                    //    await _emailService.SendSuratPerintahKirimAsync(
-                    //        model: emailModel,
-                    //        toEmails: toEmails,
-                    //        ccEmails: ccEmails,
-                    //        sentByUserId: currentUser?.Id
-                    //    );
-                    //}
                 }
                 catch (Exception emailEx)
                 {
-                    // Jangan gagalkan SetStarted hanya karena email error
                     // Log sudah tersimpan di EmailLogs oleh EmailService
                     Console.WriteLine($"[EMAIL ERROR] {emailEx.Message}");
                 }
@@ -1465,6 +1418,131 @@ namespace TMSBilling.Controllers
             }
         }
 
+
+        public async Task<IActionResult> SetClosed(string id)
+        {
+            var username = HttpContext.Session.GetString("username") ?? "System";
+            try
+            {
+                var job = _context.JobHeaders.FirstOrDefault(j => j.jobid == id);
+                if (job == null)
+                    return Json(new { success = false, message = "Job not found." });
+
+                job.status_job = "CLOSED";
+                job.update_user = username;
+                job.update_date = DateTime.Now;
+                _context.SaveChanges();
+
+                // ─── Trigger Kirim Email ───────────────────────────────────────
+                try
+                {
+                    // Ambil data Customer
+                    var customerGroup = _context.CustomerGroups
+                        .FirstOrDefault(c => c.SUB_CODE == job.cust_group);
+
+                    // Ambil data Vendor
+                    var vendor = _context.Vendors
+                        .FirstOrDefault(v => v.SUP_CODE == job.vendor_plan);
+
+                    //  List<DeliveryOrderItem> GetDeliveryOrdersByJobId
+
+                    var deliveryDetail = GetDeliveryOrdersByJobId(job?.jobid);
+
+                    var details = deliveryDetail.Select((item, index) => new SuratPerintahKirimDetailViewModel
+                    {
+                        No = index + 1,
+                        ShipToParty = item.ShipToName ?? item.ShipTo ?? "-",
+                        City = item.City ?? "-",
+                        DateUnloading = job.deliv_date,
+                        DeliveryNo = item.DO ?? "-",
+                        TotalBox = item.TotalBoxKoli,
+                        TotalQty = item.TotalQtyPcs,
+                        Volume = item.TotalVolume
+                    }).ToList();
+
+                    // Susun ViewModel
+                    var emailModel = new SuratPerintahKirimViewModel
+                    {
+                        NomorOrder = job.jobid ?? "-",
+                        Transporter = vendor?.SUP_NAME ?? job.vendor_plan ?? "-",
+                        JenisTruck = job.truck_size ?? "-",
+                        NomorPolisi = job.truck_no ?? "-",
+                        DriverName = job.driver_name ?? "-",
+                        DriverPhone = job.driver_phone ?? "-",
+                        TanggalOrder = job.entry_date,
+                        TanggalMuat = job.pickup_date,
+                        JamMulai = null,   // dummy, belum ada di JobHeader
+                        JamSelesai = null,   // dummy, belum ada di JobHeader
+                        Remarks = null,
+                        Details = details
+                    };
+
+                    // ← Simpan nilai MAIN_CUST ke variable dulu sebelum query CustomerMain
+                    var mainCustCode = customerGroup?.MAIN_CUST;
+
+                    // Baru query CustomerMain pakai variable biasa
+                    var customerMain = mainCustCode != null
+                        ? _context.CustomerMains.FirstOrDefault(cm => cm.MAIN_CUST == mainCustCode)
+                        : null;
+
+                    var toEmails = new List<string>();
+                    var ccEmails = new List<string>();
+
+                    // To → dari TO_EMAIL di CustomerMain
+                    if (!string.IsNullOrWhiteSpace(customerMain?.TO_EMAIL))
+                    {
+                        var emails = customerMain.TO_EMAIL
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(e => e.Trim())
+                            .Where(e => !string.IsNullOrWhiteSpace(e));
+                        toEmails.AddRange(emails);
+                    }
+
+                    // CC → dari CC_EMAIL di CustomerMain
+                    if (!string.IsNullOrWhiteSpace(customerMain?.CC_EMAIL))
+                    {
+                        var emails = customerMain.CC_EMAIL
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(e => e.Trim())
+                            .Where(e => !string.IsNullOrWhiteSpace(e));
+                        ccEmails.AddRange(emails);
+                    }
+
+                    // CC → email user yang login
+                    var currentUser = _context.Users
+                        .FirstOrDefault(u => u.Username == username);
+                    if (!string.IsNullOrWhiteSpace(currentUser?.Email))
+                        ccEmails.Add(currentUser.Email);
+
+                    // Skip jika tidak ada To email
+                    if (!toEmails.Any())
+                    {
+                        Console.WriteLine($"[EMAIL SKIP] Job {id} - CustomerMain tidak memiliki TO_EMAIL.");
+                    }
+                    else
+                    {
+                        await _emailService.SendSuratPerintahKirimAsync(
+                            model: emailModel,
+                            toEmails: toEmails,
+                            ccEmails: ccEmails.Any() ? ccEmails : null,
+                            sentByUserId: currentUser?.Id
+                        );
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log sudah tersimpan di EmailLogs oleh EmailService
+                    Console.WriteLine($"[EMAIL ERROR] {emailEx.Message}");
+                }
+                // ──────────────────────────────────────────────────────────────
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
 
         [HttpPost]
         [Route("Job/BulkJobPod")]
@@ -1876,6 +1954,8 @@ namespace TMSBilling.Controllers
         public string? ServiceType { get; set; }
         public string? MCStatus { get; set; }
         public int TotalDo { get; set; }
+
+        public int? IsIntegration { get; set; }
     }
     public class VendorViewModel
     {

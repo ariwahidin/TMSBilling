@@ -94,6 +94,8 @@ builder.Services.AddScoped<IIntegrationEmailNotifier, IntegrationEmailNotifier>(
 // ── Dispatcher ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 builder.Services.AddScoped<IMailReportService, MailReportService>();
+builder.Services.AddScoped<IExcelLayoutService, ExcelLayoutService>();
+
 // ── Quartz Scheduler ─────────────────────────────────────────────────────
 builder.Services.AddQuartz(q =>
 {

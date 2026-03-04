@@ -236,6 +236,7 @@ namespace TMSBilling.Models
 
         public int? starting_point { get; set; }
 
+        public int? is_integration { get; set; } = 1;
         public string? mceasy_job_id { get; set; }
 
         [StringLength(50)]

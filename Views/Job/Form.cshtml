@@ -375,6 +375,9 @@
                     </div>
                 </div>
 
+                @if (Model.Header.status_job == "DRAFT")
+            {
+
                 <!-- Add Order Button -->
                 <div class="d-flex align-items-center">
                     <button type="button" class="btn btn-sm btn-success" id="btnAddOrder">
@@ -384,6 +387,8 @@
                         0 Orders Selected
                     </span>
                 </div>
+
+            }
 
                 <!-- Selected Orders Table -->
                 <div class="detail-section">
@@ -419,15 +424,20 @@
                     </div>
                 </div>
 
+                @if (Model.Header.status_job == "DRAFT")
+                {
+
                 <!-- Form Actions -->
                 <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                     <button type="button" class="btn btn-secondary btn-sm">
                         <i class="fas fa-times"></i> Cancel
                     </button>
+                
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-save"></i> Save
                     </button>
-                </div>
+            </div>
+                }
             </form>
         </div>
     </div>
@@ -591,6 +601,7 @@
     </script>
 
     <script>
+        const isDraft = @(Model.Header.status_job == "DRAFT" ? "true" : "false");
         function formatDateReadable(dateStr) {
             const date = new Date(dateStr);
 
@@ -807,9 +818,11 @@
                             <td>${renderYesNoSelect(`Details[${index}].flag_cc`, `${order.flag_cc}`)}</td>
                             <td>${renderYesNoSelect(`Details[${index}].flag_diffa`, `${order.flag_diffa}`)}</td>
                             <td>
+                            ${isDraft ? `
                                 <button type="button" class="btn btn-sm btn-danger btn-remove-order" data-order-id="${order.id_seq}">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                             ` : ''}
                             </td>
                         </tr>
                     `;

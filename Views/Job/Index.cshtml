@@ -96,11 +96,24 @@
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
+                                @if (item.IsIntegration == 0)
+                                {
                                 <li>
                                     <a class="dropdown-item text-success" href="#" onclick="confirmStartJob('@item.JobId'); return false;">
                                         <i class="bi bi-play-circle text-success"></i> Start Job
                                     </a>
                                 </li>
+                                }
+
+                                @if (item.IsIntegration == 0 && item.MCStatus == "Perjalanan")
+                                {
+                                    <li>
+                                        <a class="dropdown-item text-success" href="#" onclick="confirmClosedJob('@item.JobId'); return false;">
+                                            <i class="bi bi-check-circle text-success"></i> Close Job
+                                        </a>
+                                    </li>
+                                }
+                                
                                 <li>
                                     <a class="dropdown-item" href="/Job/Form/@item.JobId">
                                         <i class="bi bi-pencil-square text-primary"></i> Edit
@@ -318,6 +331,31 @@
                         .then(data => {
                             if (data.success) {
                                 Swal.fire('Started!', 'Job status changed to STARTED.', 'success')
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire('Error', data.message || 'Failed to update status.', 'error');
+                            }
+                        });
+                }
+            });
+        }
+
+         function confirmClosedJob(jobId) {
+            Swal.fire({
+                icon: 'question',
+                title: 'Close Job?',
+                text: `Change job ${jobId} status to CLOSED?`,
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, Start it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/Job/SetClosed/${jobId}`, { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('Closed!', 'Job status changed to CLOSED.', 'success')
                                     .then(() => location.reload());
                             } else {
                                 Swal.fire('Error', data.message || 'Failed to update status.', 'error');
