@@ -254,7 +254,7 @@ namespace TMSBilling.Services
             {
                 // Flat single sheet — pakai param pertama sebagai query utama
                 // Developer wajib set 1 section minimal
-                data = BuildFlatExcel(report, paramValues, out rowCount);
+                data = BuildFlatExcelA(report, paramValues, out rowCount);
             }
 
             sw.Stop();
@@ -270,7 +270,7 @@ namespace TMSBilling.Services
         }
 
         // ── Flat Excel — fallback kalau tidak ada custom layout ──
-        private byte[] BuildFlatExcel(
+        private byte[] BuildFlatExcelA(
             ReportDefinition report,
             Dictionary<string, string> paramValues,
             out int rowCount)
@@ -460,7 +460,7 @@ namespace TMSBilling.Services
             // Load layout kalau ada
             MailReportExcelLayoutVM? layout = null;
             if (report.excel_layout_id.HasValue)
-                layout = await _layoutSvc.LoadForFormAsync(report.excel_layout_id.Value);
+                layout = await _layoutSvc.LoadForFormAsync(report.excel_layout_id.Value, "reportbuilder");
 
             // Pilih output service
             var outputSvc = _outputServices

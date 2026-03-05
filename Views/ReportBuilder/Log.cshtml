@@ -1,0 +1,171 @@
+@model List<TMSBilling.Models.ReportRunLog>
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Report Run Log";
+    var reportId = ViewBag.ReportId as int?;
+}
+
+<div class="page-header mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">
+                <i class="bi bi-clock-history me-2 text-primary"></i>Report Run Log
+            </h4>
+            <small class="text-muted">
+                <a href="/ReportBuilder">Report Builder</a> /
+                @if (reportId.HasValue && Model.Any())
+                {
+                    <a href="/ReportBuilder/Form/@reportId">@Model.First().Report?.report_name</a>
+                    <text> / Log</text>
+                }
+                else
+                {
+                    <text>All Logs</text>
+                }
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            @if (reportId.HasValue)
+            {
+                <a href="/ReportBuilder/Form/@reportId" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Report
+                </a>
+            }
+            <a href="/ReportBuilder" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-list me-1"></i>All Reports
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox" style="font-size:2rem;"></i>
+        <p class="mt-2" style="font-size:.85rem;">Belum ada log.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle" style="font-size:.78rem;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:140px;">Waktu</th>
+                    <th>Report</th>
+                    <th style="width:80px;">Format</th>
+                    <th style="width:70px;">Status</th>
+                    <th style="width:80px;">Rows</th>
+                    <th style="width:80px;">Duration</th>
+                    <th>User</th>
+                    <th>Parameters</th>
+                    <th style="width:50px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td class="text-nowrap text-muted">@log.run_at.ToString("dd/MM/yy HH:mm:ss")</td>
+                        <td>
+                            <a href="/ReportBuilder/Log?reportId=@log.report_id" class="text-decoration-none fw-semibold">
+                                @(log.Report?.report_name ?? $"Report #{log.report_id}")
+                            </a>
+                        </td>
+                        <td>
+                            @if (log.output_format == "excel")
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                    <i class="bi bi-filetype-csv me-1"></i>CSV
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (log.status?.ToLower() == "success")
+                            {
+                                <span class="badge bg-success-subtle text-success">✓ OK</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger" title="@log.error_message">✕ Error</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @(log.row_count.HasValue ? log.row_count.Value.ToString("N0") : "-")
+                        </td>
+                        <td class="text-end text-muted">
+                            @(log.duration_ms.HasValue ? $"{log.duration_ms.Value:N0} ms" : "-")
+                        </td>
+                        <td>@log.run_by</td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(log.params_json))
+                            {
+                                <button class="btn btn-link p-0 log-params-btn"
+                                        style="font-size:.72rem;"
+                                        data-params="@log.params_json">
+                                    <i class="bi bi-eye me-1"></i>Lihat
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @if (log.status?.ToLower() != "success" && !string.IsNullOrWhiteSpace(log.error_message))
+                            {
+                                <button class="btn btn-link p-0 text-danger log-err-btn"
+                                        style="font-size:.72rem;"
+                                        data-err="@log.error_message"
+                                        title="Lihat error">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="text-muted" style="font-size:.72rem;">Menampilkan @Model.Count log terbaru.</div>
+}
+
+@section Scripts {
+<script>
+$(document).on('click', '.log-params-btn', function () {
+    // Ambil dari attr (string) bukan .data() supaya tidak auto-parsed
+    const raw = $(this).attr('data-params');
+    let display = '';
+    try {
+        const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        display = Object.entries(obj).map(([k, v]) =>
+            `<tr><td class="fw-semibold pe-3 text-nowrap">${k}</td><td>${v}</td></tr>`
+        ).join('');
+        display = `<table class="table table-sm mb-0" style="font-size:.78rem;"><tbody>${display}</tbody></table>`;
+    } catch {
+        display = `<pre style="font-size:.72rem;white-space:pre-wrap;">${raw}</pre>`;
+    }
+    Swal.fire({
+        title: 'Parameters',
+        html: display,
+        width: 500,
+        confirmButtonText: 'Tutup'
+    });
+});
+
+$(document).on('click', '.log-err-btn', function () {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error Message',
+        text: $(this).data('err'),
+        confirmButtonText: 'Tutup'
+    });
+});
+</script>
+}
