@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305024238_MakeReportIdNullable")]
+    partial class MakeReportIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4399,6 +4402,16 @@ namespace TMSBilling.Migrations
                         .IsRequired();
 
                     b.Navigation("Integration");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.MailReportExcelLayout", b =>
+                {
+                    b.HasOne("TMSBilling.Models.MailReport", "Report")
+                        .WithMany()
+                        .HasForeignKey("report_id")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Report");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.MailReportExcelSection", b =>

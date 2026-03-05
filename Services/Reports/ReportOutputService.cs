@@ -247,7 +247,8 @@ namespace TMSBilling.Services
             if (layout != null && layout.Layout.use_custom_layout == 1)
             {
                 // Custom layout via ExcelLayoutService
-                data = await _layoutSvc.BuildAsync(report.excel_layout_id!.Value, paramValues, "reportbuilder");
+                //data = await _layoutSvc.BuildAsync(report.excel_layout_id!.Value, paramValues, "reportbuilder");
+                data = await _layoutSvc.BuildAsync(report.ID, paramValues, "reportbuilder");
                 rowCount = -1; // multi-section, tidak dihitung per baris
             }
             else
@@ -460,7 +461,8 @@ namespace TMSBilling.Services
             // Load layout kalau ada
             MailReportExcelLayoutVM? layout = null;
             if (report.excel_layout_id.HasValue)
-                layout = await _layoutSvc.LoadForFormAsync(report.excel_layout_id.Value, "reportbuilder");
+                layout = await _layoutSvc.LoadForFormAsync(report.ID, "reportbuilder");
+            //layout = await _layoutSvc.LoadForFormAsync(report.excel_layout_id.Value, "reportbuilder");
 
             // Pilih output service
             var outputSvc = _outputServices

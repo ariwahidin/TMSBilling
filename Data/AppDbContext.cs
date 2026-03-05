@@ -535,10 +535,10 @@ namespace TMSBilling.Data
 
             modelBuilder.Entity<MailReportExcelLayout>(e =>
             {
-                e.HasOne(x => x.Report)
-                    .WithMany()                          // ← ubah WithOne() jadi WithMany()
-                    .HasForeignKey(x => x.report_id)    // ← hapus generic type parameter
-                    .OnDelete(DeleteBehavior.Cascade);
+                //e.HasOne(x => x.Report)
+                //    .WithMany()                          // ← ubah WithOne() jadi WithMany()
+                //    .HasForeignKey(x => x.report_id)    // ← hapus generic type parameter
+                //    .OnDelete(DeleteBehavior.Cascade);
 
                 // Unique per report_id + owner_type
                 // 1 report boleh punya 1 layout mailreport dan 1 layout reportbuilder

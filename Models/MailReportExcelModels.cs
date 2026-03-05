@@ -173,7 +173,7 @@ namespace TMSBilling.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        public int report_id { get; set; }
+        public int? report_id { get; set; }
 
         public byte use_custom_layout { get; set; } = 0;
 
@@ -196,9 +196,9 @@ namespace TMSBilling.Models
         [Required, StringLength(20)]
         public string owner_type { get; set; } = "mailreport";
 
-        [JsonIgnore]
-        [ForeignKey("report_id")]
-        public MailReport? Report { get; set; }
+        //[JsonIgnore]
+        //[ForeignKey("report_id")]
+        //public MailReport? Report { get; set; }
 
         public List<MailReportExcelSheet> Sheets { get; set; } = new();
     }
