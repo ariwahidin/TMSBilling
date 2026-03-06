@@ -810,7 +810,7 @@ namespace TMSBilling.Services
   }
   /* ── Header bar ── */
   .email-header {
-    background: linear-gradient(135deg, #1a56db 0%, #1e429f 100%);
+    background: #f7f9fc;
     padding: 28px 36px;
     display: flex;
     align-items: center;
@@ -822,6 +822,13 @@ namespace TMSBilling.Services
     font-weight: 700;
     letter-spacing: 0.3px;
   }
+  .head-title {
+    font-size : 16px;
+    font-weight : bold;
+    }
+   .head-subtitle {
+    font-size : 14px;
+    }
   .email-header .brand span {
     opacity: 0.7;
     font-weight: 400;
@@ -962,13 +969,18 @@ namespace TMSBilling.Services
 </head>
 <body>
 <div class='email-wrapper'>
-  <div class='email-header-a'>
+  <div class='email-header'>
+    <div class='brand-email'>
+      <span class='head-title'>TMS Billing</span><br>
+      <span class='head-subtitle'>PT Yusen Logistics Interlink Indonesia</span>
+    </div>
   </div>
   <div class='email-body'>";
-
         public static string Close() => @"
   </div>
-  <div class='email-footer-a'>
+  <div class='email-footer'>
+    <strong>TMS Billing</strong> &mdash; This message was sent automatically, please do not reply to this email.<br>
+If you have any questions, please contact the Control Tower Admin team.
   </div>
 </div>
 </body>

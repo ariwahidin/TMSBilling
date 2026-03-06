@@ -1751,6 +1751,7 @@ namespace TMSBilling.Controllers
             };
 
             var jobHeader = _context.JobHeaders.FirstOrDefault(j => j.jobid == jobid);
+            var custGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == jobHeader.cust_group);
             if (jobHeader != null)
             {
                 jobHeader.spk_print_count = (jobHeader.spk_print_count ?? 0) + 1;
@@ -1768,10 +1769,13 @@ namespace TMSBilling.Controllers
                     .Where(e => e.email_type == "CC")
                     .Select(e => e.email_address));
 
+            
+
                 _mailer.TriggerEvent("spk.printed", new Dictionary<string, string>
                 {
 
                     ["nomor_spk"] = jobid,
+                    ["customer"] = custGroup != null ? custGroup.MAIN_CUST : "UNKNOWN", 
                     ["vendor_name"] = jobHeader.vendor_act,
                     ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
                     ["order_id"] = jobid,
