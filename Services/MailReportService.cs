@@ -962,20 +962,13 @@ namespace TMSBilling.Services
 </head>
 <body>
 <div class='email-wrapper'>
-  <div class='email-header'>
-    <div class='brand'>
-      TMS Billing
-      <span>Transportation Management System</span>
-    </div>
-    <div class='date-badge'>{{date_label}}</div>
+  <div class='email-header-a'>
   </div>
   <div class='email-body'>";
 
         public static string Close() => @"
   </div>
-  <div class='email-footer'>
-    <strong>TMS Billing System</strong> &mdash; Pesan ini dikirim secara otomatis, mohon tidak membalas email ini.<br>
-    Jika ada pertanyaan, silakan hubungi tim Admin Control Tower.
+  <div class='email-footer-a'>
   </div>
 </div>
 </body>

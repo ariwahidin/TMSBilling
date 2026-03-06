@@ -347,39 +347,39 @@ namespace TMSBilling.Controllers
 
 
             // Panggil setelah update status order
-            await _integrationDispatcher.DispatchAsync("job.created", new Dictionary<string, object?>
-            {
-                { "order_no", jobid },
-                { "status", "created" },
-                { "updated_by", userId },
-                { "updated_at", DateTime.UtcNow },
-            });
+            //await _integrationDispatcher.DispatchAsync("job.created", new Dictionary<string, object?>
+            //{
+            //    { "order_no", jobid },
+            //    { "status", "created" },
+            //    { "updated_by", userId },
+            //    { "updated_at", DateTime.UtcNow },
+            //});
 
 
-            if (jobid != null)
-            {
-                var emailVendors = await _context.VendorTruckEmails
-                  .Where(vte => vte.sup_code == Header.vendor_act && vte.is_active == 1)
-                  .ToListAsync();
+            //if (jobid != null)
+            //{
+            //    var emailVendors = await _context.VendorTruckEmails
+            //      .Where(vte => vte.sup_code == Header.vendor_act && vte.is_active == 1)
+            //      .ToListAsync();
 
-                var emailTo = string.Join(",", emailVendors
-                    .Where(e => e.email_type == "TO")
-                    .Select(e => e.email_address));
+            //    var emailTo = string.Join(",", emailVendors
+            //        .Where(e => e.email_type == "TO")
+            //        .Select(e => e.email_address));
 
-                var emailCc = string.Join(",", emailVendors
-                    .Where(e => e.email_type == "CC")
-                    .Select(e => e.email_address));
+            //    var emailCc = string.Join(",", emailVendors
+            //        .Where(e => e.email_type == "CC")
+            //        .Select(e => e.email_address));
 
-                _mailer.TriggerEvent("spk.created", new Dictionary<string, string>
-                {
-                    ["nomor_spk"] = jobid,
-                    ["vendor_name"] = model.FormJobHeader.vendor_act,
-                    ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
-                    ["order_id"] = jobid,
-                    ["email_to"] = emailTo,
-                    ["email_cc"] = emailCc
-                }, HttpContext.Session.GetString("username") ?? "System");
-            }
+            //    _mailer.TriggerEvent("spk.created", new Dictionary<string, string>
+            //    {
+            //        ["nomor_spk"] = jobid,
+            //        ["vendor_name"] = model.FormJobHeader.vendor_act,
+            //        ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
+            //        ["order_id"] = jobid,
+            //        ["email_to"] = emailTo,
+            //        ["email_cc"] = emailCc
+            //    }, HttpContext.Session.GetString("username") ?? "System");
+            //}
            
 
             return Json(new { success = true, message = "Job saved successfully" });
@@ -1706,7 +1706,7 @@ namespace TMSBilling.Controllers
             return Json(new { success = true });
         }
 
-        public IActionResult PrintSPK(string jobid)
+        public async Task<IActionResult> PrintSPK(string jobid)
         {
             if (string.IsNullOrEmpty(jobid))
             {
@@ -1721,11 +1721,6 @@ namespace TMSBilling.Controllers
                 return NotFound($"Job dengan ID {jobid} tidak ditemukan");
             }
 
-            //var jobHeader = _context.JobHeaders.FirstOrDefault(or => or.jobid == jobid);
-            //if (jobHeader == null)
-            //{
-            //    return View();
-            //}
 
             // Prepare view model untuk SPK
             var spkViewModel = new SPKViewModel
@@ -1740,7 +1735,6 @@ namespace TMSBilling.Controllers
                 Transporter = jobData.VendorPlan,
                 NamaSopir = jobData.DriverName,
                 NoPol = jobData.TruckNo,
-                //TglTiba = jobData.DelivDate?.AddDays(-1).ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"),
                 TglTiba = "",
                 JamTiba = "",
                 Catatan = "",
@@ -1755,6 +1749,36 @@ namespace TMSBilling.Controllers
                 // List Delivery Orders
                 DeliveryOrders = GetDeliveryOrdersByJobId(jobid)
             };
+
+            var jobHeader = _context.JobHeaders.FirstOrDefault(j => j.jobid == jobid);
+            if (jobHeader != null)
+            {
+                jobHeader.spk_print_count = (jobHeader.spk_print_count ?? 0) + 1;
+                _context.SaveChanges();
+
+                var emailVendors = await _context.VendorTruckEmails
+                .Where(vte => vte.sup_code == jobHeader.vendor_act && vte.is_active == 1)
+                .ToListAsync();
+
+                var emailTo = string.Join(",", emailVendors
+                    .Where(e => e.email_type == "TO")
+                    .Select(e => e.email_address));
+
+                var emailCc = string.Join(",", emailVendors
+                    .Where(e => e.email_type == "CC")
+                    .Select(e => e.email_address));
+
+                _mailer.TriggerEvent("spk.printed", new Dictionary<string, string>
+                {
+
+                    ["nomor_spk"] = jobid,
+                    ["vendor_name"] = jobHeader.vendor_act,
+                    ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
+                    ["order_id"] = jobid,
+                    ["email_to"] = emailTo,
+                    ["email_cc"] = emailCc
+                }, HttpContext.Session.GetString("username") ?? "System");
+            }
 
             return View(spkViewModel);
         }

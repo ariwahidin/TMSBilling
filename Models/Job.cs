@@ -239,6 +239,8 @@ namespace TMSBilling.Models
         public int? is_integration { get; set; } = 1;
         public string? mceasy_job_id { get; set; }
 
+        public int? spk_print_count { get; set; } = 0;
+
         [StringLength(50)]
         public string? entry_user { get; set; }
 

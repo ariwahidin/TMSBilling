@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305075052_AddLeadTime")]
+    partial class AddLeadTime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1791,9 +1794,6 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
-                    b.Property<int?>("spk_print_count")
-                        .HasColumnType("int");
-
                     b.Property<int?>("starting_point")
                         .HasColumnType("int");
 
@@ -1968,9 +1968,6 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<int?>("delivery_days")
-                        .HasColumnType("int");
-
                     b.Property<string>("dest")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1983,13 +1980,16 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("lead_time_days")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("lead_time_hours")
+                        .HasColumnType("int");
+
                     b.Property<string>("origin")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("pod_days")
-                        .HasColumnType("int");
 
                     b.Property<string>("serv_moda")
                         .HasMaxLength(10)

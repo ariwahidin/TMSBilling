@@ -1,0 +1,120 @@
+@model TMSBilling.Models.LeadTime
+
+<form id="leadTimeForm">
+    <input type="hidden" asp-for="id_seq" />
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Customer</label>
+        <div class="col-sm-8">
+            <select asp-for="cust_code" class="form-select">
+                <option value="">-- General (All Customers) --</option>
+                @foreach (var c in (IEnumerable<TMSBilling.Models.CustomerMain>)ViewBag.Customers)
+                {
+                    var selected = Model.cust_code == c.MAIN_CUST ? "selected" : null;
+                    <option value="@c.MAIN_CUST" selected="@selected">@c.MAIN_CUST — @c.CUST_NAME</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Origin</label>
+        <div class="col-sm-8">
+            <select asp-for="origin" class="form-select" required>
+                <option value="">-- Select Origin --</option>
+                @foreach (var o in (IEnumerable<TMSBilling.Models.Origin>)ViewBag.Origins)
+                {
+                    var selected = Model.origin == o.origin_code ? "selected" : null;
+                    <option value="@o.origin_code" selected="@selected">@o.origin_code</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Destination</label>
+        <div class="col-sm-8">
+            <select name="dest" class="form-select" required>
+                <option value="">-- Select Destination --</option>
+                @foreach (var d in (IEnumerable<TMSBilling.Models.Destination>)ViewBag.Destinations)
+                {
+                    var selected = Model.dest == d.destination_code ? "selected" : null;
+                    <option value="@d.destination_code" selected="@selected">@d.destination_code</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Serv Type</label>
+        <div class="col-sm-8">
+            <select name="serv_type" class="form-select">
+                <option value="">-- Select Serv Type --</option>
+                @foreach (var s in (IEnumerable<TMSBilling.Models.ServiceType>)ViewBag.ServiceTypes)
+                {
+                    var selected = Model.serv_type == s.serv_name ? "selected" : null;
+                    <option value="@s.serv_name" selected="@selected">@s.serv_name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Serv Moda</label>
+        <div class="col-sm-8">
+            <select name="serv_moda" class="form-select">
+                <option value="">-- Select Serv Moda --</option>
+                @foreach (var s in (IEnumerable<TMSBilling.Models.ServiceModa>)ViewBag.ServiceModas)
+                {
+                    var selected = Model.serv_moda == s.moda_name ? "selected" : null;
+                    <option value="@s.moda_name" selected="@selected">@s.moda_name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Truck Size</label>
+        <div class="col-sm-8">
+            <select name="truck_size" class="form-select">
+                <option value="">-- Select Truck Size --</option>
+                @foreach (var t in (IEnumerable<TMSBilling.Models.TruckSize>)ViewBag.TruckSizes)
+                {
+                    var selected = Model.truck_size == t.trucksize_code ? "selected" : null;
+                    <option value="@t.trucksize_code" selected="@selected">@t.trucksize_code</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Delivery (Days)</label>
+        <div class="col-sm-4">
+            <input asp-for="delivery_days" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">POD (Days)</label>
+        <div class="col-sm-4">
+            <input asp-for="pod_days" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Active</label>
+        <div class="col-sm-8 d-flex align-items-center">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="activeFlag"
+                    @(Model.active_flag == 1 || Model.id_seq == 0 ? "checked" : "")
+                    onchange="document.getElementById('activeFlagHidden').value = this.checked ? 1 : 0" />
+                <input type="hidden" id="activeFlagHidden" name="active_flag"
+                    value="@(Model.active_flag ?? 1)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+    </div>
+</form>

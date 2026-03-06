@@ -379,6 +379,8 @@ namespace TMSBilling.Data
         public DbSet<ReportPermission> ReportPermissions { get; set; }
         public DbSet<ReportRunLog> ReportRunLogs { get; set; }
 
+        public DbSet<LeadTime> LeadTimes { get; set; }
+
         protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Integration>(e =>
