@@ -113,6 +113,7 @@ namespace TMSBilling.Controllers
                 SELECT 
                     a.id_seq AS IdSeq,
                     a.jobid AS JobId,
+                    c.MAIN_CUST AS CustomerMain,
                     a.truck_no AS TruckNo,
                     a.deliv_date AS DelivDate,
                     a.origin AS Origin,
@@ -1972,6 +1973,7 @@ namespace TMSBilling.Controllers
     {
         public int IdSeq { get; set; }
         public string? JobId { get; set; }
+        public string? CustomerMain { get; set; }
         public string? TruckNo { get; set; }
         public string? TruckSize { get; set; }
         public DateTime? DelivDate { get; set; }
