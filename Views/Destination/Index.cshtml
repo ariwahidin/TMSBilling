@@ -10,6 +10,7 @@
 <table class="table table-bordered table-striped" id="destinationTable">
     <thead>
         <tr>
+            <th>Customer</th>
             <th>Destination Name</th>
             <th>Location Code</th>
             <th>Area</th>
@@ -20,6 +21,7 @@
         @foreach (var item in Model)
         {
             <tr>
+                <td>@item.MAIN_CUST</td>
                 <td>@item.destination_code</td>
                 <td>@item.dest_loccode</td>
                 <td>@item.area</td>
@@ -27,10 +29,11 @@
                     <button class="btn btn-sm btn-warning btnEdit" data-id="@item.ID">
                         <i class="bi bi-pencil-square"></i>
                     </button>
-                    @if(isAdmin){
-                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    @if (isAdmin)
+                    {
+                        <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     }
                 </td>
             </tr>
@@ -60,23 +63,23 @@
             $("#btnAdd").click(function () {
                 $.get("/Destination/Form", function (html) {
                     $("#modalContent").html(html);
+                    initSelect2();
                     modal.show();
                 });
             });
 
-            $(document).on('click', '.btnEdit',function () {
+            $(document).on('click', '.btnEdit', function () {
                 const id = $(this).data("id");
                 $.get("/Destination/Form?id=" + id, function (html) {
                     $("#modalContent").html(html);
+                    initSelect2();
                     modal.show();
                 });
             });
 
-            $(".btnDelete").click(function () {
-                return;
+            $(document).on('click', '.btnDelete', function () {
                 if (!confirm("Yakin hapus data ini?")) return;
                 const id = $(this).data("id");
-
                 $.post("/Destination/Delete", { id }, function () {
                     location.reload();
                 }).fail(function () {
@@ -94,11 +97,16 @@
                         modal.hide();
                         location.reload();
                     },
-                    error: function () {
-                        // alert("Gagal menyimpan data.");
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.message ?? "Gagal menyimpan data.";
+                        alert(msg);
                     }
                 });
             });
+
+            function initSelect2() {
+                $('.select2').select2({ dropdownParent: $('#destinationModal'), width: '100%' });
+            }
         });
     </script>
 }

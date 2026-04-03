@@ -1,0 +1,144 @@
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Proforma Invoice Approval";
+}
+
+@model List<TMSBilling.Models.ProformaHeader>
+
+<style>
+    .badge-trx {
+        font-size: 11px;
+        font-weight: 600;
+        background: #1a6ebd;
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        letter-spacing: 0.5px;
+    }
+</style>
+
+<div class="row mb-2">
+    <div class="col-md-12">
+        @* <h5 class="mb-3">Proforma Invoice</h5> *@
+
+        <form method="get" action="/Proforma/Index" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <label class="form-label form-label-sm">Customer</label>
+                <select name="customerId" class="form-select form-select-sm">
+                    <option value="">-- All --</option>
+                    @foreach (SelectListItem item in ViewBag.Customers)
+                    {
+                        if (item.Value == ViewBag.SelectedCustomer?.ToString())
+                        {
+                            <option value="@item.Value" selected>@item.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm">From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                       value="@ViewBag.DateFrom" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm">To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm"
+                       value="@ViewBag.DateTo" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-sm btn-primary me-1">Filter</button>
+                <a href="/Proforma/Index" class="btn btn-sm btn-secondary">Reset</a>
+            </div>
+            <div class="col-md-3 d-flex align-items-end justify-content-end">
+                <a href="/Proforma/Form" class="btn btn-sm btn-success">+ Create Approval</a>
+            </div>
+        </form>
+
+        <table class="table table-bordered table-striped table-sm" style="font-size:13px;">
+            <thead class="table-dark">
+                <tr>
+                    <th>No</th>
+                    <th>Transaction No</th>
+                    <th>Customer</th>
+                    <th>Periode</th>
+                    <th>Approved By</th>
+                    <th>Created</th>
+                    <th>Grand Total</th>
+                    <th>Approved Value</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    var no = 1;
+                    foreach (var item in Model)
+                    {
+                        var grandTotal = item.Details?.Sum(d => d.GrandTotal) ?? 0;
+                        var approvedValue = item.Details?.Sum(d => d.ApprovalValue) ?? 0;
+                        <tr>
+                            <td>@no</td>
+                            <td><span class="badge-trx">@item.TransactionNo</span></td>
+                            <td>@item.CustomerName</td>
+                            <td>
+                                @item.PeriodeStart.ToString("dd-MM-yyyy")
+                                &nbsp;–&nbsp;
+                                @item.PeriodeEnd.ToString("dd-MM-yyyy")
+                            </td>
+                            <td>@item.ApprovedBy</td>
+                            <td>@item.CreatedAt.ToString("dd-MM-yyyy HH:mm")</td>
+                            <td class="text-end">@grandTotal.ToString("N0")</td>
+                            <td class="text-end">@approvedValue.ToString("N0")</td>
+                            <td>
+                                <a href="/Proforma/Form?id=@item.Id"
+                                   class="btn btn-xs btn-warning py-0 px-2">Edit</a>
+                                <button class="btn btn-xs btn-danger py-0 px-2"
+                                        onclick="deleteProforma(@item.Id, '@item.TransactionNo')">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        no++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">Data not found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function deleteProforma(id, transNo) {
+            if (!confirm('Delete ' + transNo + '?')) return;
+
+            fetch('/Proforma/Delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert(res.message);
+                    window.location.reload();
+                } else {
+                    alert('Failed: ' + res.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error deleting data');
+            });
+        }
+    </script>
+}

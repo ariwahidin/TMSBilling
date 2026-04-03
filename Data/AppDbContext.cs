@@ -381,6 +381,9 @@ namespace TMSBilling.Data
 
         public DbSet<LeadTime> LeadTimes { get; set; }
 
+        public DbSet<ProformaHeader> ProformaHeaders { get; set; }
+        public DbSet<ProformaDetail> ProformaDetails { get; set; }
+
         protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Integration>(e =>

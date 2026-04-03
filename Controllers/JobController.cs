@@ -178,13 +178,25 @@ namespace TMSBilling.Controllers
                 Text = c.SUB_CODE,
             }).ToList();
 
-
-            //ViewBag.ListCustomer = _selectList.getCustomers();
-            //ViewBag.ListCustomerGroup = _selectList.getCustomerGroup();
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
             ViewBag.ListOrigin = _selectList.GetOrigins();
-            ViewBag.ListDestination = _selectList.GetDestinations();
+            //ViewBag.ListDestination = _selectList.GetDestinations();
+
+            var accessibleCustomers = _context.UserXCustomers
+            .Where(x => x.UserName == username)
+            .Select(x => x.CustomerMain)
+            .Distinct()
+            .ToList();
+
+            ViewBag.ListDestination = _context.Destinations
+                .Where(d => accessibleCustomers.Contains(d.MAIN_CUST))
+                .Select(d => d.destination_code)
+                .Distinct()
+                .ToList()
+                .Select(code => new SelectListItem { Value = code, Text = code })
+                .ToList();
+
             ViewBag.ListUoM = _selectList.GetChargeUoms();
             ViewBag.ListModa = _selectList.GetServiceModas();
             ViewBag.ListServiceType = _selectList.GetServiceTypes();

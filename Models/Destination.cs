@@ -30,5 +30,8 @@ namespace TMSBilling.Models
 
         [StringLength(20)]
         public string? area { get; set; }
+
+        [StringLength(30)]
+        public string? MAIN_CUST { get; set; }
     }
 }

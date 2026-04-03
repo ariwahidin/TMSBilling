@@ -1,0 +1,381 @@
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = ViewBag.Mode == "Edit" ? "Edit Proforma Approval" : "Create Proforma Approval";
+
+    var header = ViewBag.Header as TMSBilling.Models.ProformaHeader;
+    var isEdit = ViewBag.Mode == "Edit";
+}
+
+@section Styles {
+    <link href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
+    <style>
+        #proforma-table {
+            overflow: hidden !important;
+        }
+        .tabulator-tableholder {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+        }
+        .proforma-header-box {
+            background: #1a6ebd;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .proforma-header-box strong {
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+        .tabulator .tabulator-col-title {
+            font-size: 12px;
+        }
+        .tabulator-row .tabulator-cell {
+            font-size: 12px;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-md-12 mb-2">
+        <a href="/Proforma/Index" class="btn btn-sm btn-secondary mb-2">← Back</a>
+        @* <h5>@(isEdit ? "Edit Proforma Invoice" : "Buat Proforma Invoice")</h5> *@
+    </div>
+
+    <div class="col-md-12 mb-3">
+        <div class="card" style="max-width:600px;">
+            <div class="card-body py-2">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm">Customer</label>
+                        @* <select id="selCustomer" class="form-select form-select-sm"
+                                @(isEdit ? "disabled" : "")>
+                            
+                            <option value="">-- Pilih --</option>
+                            @foreach (SelectListItem item in ViewBag.Customers)
+                            {
+                                var selected = isEdit && header?.CustomerId == item.Value
+                                    ? "selected" : "";
+                                <option value="@item.Value" data-text="@item.Text" selected="@selected">
+                                    @item.Text
+                                </option>
+                            }
+                        </select> *@
+                        <select id="selCustomer" class="form-select form-select-sm"
+                                @(isEdit ? "disabled" : "")>
+                            <option value="">-- Pilih --</option>
+                            @foreach (SelectListItem item in ViewBag.Customers)
+                            {
+                                if (isEdit && header?.CustomerId == item.Value)
+                                {
+                                    <option value="@item.Value" data-text="@item.Text" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value" data-text="@item.Text">@item.Text</option>
+                                }
+                            }
+                        </select>
+                        @* <pre style="font-size:11px">
+                            isEdit: @isEdit
+                            header.CustomerId: @header?.CustomerId
+                            options:
+                            @foreach (SelectListItem item in ViewBag.Customers)
+                            {
+                                        @($"  value='{item.Value}' text='{item.Text}' selected={isEdit && header?.CustomerId == item.Value}\n")
+                            }
+                            </pre> *@
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label form-label-sm">From</label>
+                        <input type="date" id="dateFrom" class="form-control form-control-sm"
+                               value="@(isEdit ? header?.PeriodeStart.ToString("yyyy-MM-dd") : "")"
+                               @(isEdit ? "disabled" : "") />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label form-label-sm">To</label>
+                        <input type="date" id="dateTo" class="form-control form-control-sm"
+                               value="@(isEdit ? header?.PeriodeEnd.ToString("yyyy-MM-dd") : "")"
+                               @(isEdit ? "disabled" : "") />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        @if (!isEdit)
+                        {
+                            <button id="btnGenerate" class="btn btn-sm btn-primary w-100">
+                                Generate
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12" id="proformaSection" style="@(isEdit ? "" : "display:none;")">
+
+        <div class="proforma-header-box" id="headerBox">
+            <strong id="lblCustomer">@(isEdit ? header?.CustomerName : "")</strong>
+            &nbsp;|&nbsp;
+            <span id="lblPeriode">
+                @(isEdit
+                    ? $"{header?.PeriodeStart:dd-MM-yyyy} – {header?.PeriodeEnd:dd-MM-yyyy}"
+                    : "")
+            </span>
+            @if (isEdit)
+            {
+                <span class="ms-2 badge bg-warning text-dark">@header?.TransactionNo</span>
+                <span class="ms-2 badge bg-warning text-dark">Approved By : @header?.ApprovedBy</span>
+                <span class="ms-2 badge bg-warning text-dark">Created At : @header?.CreatedAt.ToString("dd-MM-yyyy HH:mm")</span>
+            }
+        </div>
+
+        <div class="section-title">Detail Proforma</div>
+
+        <div id="proforma-table" style="width:900px; max-width:100%;"></div>
+
+        <div class="mt-2">
+            <button id="btnSave" class="btn btn-sm btn-success">💾 Save</button>
+            <span id="saveStatus" class="ms-2 text-muted" style="font-size:12px;"></span>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+    <script>
+
+        // ── State ──────────────────────────────────────────────
+        var headerId     = @(isEdit ? header?.Id.ToString() ?? "0" : "0");
+        var customerName = "";
+        var dateFrom     = "";
+        var dateTo       = "";
+        var table;
+
+        // ── Inisialisasi awal kalau mode Edit ──────────────────
+        @if (isEdit)
+        {
+            <text>
+            var initialData = @Html.Raw(ViewBag.DetailJson ?? "[]");
+            customerName = "@Html.Raw(header?.CustomerName ?? "")";
+            dateFrom     = "@(header?.PeriodeStart.ToString("yyyy-MM-dd") ?? "")";
+            dateTo       = "@(header?.PeriodeEnd.ToString("yyyy-MM-dd") ?? "")";
+            initTable(initialData);
+            </text>
+        }
+
+        // ── Number formatter ───────────────────────────────────
+        function fmtNumber(cell){
+            var v = cell.getValue();
+            if (!v && v !== 0) return "-";
+            return Number(v).toLocaleString("id-ID");
+        }
+
+        // ── Init Tabulator ─────────────────────────────────────
+        function initTable(data) {
+            if (table) {
+                table.setData(data);
+                return;
+            }
+
+            table = new Tabulator("#proforma-table", {
+                height: "380px",
+                layout: "fitData",
+                renderHorizontal: "virtual",
+                data: data,
+                columns: [
+                    {
+                        title: "No",
+                        formatter: "rownum",
+                        width: 45,
+                        hozAlign: "center",
+                        headerHozAlign: "center"
+                    },
+                    {
+                        title: "Type",
+                        field: "type",
+                        width: 180,
+                        editor: false
+                    },
+                    {
+                        title: "Area",
+                        field: "area",
+                        width: 180,
+                        editor: false
+                    },
+                    {
+                        title: "Grand Total",
+                        field: "grandTotal",
+                        width: 150,
+                        hozAlign: "right",
+                        formatter: fmtNumber,
+                        editor: false,
+                        bottomCalc: "sum",
+                        bottomCalcFormatter: function(cell){
+                            return Number(cell.getValue()).toLocaleString("id-ID");
+                        }
+                    },
+                    {
+                        title: "Approval Value",
+                        field: "approvalValue",
+                        width: 160,
+                        hozAlign: "right",
+                        editor: "number",
+                        editorParams: { min: 0, step: 1000 },
+                        formatter: fmtNumber,
+                        bottomCalc: "sum",
+                        bottomCalcFormatter: function(cell){
+                            return Number(cell.getValue()).toLocaleString("id-ID");
+                        }
+                    },
+                    {
+                        title: "Remarks",
+                        field: "remarks",
+                        width: 200,
+                        editor: "textarea"
+                    },
+                ],
+            });
+        }
+
+        // ── Tombol Generate ────────────────────────────────────
+        document.getElementById("btnGenerate")?.addEventListener("click", function () {
+            var custId  = document.getElementById("selCustomer").value;
+            var custTxt = document.getElementById("selCustomer")
+                            .options[document.getElementById("selCustomer").selectedIndex]?.dataset?.text ?? "";
+            dateFrom    = document.getElementById("dateFrom").value;
+            dateTo      = document.getElementById("dateTo").value;
+
+            if (!custId || !dateFrom || !dateTo) {
+                alert("Pilih customer dan isi periode terlebih dahulu");
+                return;
+            }
+            if (dateFrom > dateTo) {
+                alert("Tanggal 'Dari' tidak boleh lebih besar dari 'Sampai'");
+                return;
+            }
+
+            customerName = custTxt;
+
+            fetch("/Proforma/Generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customerId: custId,
+                    dateFrom: dateFrom,
+                    dateTo: dateTo
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) {
+                    alert("Gagal generate: " + res.message);
+                    return;
+                }
+
+                // Normalisasi field name (camelCase dari JSON)
+                var rows = res.data.map(function(d){
+                    return {
+                        type:          d.type,
+                        area:          d.area,
+                        grandTotal:    d.grandTotal,
+                        approvalValue: 0,
+                        remarks:       ""
+                    };
+                });
+
+                // Update header box
+                document.getElementById("lblCustomer").textContent = customerName;
+                document.getElementById("lblPeriode").textContent  =
+                    formatDateDisplay(dateFrom) + " – " + formatDateDisplay(dateTo);
+
+                // Tampilkan section
+                document.getElementById("proformaSection").style.display = "";
+
+                initTable(rows);
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error saat generate");
+            });
+        });
+
+        // ── Tombol Save ────────────────────────────────────────
+        document.getElementById("btnSave").addEventListener("click", function () {
+            if (!table) {
+                alert("Generate data terlebih dahulu");
+                return;
+            }
+
+            var custId = document.getElementById("selCustomer")?.value ?? "";
+
+            // Kalau edit, ambil dari disabled select
+            if (headerId > 0) {
+                custId = document.getElementById("selCustomer")?.value ?? "";
+            }
+
+            var rows = table.getData();
+
+            var payload = {
+                headerId:     headerId > 0 ? headerId : null,
+                customerId:   custId || "@(isEdit ? header?.CustomerId : "")",
+                customerName: customerName || "@(isEdit ? header?.CustomerName : "")",
+                dateFrom:     dateFrom || "@(isEdit ? header?.PeriodeStart.ToString("yyyy-MM-dd") : "")",
+                dateTo:       dateTo   || "@(isEdit ? header?.PeriodeEnd.ToString("yyyy-MM-dd") : "")",
+                details:      rows.map(function(r){
+                    return {
+                        type:          r.type          ?? "",
+                        area:          r.area          ?? "",
+                        grandTotal:    r.grandTotal    ?? 0,
+                        approvalValue: r.approvalValue ?? 0,
+                        remarks:       r.remarks       ?? ""
+                    };
+                })
+            };
+
+            document.getElementById("btnSave").disabled = true;
+            document.getElementById("saveStatus").textContent = "Saving...";
+
+            fetch("/Proforma/Save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(res => {
+                document.getElementById("btnSave").disabled = false;
+                if (res.success) {
+                    document.getElementById("saveStatus").textContent =
+                        "✅ " + res.message + (res.transactionNo ? " (" + res.transactionNo + ")" : "");
+                    // Kalau insert baru, update headerId supaya next save = update
+                    if (res.transactionNo) {
+                        // redirect ke list setelah 1.5 detik
+                        setTimeout(function(){ window.location.href = "/Proforma/Index"; }, 1500);
+                    }
+                } else {
+                    document.getElementById("saveStatus").textContent = "❌ " + res.message;
+                }
+            })
+            .catch(err => {
+                document.getElementById("btnSave").disabled = false;
+                document.getElementById("saveStatus").textContent = "❌ Error";
+                console.error(err);
+            });
+        });
+
+        // ── Helper ─────────────────────────────────────────────
+        function formatDateDisplay(isoDate) {
+            if (!isoDate) return "";
+            var parts = isoDate.split("-");
+            if (parts.length !== 3) return isoDate;
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+    </script>
+}
