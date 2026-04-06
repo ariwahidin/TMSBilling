@@ -250,10 +250,6 @@ namespace TMSBilling.Controllers
 
                 if (!string.IsNullOrEmpty(jobid))
                 {
-                    //query = query.Where(o =>
-                    //    (o.delivery_date == parsedDate && o.order_status == 0) ||
-                    //    o.jobid == jobid
-                    //);
 
                     query = query.Where(o =>
                         (EF.Functions.DateDiffDay(o.delivery_date, parsedDate) == 0 && o.order_status == 0)
@@ -262,9 +258,6 @@ namespace TMSBilling.Controllers
                 }
                 else
                 {
-                    //query = query.Where(o =>
-                    //    o.delivery_date == parsedDate && o.order_status == 0
-                    //);
 
                     query = query.Where(o =>
                         EF.Functions.DateDiffDay(o.delivery_date, parsedDate) == 0 && o.order_status == 0
@@ -286,6 +279,7 @@ namespace TMSBilling.Controllers
                         o.order_status,
                         o.remark
                     })
+                .Distinct()
                 .ToList();
 
                 return Ok(new { success = true, data = orders });

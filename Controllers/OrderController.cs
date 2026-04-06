@@ -99,7 +99,7 @@ namespace TMSBilling.Controllers
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
                 LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
                 WHERE CAST(a.pickup_date AS date) BETWEEN {1} AND {2})
-                SELECT ord.*, b.jobid AS JobID, c.MAIN_CUST
+                SELECT DISTINCT ord.*, b.jobid AS JobID, c.MAIN_CUST
                 FROM ord 
                 LEFT JOIN TRC_JOB b ON ord.InvNo = b.inv_no
                 INNER JOIN TRC_CUST_GROUP c ON ord.SubCustId = c.SUB_CODE
