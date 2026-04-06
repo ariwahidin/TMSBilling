@@ -899,7 +899,9 @@ namespace TMSBilling.Controllers
                         errors.Add(new { row, section = "header", field = "Alamat asal", message = $"'{originName}' tidak ditemukan" });
                     }
 
-                    var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName && d.CustomerName == customer);
+                    //var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName && d.CustomerName == customer);
+
+                    var geofenceDestination = _context.Geofences.FirstOrDefault(d => d.FenceName == destName);
 
                     if (isB2C != "1") {
                         if (geofenceDestination == null)
