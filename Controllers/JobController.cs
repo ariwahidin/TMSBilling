@@ -1850,66 +1850,132 @@ namespace TMSBilling.Controllers
                     .Select(o => o.inv_no)
                     .ToList();
 
+                // Ambil semua jobid dari payload untuk cnee ini
+                var jobIdsInPayload = cneeGroup.Select(x => x.jobid).ToList();
+
                 // 3. Loop per inv_no, insert/update JobPOD
                 foreach (var inv_no in invNos)
                 {
-                    // Cari jobid dari Jobs
-                    var job = _context.Jobs
-                        .FirstOrDefault(j => j.inv_no == inv_no);
 
-                    if (job == null) continue;
+                    // Ambil semua job yang match inv_no DAN jobid ada di payload
+                    var jobs = _context.Jobs
+                        .Where(j => j.inv_no == inv_no && jobIdsInPayload.Contains(j.jobid))
+                        .ToList();
 
-                    var existing = _context.JobPODs
-                        .FirstOrDefault(x => x.jobid == job.jobid && x.inv_no == inv_no);
-
-                    if (existing != null)
+                    foreach (var job in jobs)
                     {
-                        // ===== UPDATE =====
-                        existing.outorigin_date = podData.outorigin_date;
-                        existing.outorigin_time = podData.outorigin_time;
-                        existing.arriv_date = podData.arriv_date;
-                        existing.arriv_time = podData.arriv_time;
-                        existing.arriv_pic = podData.arriv_pic;
-                        existing.pod_ret_date = podData.pod_ret_date;
-                        existing.pod_ret_time = podData.pod_ret_time;
-                        existing.pod_ret_pic = podData.pod_ret_pic;
-                        existing.pod_send_date = podData.pod_send_date;
-                        existing.pod_send_time = podData.pod_send_time;
-                        existing.pod_send_pic = podData.pod_send_pic;
-                        existing.pod_status = podData.pod_status;
-                        existing.spd_no = podData.spd_no;
-                        existing.pod_remark = podData.pod_remark;
-                        existing.update_user = username;
-                        existing.update_date = DateTime.Now;
-                        existing.input_method = "BY_CNEE";
-                    }
-                    else
-                    {
-                        // ===== INSERT =====
-                        var model = new JobPOD
+                        var existing = _context.JobPODs
+                            .FirstOrDefault(x => x.jobid == job.jobid && x.inv_no == job.inv_no);
+
+                        if (existing != null)
                         {
-                            jobid = job.jobid,
-                            inv_no = inv_no,
-                            outorigin_date = podData.outorigin_date,
-                            outorigin_time = podData.outorigin_time,
-                            arriv_date = podData.arriv_date,
-                            arriv_time = podData.arriv_time,
-                            arriv_pic = podData.arriv_pic,
-                            pod_ret_date = podData.pod_ret_date,
-                            pod_ret_time = podData.pod_ret_time,
-                            pod_ret_pic = podData.pod_ret_pic,
-                            pod_send_date = podData.pod_send_date,
-                            pod_send_time = podData.pod_send_time,
-                            pod_send_pic = podData.pod_send_pic,
-                            pod_status = podData.pod_status,
-                            spd_no = podData.spd_no,
-                            pod_remark = podData.pod_remark,
-                            entry_user = username,
-                            entry_date = DateTime.Now,
-                            input_method = "BY_CNEE"
-                        };
-                        _context.JobPODs.Add(model);
+                            // UPDATE
+                            existing.outorigin_date = podData.outorigin_date;
+                            existing.outorigin_time = podData.outorigin_time;
+                            existing.arriv_date = podData.arriv_date;
+                            existing.arriv_time = podData.arriv_time;
+                            existing.arriv_pic = podData.arriv_pic;
+                            existing.pod_ret_date = podData.pod_ret_date;
+                            existing.pod_ret_time = podData.pod_ret_time;
+                            existing.pod_ret_pic = podData.pod_ret_pic;
+                            existing.pod_send_date = podData.pod_send_date;
+                            existing.pod_send_time = podData.pod_send_time;
+                            existing.pod_send_pic = podData.pod_send_pic;
+                            existing.pod_status = podData.pod_status;
+                            existing.spd_no = podData.spd_no;
+                            existing.pod_remark = podData.pod_remark;
+                            existing.update_user = username;
+                            existing.update_date = DateTime.Now;
+                        }
+                        else
+                        {
+                            // INSERT
+                            var model = new JobPOD
+                            {
+                                jobid = job.jobid,
+                                inv_no = job.inv_no,
+                                outorigin_date = podData.outorigin_date,
+                                outorigin_time = podData.outorigin_time,
+                                arriv_date = podData.arriv_date,
+                                arriv_time = podData.arriv_time,
+                                arriv_pic = podData.arriv_pic,
+                                pod_ret_date = podData.pod_ret_date,
+                                pod_ret_time = podData.pod_ret_time,
+                                pod_ret_pic = podData.pod_ret_pic,
+                                pod_send_date = podData.pod_send_date,
+                                pod_send_time = podData.pod_send_time,
+                                pod_send_pic = podData.pod_send_pic,
+                                pod_status = podData.pod_status,
+                                spd_no = podData.spd_no,
+                                pod_remark = podData.pod_remark,
+                                entry_user = username,
+                                entry_date = DateTime.Now
+                            };
+                            _context.JobPODs.Add(model);
+                        }
                     }
+
+                    // Cari jobid dari Jobs
+                    //var job = _context.Jobs
+                    //    .FirstOrDefault(j => j.inv_no == inv_no);
+
+                    // Cari job yang inv_no-nya match DAN jobid-nya ada di payload
+                    //var job = _context.Jobs
+                    //    .FirstOrDefault(j => j.inv_no == inv_no && jobIdsInPayload.Contains(j.jobid));
+
+                    //if (job == null) continue;
+
+                    //var existing = _context.JobPODs
+                    //    .FirstOrDefault(x => x.jobid == job.jobid && x.inv_no == inv_no);
+
+                    //if (existing != null)
+                    //{
+                    //    // ===== UPDATE =====
+                    //    existing.outorigin_date = podData.outorigin_date;
+                    //    existing.outorigin_time = podData.outorigin_time;
+                    //    existing.arriv_date = podData.arriv_date;
+                    //    existing.arriv_time = podData.arriv_time;
+                    //    existing.arriv_pic = podData.arriv_pic;
+                    //    existing.pod_ret_date = podData.pod_ret_date;
+                    //    existing.pod_ret_time = podData.pod_ret_time;
+                    //    existing.pod_ret_pic = podData.pod_ret_pic;
+                    //    existing.pod_send_date = podData.pod_send_date;
+                    //    existing.pod_send_time = podData.pod_send_time;
+                    //    existing.pod_send_pic = podData.pod_send_pic;
+                    //    existing.pod_status = podData.pod_status;
+                    //    existing.spd_no = podData.spd_no;
+                    //    existing.pod_remark = podData.pod_remark;
+                    //    existing.update_user = username;
+                    //    existing.update_date = DateTime.Now;
+                    //    existing.input_method = "BY_CNEE";
+                    //}
+                    //else
+                    //{
+                    //    // ===== INSERT =====
+                    //    var model = new JobPOD
+                    //    {
+                    //        jobid = job.jobid,
+                    //        inv_no = inv_no,
+                    //        outorigin_date = podData.outorigin_date,
+                    //        outorigin_time = podData.outorigin_time,
+                    //        arriv_date = podData.arriv_date,
+                    //        arriv_time = podData.arriv_time,
+                    //        arriv_pic = podData.arriv_pic,
+                    //        pod_ret_date = podData.pod_ret_date,
+                    //        pod_ret_time = podData.pod_ret_time,
+                    //        pod_ret_pic = podData.pod_ret_pic,
+                    //        pod_send_date = podData.pod_send_date,
+                    //        pod_send_time = podData.pod_send_time,
+                    //        pod_send_pic = podData.pod_send_pic,
+                    //        pod_status = podData.pod_status,
+                    //        spd_no = podData.spd_no,
+                    //        pod_remark = podData.pod_remark,
+                    //        entry_user = username,
+                    //        entry_date = DateTime.Now,
+                    //        input_method = "BY_CNEE"
+                    //    };
+                    //    _context.JobPODs.Add(model);
+                    //}
                 }
             }
 

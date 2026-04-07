@@ -451,7 +451,25 @@
         document.getElementById('btnPodByCnee').addEventListener('click', function () {
             bootstrap.Modal.getInstance(document.getElementById('modalPodMode')).hide();
 
-            const orderIds = Array.from(selectedOrders);
+        let orderIds = Array.from(selectedOrders);
+
+        if (orderIds.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Selection',
+                text: 'Please select at least one order to POD Job.'
+            });
+            return;
+        }
+
+        if (orderIds.length > 1) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Warning',
+                text: 'Please select only one Job for Job POD By Consignee.'
+            });
+            return;
+        }
 
             fetch('/Job/BulkJobPodByCnee', {
                 method: 'POST',
