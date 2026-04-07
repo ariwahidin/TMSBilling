@@ -1600,15 +1600,16 @@ namespace TMSBilling.Controllers
             // ===== DETAIL =====
             var details =
             (from j in _context.Jobs
-             join p in _context.JobPODs
-                 on j.inv_no equals p.inv_no into podGroup
+             join p in _context.JobPODs on j.inv_no equals p.inv_no into podGroup
              from pod in podGroup.DefaultIfEmpty()
+             join o in _context.Orders on j.inv_no equals o.inv_no into orderGroup
+             from order in orderGroup.DefaultIfEmpty()
              where jobIds.Contains(j.jobid)
              select new
              {
                  j.jobid,
                  j.inv_no,
-
+                 order.cnee_code,
                  outorigin_date = pod.outorigin_date == null
                      ? null
                      : pod.outorigin_date.Value.ToString("yyyy-MM-dd"),
@@ -1642,6 +1643,118 @@ namespace TMSBilling.Controllers
             ViewBag.Details = details;
 
             return View("JobPod");
+        }
+
+
+        public IActionResult BulkJobPodByCnee([FromBody] List<int> orderIds)
+        {
+            if (orderIds == null || !orderIds.Any())
+            {
+                return Json(new { success = false, message = "No data received" });
+            }
+
+            // Simpan ke TempData / Session untuk halaman edit
+            HttpContext.Session.SetString(
+                "BulkOrderIds",
+                string.Join(",", orderIds)
+            );
+
+            return Json(new
+            {
+                success = true,
+                redirectUrl = Url.Action("JobPodByCnee", "Job")
+            });
+        }
+
+        public IActionResult JobPodByCnee()
+        {
+            var ids = HttpContext.Session.GetString("BulkOrderIds");
+
+            if (string.IsNullOrEmpty(ids))
+                return Content("SESSION KOSONG");
+
+            var orderIdList = ids.Split(',').Select(int.Parse).ToList();
+
+            // ===== HEADER =====
+            var headers = _context.JobHeaders
+                .Where(h => orderIdList.Contains(h.id_seq))
+                .Select(h => new {
+                    h.jobid,
+                    h.deliv_date,
+                    h.origin,
+                    h.dest,
+                    h.vendor_act,
+                    h.status_job
+                })
+                .ToList();
+
+            var jobIds = headers.Select(x => x.jobid).ToList();
+
+            // ===== DETAIL =====
+            var details =
+            (from j in _context.Jobs
+             join p in _context.JobPODs on j.inv_no equals p.inv_no into podGroup
+             from pod in podGroup.DefaultIfEmpty()
+             join o in _context.Orders on j.inv_no equals o.inv_no into orderGroup
+             from order in orderGroup.DefaultIfEmpty()
+             where jobIds.Contains(j.jobid)
+             select new
+             {
+                 j.jobid,
+                 j.inv_no,
+                 order.cnee_code,
+                 outorigin_date = pod.outorigin_date == null
+                     ? null
+                     : pod.outorigin_date.Value.ToString("yyyy-MM-dd"),
+
+                 arriv_date = pod.arriv_date == null
+                     ? null
+                     : pod.arriv_date.Value.ToString("yyyy-MM-dd"),
+
+                 pod_ret_date = pod.pod_ret_date == null
+                     ? null
+                     : pod.pod_ret_date.Value.ToString("yyyy-MM-dd"),
+
+                 pod_send_date = pod.pod_send_date == null
+                     ? null
+                     : pod.pod_send_date.Value.ToString("yyyy-MM-dd"),
+
+                 pod.outorigin_time,
+                 pod.arriv_time,
+                 pod.arriv_pic,
+                 pod.pod_ret_time,
+                 pod.pod_ret_pic,
+                 pod.pod_send_time,
+                 pod.pod_send_pic,
+                 pod.pod_status,
+                 pod.spd_no,
+                 pod.pod_remark
+             }).ToList()
+             .GroupBy(x => new { x.cnee_code, x.outorigin_date })
+             .Select(y => new {
+                 jobid = y.First().jobid,
+                 cnee_code = y.First().cnee_code,
+                 outorigin_date = y.First().outorigin_date,
+                 outorigin_time = y.First().outorigin_time,
+                 arriv_date = y.First().arriv_date,
+                 arriv_time = y.First().arriv_time,
+                 arriv_pic = y.First().arriv_pic,
+                 pod_ret_date = y.First().pod_ret_date,
+                 pod_ret_time = y.First().pod_ret_time,
+                 pod_ret_pic = y.First().pod_ret_pic,
+                 pod_send_date = y.First().pod_send_date,
+                 pod_send_time = y.First().pod_send_time,
+                 pod_send_pic = y.First().pod_send_pic,
+                 pod_status = y.First().pod_status,
+                 spd_no = y.First().spd_no,
+                 pod_remark = y.First().pod_remark,
+             }).ToList();
+
+
+            ViewBag.Headers = headers;
+            ViewBag.Details = details;
+
+            return View("JobPodByCnee");
         }
 
         [HttpPost]
@@ -1678,6 +1791,7 @@ namespace TMSBilling.Controllers
 
                     existing.update_user = username;
                     existing.update_date = DateTime.Now;
+                    existing.input_method = "BY_ORDER";
                 }
                 else
                 {
@@ -1701,7 +1815,8 @@ namespace TMSBilling.Controllers
                         spd_no = item.spd_no,
                         pod_remark = item.pod_remark,
                         entry_user = username,
-                        entry_date = DateTime.Now
+                        entry_date = DateTime.Now,
+                        input_method = "BY_ORDER"
                     };
 
                     _context.JobPODs.Add(model);
@@ -1710,6 +1825,95 @@ namespace TMSBilling.Controllers
 
             _context.SaveChanges();
 
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public IActionResult SavePodByCnee([FromBody] List<JobPOD> data)
+        {
+            if (data == null || data.Count == 0)
+                return Json(new { success = false, message = "Data kosong" });
+
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
+            // 1. Group input by cnee_code
+            var groupedByCnee = data.GroupBy(x => x.cnee_code);
+
+            foreach (var cneeGroup in groupedByCnee)
+            {
+                var cneeCode = cneeGroup.Key;
+                var podData = cneeGroup.First(); // data POD yang akan di-apply ke semua inv
+
+                // 2. Cari semua inv_no yang punya cnee_code ini di Orders
+                var invNos = _context.Orders
+                    .Where(o => o.cnee_code == cneeCode)
+                    .Select(o => o.inv_no)
+                    .ToList();
+
+                // 3. Loop per inv_no, insert/update JobPOD
+                foreach (var inv_no in invNos)
+                {
+                    // Cari jobid dari Jobs
+                    var job = _context.Jobs
+                        .FirstOrDefault(j => j.inv_no == inv_no);
+
+                    if (job == null) continue;
+
+                    var existing = _context.JobPODs
+                        .FirstOrDefault(x => x.jobid == job.jobid && x.inv_no == inv_no);
+
+                    if (existing != null)
+                    {
+                        // ===== UPDATE =====
+                        existing.outorigin_date = podData.outorigin_date;
+                        existing.outorigin_time = podData.outorigin_time;
+                        existing.arriv_date = podData.arriv_date;
+                        existing.arriv_time = podData.arriv_time;
+                        existing.arriv_pic = podData.arriv_pic;
+                        existing.pod_ret_date = podData.pod_ret_date;
+                        existing.pod_ret_time = podData.pod_ret_time;
+                        existing.pod_ret_pic = podData.pod_ret_pic;
+                        existing.pod_send_date = podData.pod_send_date;
+                        existing.pod_send_time = podData.pod_send_time;
+                        existing.pod_send_pic = podData.pod_send_pic;
+                        existing.pod_status = podData.pod_status;
+                        existing.spd_no = podData.spd_no;
+                        existing.pod_remark = podData.pod_remark;
+                        existing.update_user = username;
+                        existing.update_date = DateTime.Now;
+                        existing.input_method = "BY_CNEE";
+                    }
+                    else
+                    {
+                        // ===== INSERT =====
+                        var model = new JobPOD
+                        {
+                            jobid = job.jobid,
+                            inv_no = inv_no,
+                            outorigin_date = podData.outorigin_date,
+                            outorigin_time = podData.outorigin_time,
+                            arriv_date = podData.arriv_date,
+                            arriv_time = podData.arriv_time,
+                            arriv_pic = podData.arriv_pic,
+                            pod_ret_date = podData.pod_ret_date,
+                            pod_ret_time = podData.pod_ret_time,
+                            pod_ret_pic = podData.pod_ret_pic,
+                            pod_send_date = podData.pod_send_date,
+                            pod_send_time = podData.pod_send_time,
+                            pod_send_pic = podData.pod_send_pic,
+                            pod_status = podData.pod_status,
+                            spd_no = podData.spd_no,
+                            pod_remark = podData.pod_remark,
+                            entry_user = username,
+                            entry_date = DateTime.Now,
+                            input_method = "BY_CNEE"
+                        };
+                        _context.JobPODs.Add(model);
+                    }
+                }
+            }
+
+            _context.SaveChanges();
             return Json(new { success = true });
         }
 
@@ -1867,6 +2071,288 @@ namespace TMSBilling.Controllers
             return deliveryOrders;
 
         }
+
+
+        // ================================================================
+        // TAMBAHKAN METHOD-METHOD INI KE DALAM JobController
+        // ================================================================
+
+        // ------------------------------------------------------------------
+        // 1. SEARCH SHIPTO
+        //    GET /Job/SearchShipTo?q=keyword&delivDate=yyyy-MM-dd
+        // ------------------------------------------------------------------
+        [HttpGet]
+        public IActionResult SearchShipTo(string? q, string? delivDate)
+        {
+            var username = HttpContext.Session.GetString("username") ?? "System";
+
+            var allowedCustomers = _context.UserXCustomers
+                .Where(x => x.UserName == username)
+                .Select(x => x.CustomerMain)
+                .Distinct()
+                .ToList();
+
+            var allowedSubCodes = _context.CustomerGroups
+                .Where(cg => allowedCustomers.Contains(cg.MAIN_CUST))
+                .Select(cg => cg.SUB_CODE)
+                .Distinct()
+                .ToList();
+
+            var query = _context.Orders
+                .Where(o =>
+                    o.jobid != null &&
+                    allowedSubCodes.Contains(o.sub_custid)
+                );
+
+            if (!string.IsNullOrEmpty(delivDate) && DateTime.TryParse(delivDate, out var parsedDate))
+            {
+                query = query.Where(o => EF.Functions.DateDiffDay(o.delivery_date, parsedDate) == 0);
+            }
+
+            if (!string.IsNullOrEmpty(q))
+            {
+                var keyword = q.ToLower();
+                query = query.Where(o =>
+                    (o.ship_to_name != null && o.ship_to_name.ToLower().Contains(keyword)) ||
+                    (o.ship_to_address != null && o.ship_to_address.ToLower().Contains(keyword)) ||
+                    (o.ship_to_city != null && o.ship_to_city.ToLower().Contains(keyword))
+                );
+            }
+
+            var grouped = query
+                .GroupBy(o => new
+                {
+                    o.ship_to_name,
+                    o.ship_to_address,
+                    o.ship_to_city
+                })
+                .Select(g => new
+                {
+                    ship_to_name = g.Key.ship_to_name,
+                    ship_to_address = g.Key.ship_to_address,
+                    ship_to_city = g.Key.ship_to_city,
+                    total_order = g.Count(),
+                    job_ids = g.Select(o => o.jobid).Distinct().ToList(),
+                    delivery_dates = g.Select(o => o.delivery_date).Distinct().ToList(),
+                })
+                .OrderBy(g => g.ship_to_name)
+                .Take(50)
+                .ToList();
+
+            return Ok(new { success = true, data = grouped });
+        }
+
+        // ------------------------------------------------------------------
+        // 2. SIMPAN CONTEXT KE SESSION → REDIRECT KE HALAMAN POD
+        //    POST /Job/OpenPodByShipTo
+        // ------------------------------------------------------------------
+        [HttpPost]
+        public IActionResult OpenPodByShipTo([FromBody] OpenPodByShipToRequest req)
+        {
+            if (req == null || string.IsNullOrEmpty(req.ShipToName))
+                return BadRequest(new { success = false, message = "ShipTo tidak valid" });
+
+            HttpContext.Session.SetString("PodShipToName", req.ShipToName ?? "");
+            HttpContext.Session.SetString("PodShipToAddress", req.ShipToAddress ?? "");
+            HttpContext.Session.SetString("PodShipToCity", req.ShipToCity ?? "");
+            HttpContext.Session.SetString("PodDelivDate", req.DelivDate ?? "");
+
+            return Ok(new
+            {
+                success = true,
+                redirectUrl = Url.Action("JobPodByShipTo", "Job")
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // 3. HALAMAN POD BY SHIPTO
+        //    GET /Job/JobPodByShipTo
+        // ------------------------------------------------------------------
+        public IActionResult JobPodByShipTo()
+        {
+            var shipToName = HttpContext.Session.GetString("PodShipToName") ?? "";
+            var shipToAddress = HttpContext.Session.GetString("PodShipToAddress") ?? "";
+            var shipToCity = HttpContext.Session.GetString("PodShipToCity") ?? "";
+            var delivDateStr = HttpContext.Session.GetString("PodDelivDate") ?? "";
+
+            if (string.IsNullOrEmpty(shipToName))
+                return RedirectToAction("Index");
+
+            // Clear session setelah dibaca
+            HttpContext.Session.Remove("PodShipToName");
+            HttpContext.Session.Remove("PodShipToAddress");
+            HttpContext.Session.Remove("PodShipToCity");
+            HttpContext.Session.Remove("PodDelivDate");
+
+            var ordersQuery = _context.Orders
+                .Where(o =>
+                    o.jobid != null &&
+                    o.ship_to_name == shipToName &&
+                    o.ship_to_address == shipToAddress &&
+                    o.ship_to_city == shipToCity
+                );
+
+            if (!string.IsNullOrEmpty(delivDateStr) && DateTime.TryParse(delivDateStr, out var delivDate))
+            {
+                ordersQuery = ordersQuery.Where(o => EF.Functions.DateDiffDay(o.delivery_date, delivDate) == 0);
+            }
+
+            var orders = ordersQuery.ToList();
+
+            if (!orders.Any())
+                return RedirectToAction("Index");
+
+            var jobIds = orders.Select(o => o.jobid).Distinct().ToList();
+            var invNos = orders.Select(o => o.inv_no).Distinct().ToList();
+
+            var headers = _context.JobHeaders
+                .Where(h => jobIds.Contains(h.jobid))
+                .Select(h => new
+                {
+                    h.jobid,
+                    h.deliv_date,
+                    h.origin,
+                    h.dest,
+                    h.vendor_act,
+                    h.truck_no,
+                    h.driver_name,
+                    h.status_job
+                })
+                .ToList();
+
+            var details = (
+                from o in _context.Orders
+                join pod in _context.JobPODs
+                    on new { jobid = o.jobid, inv_no = o.inv_no }
+                    equals new { jobid = pod.jobid, inv_no = pod.inv_no }
+                    into podGroup
+                from pod in podGroup.DefaultIfEmpty()
+                where invNos.Contains(o.inv_no) && jobIds.Contains(o.jobid)
+                orderby o.jobid, o.inv_no
+                select new PodDetailViewModel
+                {
+                    jobid = o.jobid,
+                    inv_no = o.inv_no,
+                    ship_to_name = o.ship_to_name,
+                    ship_to_address = o.ship_to_address,
+                    ship_to_city = o.ship_to_city,
+                    delivery_date = o.delivery_date,
+
+                    outorigin_date = pod != null ? pod.outorigin_date : null,
+                    outorigin_time = pod != null ? pod.outorigin_time : null,
+                    arriv_date = pod != null ? pod.arriv_date : null,
+                    arriv_time = pod != null ? pod.arriv_time : null,
+                    arriv_pic = pod != null ? pod.arriv_pic : null,
+                    pod_ret_date = pod != null ? pod.pod_ret_date : null,
+                    pod_ret_time = pod != null ? pod.pod_ret_time : null,
+                    pod_ret_pic = pod != null ? pod.pod_ret_pic : null,
+                    pod_send_date = pod != null ? pod.pod_send_date : null,
+                    pod_send_time = pod != null ? pod.pod_send_time : null,
+                    pod_send_pic = pod != null ? pod.pod_send_pic : null,
+                    pod_status = pod != null ? pod.pod_status : null,
+                    spd_no = pod != null ? pod.spd_no : null,
+                    pod_remark = pod != null ? pod.pod_remark : null,
+                }
+            ).ToList();
+
+            ViewBag.Headers = headers;
+            ViewBag.Details = details;
+            ViewBag.ShipToName = shipToName;
+            ViewBag.ShipToAddress = shipToAddress;
+            ViewBag.ShipToCity = shipToCity;
+
+            return View("JobPodByShipTo");
+        }
+
+        // ------------------------------------------------------------------
+        // 4. SAVE POD — fix dari SavePod lama:
+        //    - tambah [ValidateAntiForgeryToken]
+        //    - hanya upsert row yang ada perubahannya (dirty check)
+        //    - return pesan error detail
+        //    POST /Job/SavePod  (replace method lama)
+        // ------------------------------------------------------------------
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public IActionResult SavePod([FromBody] List<JobPOD> data)
+        //{
+        //    if (data == null || data.Count == 0)
+        //        return Json(new { success = false, message = "Data kosong" });
+
+        //    var username = HttpContext.Session.GetString("username") ?? "System";
+        //    var savedCount = 0;
+
+        //    foreach (var item in data)
+        //    {
+        //        if (string.IsNullOrEmpty(item.jobid) || string.IsNullOrEmpty(item.inv_no))
+        //            continue;
+
+        //        var existing = _context.JobPODs
+        //            .FirstOrDefault(x => x.jobid == item.jobid && x.inv_no == item.inv_no);
+
+        //        if (existing != null)
+        //        {
+        //            existing.outorigin_date = item.outorigin_date;
+        //            existing.outorigin_time = item.outorigin_time;
+        //            existing.arriv_date = item.arriv_date;
+        //            existing.arriv_time = item.arriv_time;
+        //            existing.arriv_pic = item.arriv_pic;
+        //            existing.pod_ret_date = item.pod_ret_date;
+        //            existing.pod_ret_time = item.pod_ret_time;
+        //            existing.pod_ret_pic = item.pod_ret_pic;
+        //            existing.pod_send_date = item.pod_send_date;
+        //            existing.pod_send_time = item.pod_send_time;
+        //            existing.pod_send_pic = item.pod_send_pic;
+        //            existing.pod_status = item.pod_status;
+        //            existing.spd_no = item.spd_no;
+        //            existing.pod_remark = item.pod_remark;
+        //            existing.update_user = username;
+        //            existing.update_date = DateTime.Now;
+        //        }
+        //        else
+        //        {
+        //            _context.JobPODs.Add(new JobPOD
+        //            {
+        //                jobid = item.jobid,
+        //                inv_no = item.inv_no,
+        //                outorigin_date = item.outorigin_date,
+        //                outorigin_time = item.outorigin_time,
+        //                arriv_date = item.arriv_date,
+        //                arriv_time = item.arriv_time,
+        //                arriv_pic = item.arriv_pic,
+        //                pod_ret_date = item.pod_ret_date,
+        //                pod_ret_time = item.pod_ret_time,
+        //                pod_ret_pic = item.pod_ret_pic,
+        //                pod_send_date = item.pod_send_date,
+        //                pod_send_time = item.pod_send_time,
+        //                pod_send_pic = item.pod_send_pic,
+        //                pod_status = item.pod_status,
+        //                spd_no = item.spd_no,
+        //                pod_remark = item.pod_remark,
+        //                entry_user = username,
+        //                entry_date = DateTime.Now
+        //            });
+        //        }
+
+        //        savedCount++;
+        //    }
+
+        //    try
+        //    {
+        //        _context.SaveChanges();
+        //        return Json(new { success = true, message = $"{savedCount} data berhasil disimpan" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return Json(new { success = false, message = $"Gagal menyimpan: {ex.Message}" });
+        //    }
+        //}
+
+        // ------------------------------------------------------------------
+        // FIX: SetStarted dan SetClosed — tambah [HttpPost]
+        // (sudah ada di controller, tinggal tambah attribute)
+        // ------------------------------------------------------------------
+        // [HttpPost]  ← tambahkan ini di atas method SetStarted
+        // [HttpPost]  ← tambahkan ini di atas method SetClosed
 
 
 
@@ -2043,4 +2529,37 @@ namespace TMSBilling.Controllers
         public decimal TotalVolume { get; set; }
     }
 
+    public class PodDetailViewModel
+    {
+        public string? jobid { get; set; }
+        public string? inv_no { get; set; }
+        public string? ship_to_name { get; set; }
+        public string? ship_to_address { get; set; }
+        public string? ship_to_city { get; set; }
+        public DateTime? delivery_date { get; set; }
+
+        // POD fields
+        public DateTime? outorigin_date { get; set; }
+        public string? outorigin_time { get; set; }
+        public DateTime? arriv_date { get; set; }
+        public string? arriv_time { get; set; }
+        public string? arriv_pic { get; set; }
+        public DateTime? pod_ret_date { get; set; }
+        public string? pod_ret_time { get; set; }
+        public string? pod_ret_pic { get; set; }
+        public DateTime? pod_send_date { get; set; }
+        public string? pod_send_time { get; set; }
+        public string? pod_send_pic { get; set; }
+        public byte? pod_status { get; set; }
+        public string? spd_no { get; set; }
+        public string? pod_remark { get; set; }
+    }
+
+    public class OpenPodByShipToRequest
+    {
+        public string? ShipToName { get; set; }
+        public string? ShipToAddress { get; set; }
+        public string? ShipToCity { get; set; }
+        public string? DelivDate { get; set; }
+    }
 }

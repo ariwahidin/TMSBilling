@@ -1,0 +1,544 @@
+﻿@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "POD Entry";
+
+    var shipToName = ViewBag.ShipToName as string ?? "-";
+    var shipToAddress = ViewBag.ShipToAddress as string ?? "-";
+    var shipToCity = ViewBag.ShipToCity as string ?? "-";
+}
+
+@* Serialize data untuk JS *@
+@{
+    var headersJson = System.Text.Json.JsonSerializer.Serialize(ViewBag.Headers);
+    var detailsJson = System.Text.Json.JsonSerializer.Serialize(ViewBag.Details);
+}
+
+<!-- Info ShipTo -->
+<div class="card mb-3 border-primary">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div>
+                <span class="text-muted" style="font-size:12px;">Ship To</span>
+                <div class="fw-bold">@shipToName</div>
+            </div>
+            <div class="vr"></div>
+            <div>
+                <span class="text-muted" style="font-size:12px;">Address</span>
+                <div>@shipToAddress</div>
+            </div>
+            <div class="vr"></div>
+            <div>
+                <span class="text-muted" style="font-size:12px;">City</span>
+                <div>@shipToCity</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="mb-2 d-flex gap-2">
+    <button id="btnBack" class="btn btn-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+    <button id="btnSave" class="btn btn-primary btn-sm">
+        <i class="bi bi-save"></i> Save POD
+    </button>
+    <span id="savingIndicator" class="text-muted align-self-center" style="display:none; font-size:13px;">
+        <span class="spinner-border spinner-border-sm"></span> Menyimpan...
+    </span>
+</div>
+
+<!-- Job Headers Table -->
+<div class="mb-3">
+    <div class="fw-semibold mb-1" style="font-size:13px;">Job yang terkait:</div>
+    <table class="table table-bordered table-sm align-middle mb-0" style="width:auto; font-size:13px;">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Job ID</th>
+                <th>Delivery Date</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>Vendor</th>
+                <th>Truck</th>
+                <th>Driver</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (ViewBag.Headers != null)
+            {
+                var no = 1;
+                foreach (var item in ViewBag.Headers)
+                {
+                    var statusClass = item.status_job == "STARTED" ? "text-success fw-bold"
+                    : item.status_job == "CLOSED" ? "text-secondary"
+                    : "text-warning fw-bold";
+                    <tr>
+                        <td>@no</td>
+                        <td class="fw-semibold">@item.jobid</td>
+                        <td>@(item.deliv_date?.ToString("yyyy-MM-dd") ?? "-")</td>
+                        <td>@item.origin</td>
+                        <td>@item.dest</td>
+                        <td>@item.vendor_act</td>
+                        <td>@item.truck_no</td>
+                        <td>@item.driver_name</td>
+                        <td class="@statusClass">@item.status_job</td>
+                    </tr>
+                    no++;
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- POD Tabulator Grid -->
+<div class="fw-semibold mb-1" style="font-size:13px;">Input POD:</div>
+<div id="podTable"></div>
+
+@section Styles {
+    <link href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
+    <style>
+        #podTable .tabulator-tableholder {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+        }
+
+        #podTable .tabulator-cell[tabulator-field="jobid"],
+        #podTable .tabulator-cell[tabulator-field="inv_no"] {
+            background-color: #f8f9fa;
+            font-weight: 500;
+        }
+        /* Highlight row yang sudah diubah */
+        #podTable .tabulator-row.row-dirty {
+            background-color: #fff8e1 !important;
+        }
+
+            #podTable .tabulator-row.row-dirty:hover {
+                background-color: #fff3cd !important;
+            }
+        /* Kolom ship_to */
+        #podTable .tabulator-cell[tabulator-field="ship_to_name"] {
+            font-size: 12px;
+            color: #495057;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+
+    <script>
+        var detailData = @Html.Raw(detailsJson);
+
+        // ── Track dirty rows ──────────────────────────────────────────
+        var dirtyRows = new Set();
+
+        // ── Editor: date auto-format ──────────────────────────────────
+        function dateAutoFormatEditor(cell, onRendered, success, cancel) {
+            var input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = "YYYY-MM-DD";
+
+            var raw = cell.getValue();
+            // normalize dari ISO datetime ke date saja
+            input.value = raw ? String(raw).slice(0, 10) : "";
+
+            input.addEventListener("input", function () {
+                let v = this.value.replace(/[^0-9]/g, "");
+                if (v.length >= 5) v = v.slice(0, 4) + "-" + v.slice(4);
+                if (v.length >= 8) v = v.slice(0, 7) + "-" + v.slice(7, 10);
+                this.value = v.slice(0, 10);
+            });
+
+            input.addEventListener("paste", function (e) {
+                e.preventDefault();
+                let text = (e.clipboardData || window.clipboardData).getData("text").trim();
+                input.value = normalizeDate(text) ?? "";
+            });
+
+            input.addEventListener("keydown", function (e) {
+                if (e.key === "Enter") success(input.value);
+                if (e.key === "Escape") cancel();
+            });
+
+            input.addEventListener("blur", function () {
+                success(input.value);
+            });
+
+            return input;
+        }
+
+        function normalizeDate(value) {
+            if (!value) return null;
+            value = value.trim();
+            if (/^\d{8}$/.test(value))
+                return value.slice(0, 4) + "-" + value.slice(4, 6) + "-" + value.slice(6, 8);
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+                const parts = value.split("/");
+                let a = parseInt(parts[0], 10), b = parseInt(parts[1], 10), y = parts[2];
+                let day, month;
+                if (a > 12) { day = a; month = b; }
+                else if (b > 12) { month = a; day = b; }
+                else { day = a; month = b; }
+                return y + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+            }
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+            return null;
+        }
+
+        function validateDateISO(cell, value) {
+            if (!value) return true;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+            const d = new Date(value);
+            return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+        }
+
+        // ── Editor: time auto-format ──────────────────────────────────
+        function timeAutoFormatEditor(cell, onRendered, success, cancel) {
+            var input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = "HH:mm";
+            input.value = cell.getValue() || "";
+
+            input.addEventListener("input", function () {
+                let v = this.value.replace(/[^0-9]/g, "");
+                if (v.length >= 3) v = v.slice(0, 2) + ":" + v.slice(2, 4);
+                this.value = v.slice(0, 5);
+            });
+
+            input.addEventListener("paste", function (e) {
+                e.preventDefault();
+                let text = (e.clipboardData || window.clipboardData).getData("text").trim();
+                input.value = normalizeTime(text) ?? "";
+            });
+
+            input.addEventListener("keydown", function (e) {
+                if (e.key === "Enter") success(input.value);
+                if (e.key === "Escape") cancel();
+            });
+
+            input.addEventListener("blur", function () {
+                success(input.value);
+            });
+
+            return input;
+        }
+
+        function normalizeTime(value) {
+            if (!value) return null;
+            value = value.trim();
+            if (/^\d{4}$/.test(value)) return value.slice(0, 2) + ":" + value.slice(2, 4);
+            if (/^\d{2}\.\d{2}$/.test(value)) return value.replace(".", ":");
+            if (/^\d{2}:\d{2}$/.test(value)) return value;
+            return null;
+        }
+
+        function validateTimeHHmm(cell, value) {
+            if (!value) return true;
+            if (!/^\d{2}:\d{2}$/.test(value)) return false;
+            const [h, m] = value.split(":").map(Number);
+            return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+        }
+
+        // ── Tabulator ─────────────────────────────────────────────────
+        var table = new Tabulator("#podTable", {
+            height: "420px",
+            layout: "fitData",
+            renderHorizontal: "virtual",
+            data: detailData,
+
+            rowFormatter: function (row) {
+                if (dirtyRows.has(row.getData().inv_no)) {
+                    row.getElement().classList.add("row-dirty");
+                } else {
+                    row.getElement().classList.remove("row-dirty");
+                }
+            },
+
+            cellEdited: function (cell) {
+                const inv = cell.getRow().getData().inv_no;
+                dirtyRows.add(inv);
+                cell.getRow().reformat();
+            },
+
+            columns: [
+                // ── Frozen identifiers ──
+                {
+                    title: "Job ID",
+                    field: "jobid",
+                    frozen: true,
+                    editor: false,
+                    width: 130
+                },
+                {
+                    title: "Invoice No",
+                    field: "inv_no",
+                    frozen: true,
+                    editor: false,
+                    width: 130
+                },
+                {
+                    title: "Ship To",
+                    field: "ship_to_name",
+                    frozen: true,
+                    editor: false,
+                    width: 150,
+                    tooltip: function (e, cell) {
+                        var d = cell.getRow().getData();
+                        return (d.ship_to_address || "") + " — " + (d.ship_to_city || "");
+                    }
+                },
+                {
+                    title: "Deliv Date",
+                    field: "delivery_date",
+                    frozen: true,
+                    editor: false,
+                    width: 100,
+                    formatter: function (cell) {
+                        var v = cell.getValue();
+                        return v ? String(v).slice(0, 10) : "-";
+                    }
+                },
+
+                // ── POD input columns ──
+                {
+                    title: "Out Date",
+                    field: "outorigin_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO,
+                    width: 120,
+                    formatter: function (cell) {
+                        var v = cell.getValue();
+                        return v ? String(v).slice(0, 10) : "";
+                    }
+                },
+                {
+                    title: "Out Time",
+                    field: "outorigin_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm,
+                    width: 100
+                },
+                {
+                    title: "Arriv Date",
+                    field: "arriv_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO,
+                    width: 120,
+                    formatter: function (cell) {
+                        var v = cell.getValue();
+                        return v ? String(v).slice(0, 10) : "";
+                    }
+                },
+                {
+                    title: "Arriv Time",
+                    field: "arriv_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm,
+                    width: 100
+                },
+                {
+                    title: "Rcv By",
+                    field: "arriv_pic",
+                    editor: "input",
+                    width: 130
+                },
+                {
+                    title: "Return Date",
+                    field: "pod_ret_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO,
+                    width: 120,
+                    formatter: function (cell) {
+                        var v = cell.getValue();
+                        return v ? String(v).slice(0, 10) : "";
+                    }
+                },
+                {
+                    title: "Return Time",
+                    field: "pod_ret_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm,
+                    width: 100
+                },
+                {
+                    title: "POD Rcv By",
+                    field: "pod_ret_pic",
+                    editor: "input",
+                    width: 130
+                },
+                {
+                    title: "SPD No",
+                    field: "spd_no",
+                    editor: "input",
+                    width: 120
+                },
+                {
+                    title: "POD Send Date",
+                    field: "pod_send_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO,
+                    width: 130,
+                    formatter: function (cell) {
+                        var v = cell.getValue();
+                        return v ? String(v).slice(0, 10) : "";
+                    }
+                },
+                {
+                    title: "POD Send Time",
+                    field: "pod_send_time",
+                    editor: timeAutoFormatEditor,
+                    validator: validateTimeHHmm,
+                    width: 120
+                },
+                {
+                    title: "POD Send By",
+                    field: "pod_send_pic",
+                    editor: "input",
+                    width: 130
+                },
+                {
+                    title: "POD Status",
+                    field: "pod_status",
+                    editor: "list",
+                    editorParams: {
+                        values: {
+                            "": "-",
+                            "1": "Delivered",
+                            "2": "Partial",
+                            "3": "Returned"
+                        },
+                        clearable: true
+                    },
+                    formatter: function (cell) {
+                        const map = {
+                            1: '<span class="badge bg-success">Delivered</span>',
+                            2: '<span class="badge bg-warning text-dark">Partial</span>',
+                            3: '<span class="badge bg-danger">Returned</span>',
+                        };
+                        return map[cell.getValue()] || '<span class="text-muted">-</span>';
+                    },
+                    width: 120
+                },
+                {
+                    title: "Remark",
+                    field: "pod_remark",
+                    editor: "textarea",
+                    width: 150
+                },
+            ]
+        });
+
+        // ── Save ──────────────────────────────────────────────────────
+        document.getElementById("btnSave").addEventListener("click", function () {
+            var allData = table.getData();
+
+            if (dirtyRows.size === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Tidak ada perubahan',
+                    text: 'Belum ada data yang diubah.',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+
+            // Hanya kirim row yang diubah
+            var dirtyData = allData.filter(row => dirtyRows.has(row.inv_no));
+
+            Swal.fire({
+                title: 'Simpan POD?',
+                text: `${dirtyData.length} data akan disimpan.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Simpan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                document.getElementById("btnSave").disabled = true;
+                document.getElementById("savingIndicator").style.display = "inline-block";
+
+                fetch("/Job/SavePod", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ""
+                    },
+                    body: JSON.stringify(dirtyData)
+                })
+                .then(res => res.json())
+                .then(res => {
+                    document.getElementById("btnSave").disabled = false;
+                    document.getElementById("savingIndicator").style.display = "none";
+
+                    if (res.success) {
+                        dirtyRows.clear();
+                        table.redraw();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: res.message,
+                            confirmButtonColor: '#3085d6'
+                        });
+                    } else {
+                        Swal.fire('Gagal', res.message || 'Terjadi kesalahan', 'error');
+                    }
+                })
+                .catch(() => {
+                    document.getElementById("btnSave").disabled = false;
+                    document.getElementById("savingIndicator").style.display = "none";
+                    Swal.fire('Error', 'Server tidak merespons', 'error');
+                });
+            });
+        });
+
+        // ── Navigation ────────────────────────────────────────────────
+        document.getElementById("btnBack").addEventListener("click", function () {
+            if (dirtyRows.size > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Ada perubahan yang belum disimpan',
+                    text: 'Yakin ingin keluar?',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Keluar',
+                    cancelButtonText: 'Tetap di sini'
+                }).then(r => {
+                    if (r.isConfirmed) window.location.href = '/Job/Index';
+                });
+            } else {
+                window.location.href = '/Job/Index';
+            }
+        });
+
+        document.getElementById("btnRefresh").addEventListener("click", function () {
+            if (dirtyRows.size > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Ada perubahan yang belum disimpan',
+                    text: 'Refresh akan menghapus perubahan. Lanjut?',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Refresh',
+                    cancelButtonText: 'Batal'
+                }).then(r => {
+                    if (r.isConfirmed) window.location.reload();
+                });
+            } else {
+                window.location.reload();
+            }
+        });
+    </script>
+
+    @* CSRF token untuk fetch *@
+    @Html.AntiForgeryToken()
+}

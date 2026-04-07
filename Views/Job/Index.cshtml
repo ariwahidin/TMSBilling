@@ -143,6 +143,93 @@
     </tbody>
 </table>
 
+<!-- Modal Pilih Mode POD -->
+<div class="modal fade" id="modalPodMode" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <i class="bi bi-box-seam"></i> Input POD
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body d-grid gap-2">
+                <p class="text-muted mb-1" style="font-size:13px;">Select POD input method:</p>
+                <button id="btnPodByInvoice" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-text"></i> By Order
+                </button>
+                <button id="btnPodByCnee" class="btn btn-outline-success">
+                    <i class="bi bi-geo-alt"></i> By Consignee
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Search ShipTo -->
+<div class="modal fade" id="modalShipTo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <i class="bi bi-geo-alt"></i> POD by Ship To
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Filter -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label form-label-sm text-muted">Keyword (nama / alamat / kota)</label>
+                        <input type="text" id="inputShipToKeyword" class="form-control form-control-sm"
+                               placeholder="Cari ship to...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm text-muted">Delivery Date</label>
+                        <input type="date" id="inputShipToDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button id="btnSearchShipTo" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div id="shipToLoading" style="display:none;" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                    <span class="ms-2 text-muted">Mencari...</span>
+                </div>
+
+                <!-- Empty -->
+                <div id="shipToEmpty" style="display:none;" class="text-center py-3 text-muted">
+                    <i class="bi bi-inbox fs-4"></i>
+                    <p class="mt-1 mb-0">Tidak ada data ditemukan</p>
+                </div>
+
+                <!-- Result -->
+                <table class="table table-sm table-bordered table-hover align-middle"
+                       id="tblShipToResult" style="display:none; font-size:13px;">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th>Ship To Name</th>
+                            <th>Address</th>
+                            <th>City</th>
+                            <th class="text-center" style="width:65px;">Orders</th>
+                            <th class="text-center" style="width:65px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipToResultBody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         // Delete confirmation
@@ -278,46 +365,212 @@
             updateCheckAllStatus();
         });
 
-        function bulkConfirmOrders() {
+        // function bulkConfirmOrders() {
+        //     if (selectedOrders.size === 0) {
+        //         Swal.fire({
+        //             icon: 'warning',
+        //             title: 'No Selection',
+        //             text: 'Please select at least one order to POD Job.'
+        //         });
+        //         return;
+        //     }
+
+        //     const orderIds = Array.from(selectedOrders);
+
+        //     console.log("Order Selecteds : ", orderIds);
+
+        //     fetch('/Job/BulkJobPod', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify(orderIds)
+        //     })
+        //     .then(res => res.json())
+        //     .then(res => {
+        //         if (res.success) {
+        //             pindah ke halaman edit
+        //             window.location.href = res.redirectUrl;
+        //         } else {
+        //             Swal.fire('Error', res.message, 'error');
+        //         }
+        //     })
+        //     .catch(err => {
+        //         console.error(err);
+        //         Swal.fire('Error', 'Server error', 'error');
+        //     });
+        // }
+
+
+        // Bulk confirm button handler
+        // $('#btnBulkConfirm').on('click', bulkConfirmOrders);
+
+                // ── Buka modal pilih mode POD ────────────────────────────────────
+        $('#btnBulkConfirm').on('click', function () {
             if (selectedOrders.size === 0) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'No Selection',
-                    text: 'Please select at least one order to POD Job.'
+                    title: 'Tidak ada pilihan',
+                    text: 'Pilih minimal satu job terlebih dahulu.'
                 });
                 return;
             }
+            new bootstrap.Modal(document.getElementById('modalPodMode')).show();
+        });
+
+        // ── Mode 1: By Invoice No (flow lama) ───────────────────────────
+        document.getElementById('btnPodByInvoice').addEventListener('click', function () {
+            bootstrap.Modal.getInstance(document.getElementById('modalPodMode')).hide();
 
             const orderIds = Array.from(selectedOrders);
 
-            console.log("Order Selecteds : ", orderIds);
-
             fetch('/Job/BulkJobPod', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderIds)
             })
             .then(res => res.json())
             .then(res => {
                 if (res.success) {
-                    // pindah ke halaman edit
                     window.location.href = res.redirectUrl;
                 } else {
                     Swal.fire('Error', res.message, 'error');
                 }
             })
-            .catch(err => {
-                console.error(err);
-                Swal.fire('Error', 'Server error', 'error');
+            .catch(() => Swal.fire('Error', 'Server error', 'error'));
+        });
+
+        // ── Mode 2: By Ship To ───────────────────────────────────────────
+        document.getElementById('btnPodByCnee').addEventListener('click', function () {
+            bootstrap.Modal.getInstance(document.getElementById('modalPodMode')).hide();
+
+            const orderIds = Array.from(selectedOrders);
+
+            fetch('/Job/BulkJobPodByCnee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderIds)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    window.location.href = res.redirectUrl;
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            })
+            .catch(() => Swal.fire('Error', 'Server error', 'error'));
+        });
+        // document.getElementById('btnPodByShipTo').addEventListener('click', function () {
+        //     bootstrap.Modal.getInstance(document.getElementById('modalPodMode')).hide();
+
+        //     Reset state modal ShipTo
+        //     $('#inputShipToKeyword').val('');
+        //     $('#inputShipToDate').val(new Date().toISOString().slice(0, 10));
+        //     $('#tblShipToResult').hide();
+        //     $('#shipToEmpty').hide();
+        //     $('#shipToResultBody').empty();
+
+        //     new bootstrap.Modal(document.getElementById('modalShipTo')).show();
+
+        //     Auto search langsung
+        //     searchShipTo();
+        // });
+
+        // ── Search ShipTo ────────────────────────────────────────────────
+        function searchShipTo() {
+            const q         = $('#inputShipToKeyword').val().trim();
+            const delivDate = $('#inputShipToDate').val();
+
+            $('#shipToLoading').show();
+            $('#tblShipToResult').hide();
+            $('#shipToEmpty').hide();
+
+            $.ajax({
+                url: '/Job/SearchShipTo',
+                method: 'GET',
+                data: { q, delivDate },
+                success: function (res) {
+                    $('#shipToLoading').hide();
+
+                    if (!res.success || !res.data || res.data.length === 0) {
+                        $('#shipToEmpty').show();
+                        return;
+                    }
+
+                    const tbody = $('#shipToResultBody');
+                    tbody.empty();
+
+                    res.data.forEach((item, idx) => {
+                        const firstDate = item.delivery_dates && item.delivery_dates[0]
+                            ? item.delivery_dates[0].slice(0, 10)
+                            : '';
+
+                        tbody.append(`
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td>${item.ship_to_name || '-'}</td>
+                                <td style="max-width:180px; white-space:normal; font-size:12px;">
+                                    ${item.ship_to_address || '-'}
+                                </td>
+                                <td>${item.ship_to_city || '-'}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary">${item.total_order}</span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-success btn-sm py-0 px-2"
+                                        onclick="openPodShipTo(
+                                            ${JSON.stringify(item.ship_to_name)},
+                                            ${JSON.stringify(item.ship_to_address)},
+                                            ${JSON.stringify(item.ship_to_city)},
+                                            '${firstDate}'
+                                        )">
+                                        <i class="bi bi-box-arrow-right"></i> Open
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+
+                    $('#tblShipToResult').show();
+                },
+                error: function () {
+                    $('#shipToLoading').hide();
+                    $('#shipToEmpty').show();
+                }
             });
         }
 
+        $('#btnSearchShipTo').on('click', searchShipTo);
+        $('#inputShipToKeyword').on('keydown', function (e) {
+            if (e.key === 'Enter') searchShipTo();
+        });
 
-        // Bulk confirm button handler
-        $('#btnBulkConfirm').on('click', bulkConfirmOrders);
+        // ── Open POD by ShipTo ───────────────────────────────────────────
+        function openPodShipTo(name, address, city, delivDate) {
+            fetch('/Job/OpenPodByShipTo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ShipToName:    name,
+                    ShipToAddress: address,
+                    ShipToCity:    city,
+                    DelivDate:     delivDate
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    window.location.href = res.redirectUrl;
+                } else {
+                    Swal.fire('Error', res.message || 'Gagal membuka POD', 'error');
+                }
+            })
+            .catch(() => Swal.fire('Error', 'Server error', 'error'));
+        }
 
+
+        
         function confirmStartJob(jobId) {
             Swal.fire({
                 icon: 'question',
@@ -343,7 +596,7 @@
             });
         }
 
-         function confirmClosedJob(jobId) {
+        function confirmClosedJob(jobId) {
             Swal.fire({
                 icon: 'question',
                 title: 'Close Job?',
@@ -367,6 +620,7 @@
                 }
             });
         }
+
 
 
     </script>

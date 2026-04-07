@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Drawing;
 
 namespace TMSBilling.Models
 {
@@ -16,6 +17,8 @@ namespace TMSBilling.Models
 
         [StringLength(50)]
         public string? inv_no { get; set; }
+
+        public string? cnee_code { get; set; }
 
         public DateTime? outorigin_date { get; set; }
 
@@ -53,6 +56,9 @@ namespace TMSBilling.Models
 
         [StringLength(50)]
         public string? pod_remark { get; set; }
+
+        [StringLength(10)]
+        public string? input_method { get; set; }
 
         [StringLength(50)]
         public string? entry_user { get; set; }

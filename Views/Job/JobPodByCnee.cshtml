@@ -1,7 +1,7 @@
 ﻿
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
-    ViewData["Title"] = "Job POD";
+    ViewData["Title"] = "Job POD By Consignee";
     @model List<JobHeader>
 }
 
@@ -339,14 +339,14 @@
                 },
 
                 // INVOICE
-                {
-                    title: "Invoice No",
-                    field: "inv_no",
-                    width: 150,
-                    editor: false,
-                    frozen: true,
-                    width: 130
-                },
+                // {
+                //     title: "Invoice No",
+                //     field: "inv_no",
+                //     width: 150,
+                //     editor: false,
+                //     frozen: true,
+                //     width: 130
+                // },
 
                 // CNEE
                 {
@@ -468,7 +468,7 @@
 
             // return;
 
-            fetch("/Job/SavePod", {
+            fetch("/Job/SavePodByCnee", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
