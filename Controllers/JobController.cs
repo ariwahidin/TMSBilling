@@ -1917,7 +1917,7 @@ namespace TMSBilling.Controllers
             return Json(new { success = true });
         }
 
-        public async Task<IActionResult> PrintSPK(string jobid)
+        public async Task<IActionResult> PrintSPK(string jobid, bool preview = false)
         {
             if (string.IsNullOrEmpty(jobid))
             {
@@ -1958,41 +1958,46 @@ namespace TMSBilling.Controllers
                 },
 
                 // List Delivery Orders
-                DeliveryOrders = GetDeliveryOrdersByJobId(jobid)
+                DeliveryOrders = GetDeliveryOrdersByJobId(jobid),
+                IsPreview = preview,
             };
 
             var jobHeader = _context.JobHeaders.FirstOrDefault(j => j.jobid == jobid);
             var custGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == jobHeader.cust_group);
             if (jobHeader != null)
             {
-                jobHeader.spk_print_count = (jobHeader.spk_print_count ?? 0) + 1;
-                _context.SaveChanges();
-
-                var emailVendors = await _context.VendorTruckEmails
-                .Where(vte => vte.sup_code == jobHeader.vendor_act && vte.is_active == 1)
-                .ToListAsync();
-
-                var emailTo = string.Join(",", emailVendors
-                    .Where(e => e.email_type == "TO")
-                    .Select(e => e.email_address));
-
-                var emailCc = string.Join(",", emailVendors
-                    .Where(e => e.email_type == "CC")
-                    .Select(e => e.email_address));
-
-            
-
-                _mailer.TriggerEvent("spk.printed", new Dictionary<string, string>
+                if (jobHeader != null && !preview)
                 {
+                    jobHeader.spk_print_count = (jobHeader.spk_print_count ?? 0) + 1;
+                    _context.SaveChanges();
 
-                    ["nomor_spk"] = jobid,
-                    ["customer"] = custGroup != null ? custGroup.MAIN_CUST : "UNKNOWN", 
-                    ["vendor_name"] = jobHeader.vendor_act,
-                    ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
-                    ["order_id"] = jobid,
-                    ["email_to"] = emailTo,
-                    ["email_cc"] = emailCc
-                }, HttpContext.Session.GetString("username") ?? "System");
+                    var emailVendors = await _context.VendorTruckEmails
+                    .Where(vte => vte.sup_code == jobHeader.vendor_act && vte.is_active == 1)
+                    .ToListAsync();
+
+                    var emailTo = string.Join(",", emailVendors
+                        .Where(e => e.email_type == "TO")
+                        .Select(e => e.email_address));
+
+                    var emailCc = string.Join(",", emailVendors
+                        .Where(e => e.email_type == "CC")
+                        .Select(e => e.email_address));
+
+
+
+                    _mailer.TriggerEvent("spk.printed", new Dictionary<string, string>
+                    {
+
+                        ["nomor_spk"] = jobid,
+                        ["customer"] = custGroup != null ? custGroup.MAIN_CUST : "UNKNOWN",
+                        ["vendor_name"] = jobHeader.vendor_act,
+                        ["tanggal"] = DateTime.UtcNow.ToString("dd MMMM yyyy"),
+                        ["order_id"] = jobid,
+                        ["email_to"] = emailTo,
+                        ["email_cc"] = emailCc
+                    }, HttpContext.Session.GetString("username") ?? "System");
+
+                }
             }
 
             return View(spkViewModel);
@@ -2510,6 +2515,8 @@ namespace TMSBilling.Controllers
         public int GrandTotalBox => DeliveryOrders?.Sum(d => d.TotalBoxKoli) ?? 0;
         public int GrandTotalQty => DeliveryOrders?.Sum(d => d.TotalQtyPcs) ?? 0;
         public decimal GrandTotalVolume => DeliveryOrders?.Sum(d => d.TotalVolume) ?? 0;
+
+        public bool IsPreview { get; set; } = false;
     }
 
     public class KelengkapanDokumen

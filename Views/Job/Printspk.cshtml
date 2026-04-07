@@ -203,14 +203,77 @@
             .btn-print:hover {
                 background-color: #0056b3;
             }
+
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 80px;
+            font-weight: bold;
+            color: rgba(255, 0, 0, 0.15);
+            pointer-events: none;
+            z-index: 9999;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        @@media print {
+            .watermark {
+                display: none;
+            }
+            /* Kalau somehow bisa print, watermark tetap hilang */
+        }
+
+        @@media print {
+            body .preview-mode *
+
+        {
+            visibility: hidden !important;
+        }
+
+        body.preview-mode::after {
+            visibility: visible !important;
+            content: "This document is for preview only. Use the Print SPK button to print.";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+        }
+
+        }
     </style>
 </head>
-<body>
+<body class="@(Model.IsPreview ? "preview-mode" : "")">
     <div class="container">
+
+        @if (Model.IsPreview)
+        {
+            <div class="watermark">PREVIEW</div>
+        }
+
         <div class="no-print" style="text-align: center; margin-bottom: 15px;">
-            <button class="btn-print" onclick="window.print()">🖨️ Print </button>
+            @if (!Model.IsPreview)
+            {
+                <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+            }
+            else
+            {
+                <span style="background:#ffc107;color:#333;padding:6px 14px;border-radius:4px;font-weight:bold;margin-right:8px;">
+                    👁️ Mode Preview — Cannot be printed
+                </span>
+            }
             <button class="btn-print" style="background-color: #6c757d;" onclick="window.close()">✖ Close</button>
         </div>
+
+        @* <div class="no-print" style="text-align: center; margin-bottom: 15px;">
+            <button class="btn-print" onclick="window.print()">🖨️ Print </button>
+            <button class="btn-print" style="background-color: #6c757d;" onclick="window.close()">✖ Close</button>
+        </div> *@
 
         <!-- Header -->
         <div class="header">
@@ -418,8 +481,23 @@
     </div>
 
     <script>
-        // Auto print on load (optional)
-        window.onload = function() { window.print(); }
+        window.onload = function () {
+            @if (Model.IsPreview)
+            {
+                    <text>
+                    window.addEventListener('beforeprint', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                            alert('This document is for preview only. Use the Print SPK button to print.');
+                        return false;
+                    });
+                    </text>
+            }
+            else
+            {
+                    <text>window.print();</text>
+            }
+        }
     </script>
 </body>
 </html>
