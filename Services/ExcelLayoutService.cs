@@ -1037,7 +1037,8 @@ namespace TMSBilling.Services
             // Section title
             if (!string.IsNullOrWhiteSpace(sec.section_title))
             {
-                var titleText = Resolve(sec.section_title, eventParams);
+                //var titleText = Resolve(sec.section_title, eventParams);
+                var titleText = ResolveWithDataTable(sec.section_title, dt, eventParams);
                 var titleRange = ws.Range(row, startCol, row, startCol + colCount - 1);
                 titleRange.Merge();
                 titleRange.FirstCell().Value = titleText;
@@ -1279,6 +1280,51 @@ namespace TMSBilling.Services
             };
             return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
                 merged.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
+        }
+
+        private string ResolveWithDataTable(
+        string template,
+        DataTable dt,
+        Dictionary<string, string>? values = null)
+        {
+            if (string.IsNullOrEmpty(template)) return template;
+
+            // base values (optional dari luar)
+            var merged = new Dictionary<string, string>(
+                values ?? new Dictionary<string, string>(),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            // default system values
+            merged["date"] = DateTime.Now.ToString("yyyy-MM-dd");
+            merged["date_label"] = DateTime.Now.ToString("dd MMMM yyyy");
+            merged["datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            merged["year"] = DateTime.Now.ToString("yyyy");
+            merged["month"] = DateTime.Now.ToString("MM");
+            merged["month_name"] = DateTime.Now.ToString("MMMM");
+            merged["today"] = DateTime.Now.ToString("yyyy-MM-dd");
+            merged["month_start"] = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd");
+            merged["month_end"] = new DateTime(
+                DateTime.Now.Year,
+                DateTime.Now.Month,
+                DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month)
+            ).ToString("yyyy-MM-dd");
+
+            // ambil dari DataTable row pertama
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                var row = dt.Rows[0];
+                foreach (DataColumn col in dt.Columns)
+                {
+                    var val = row[col];
+                    merged[col.ColumnName] = val == DBNull.Value ? "" : val.ToString()!;
+                }
+            }
+
+            // replace {{key}}
+            return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
+                merged.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value
+            );
         }
 
         private string InjectWhere(string sql, string where)

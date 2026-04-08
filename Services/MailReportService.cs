@@ -721,10 +721,39 @@ namespace TMSBilling.Services
         // ──────────────────────────────────────────────
         // PRIVATE: Helpers
         // ──────────────────────────────────────────────
+        //private string ResolvePlaceholders(string template, Dictionary<string, string> values)
+        //{
+        //    return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
+        //        values.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
+        //}
+
         private string ResolvePlaceholders(string template, Dictionary<string, string> values)
         {
+            if (string.IsNullOrEmpty(template)) return template;
+
+            var merged = new Dictionary<string, string>(
+                values ?? new Dictionary<string, string>(),
+                StringComparer.OrdinalIgnoreCase
+            )
+            {
+                ["date"] = DateTime.Now.ToString("yyyy-MM-dd"),
+                ["date_label"] = DateTime.Now.ToString("dd MMMM yyyy"),
+                ["datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["year"] = DateTime.Now.ToString("yyyy"),
+                ["month"] = DateTime.Now.ToString("MM"),
+                ["month_name"] = DateTime.Now.ToString("MMMM"),
+                ["today"] = DateTime.Now.ToString("yyyy-MM-dd"),
+                ["month_start"] = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"),
+                ["month_end"] = new DateTime(
+                    DateTime.Now.Year,
+                    DateTime.Now.Month,
+                    DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month)
+                ).ToString("yyyy-MM-dd")
+            };
+
             return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
-                values.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
+                merged.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value
+            );
         }
 
         private bool IsSafeSelectQuery(string sql)
