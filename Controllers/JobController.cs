@@ -2142,12 +2142,13 @@ namespace TMSBilling.Controllers
                                   {
                                       job.jobid,
                                       job.inv_no,
-                                      ShipTo = geofence.FenceName,
-                                      City = geofence.City
+                                      ShipTo = order.ship_to_name,
+                                      ShipToAddress = order.ship_to_address,
+                                      City = order.dest_area,
                                   } into g
                                   select new DeliveryOrderItem
                                   {
-                                      ShipTo = g.Key.ShipTo ?? "",
+                                      ShipTo = g.Key.ShipToAddress ?? "",
                                       ShipToName = g.Key.ShipTo ?? "",
                                       City = g.Key.City ?? "",
                                       DO = g.Key.inv_no ?? "",
