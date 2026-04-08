@@ -82,6 +82,8 @@ namespace TMSBilling.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error on TriggerEvent: {key}", eventKey);
+                    // Tambah sementara untuk debug:
+                    Console.WriteLine($"TriggerEvent ERROR: {ex.Message}\n{ex.StackTrace}");
                 }
             });
         }

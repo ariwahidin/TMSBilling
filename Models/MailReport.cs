@@ -197,8 +197,11 @@ namespace TMSBilling.Models
         [StringLength(20)]
         public string? trigger_type { get; set; }              // EVENT | SCHEDULED | MANUAL
 
-        [StringLength(200)]
-        public string? trigger_ref { get; set; }               // e.g. "order_id=123"
+        //[StringLength(200)]
+        //public string? trigger_ref { get; set; }               // e.g. "order_id=123"
+
+        [StringLength(2000)]
+        public string? trigger_ref { get; set; }
 
         // Recipients snapshot
         [Column(TypeName = "nvarchar(max)")]
