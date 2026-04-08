@@ -1402,12 +1402,13 @@ namespace TMSBilling.Controllers
                     }
                     else
                     {
-                        await _emailService.SendSuratPerintahKirimAsync(
-                            model: emailModel,
-                            toEmails: toEmails,
-                            ccEmails: ccEmails.Any() ? ccEmails : null,
-                            sentByUserId: currentUser?.Id
-                        );
+                        // DiNonaktifkan
+                        //await _emailService.SendSuratPerintahKirimAsync(
+                        //    model: emailModel,
+                        //    toEmails: toEmails,
+                        //    ccEmails: ccEmails.Any() ? ccEmails : null,
+                        //    sentByUserId: currentUser?.Id
+                        //);
                     }
                 }
                 catch (Exception emailEx)
@@ -1528,12 +1529,13 @@ namespace TMSBilling.Controllers
                     }
                     else
                     {
-                        await _emailService.SendSuratPerintahKirimAsync(
-                            model: emailModel,
-                            toEmails: toEmails,
-                            ccEmails: ccEmails.Any() ? ccEmails : null,
-                            sentByUserId: currentUser?.Id
-                        );
+                        //Fungsi Email DiNonaktifkan
+                        //await _emailService.SendSuratPerintahKirimAsync(
+                        //    model: emailModel,
+                        //    toEmails: toEmails,
+                        //    ccEmails: ccEmails.Any() ? ccEmails : null,
+                        //    sentByUserId: currentUser?.Id
+                        //);
                     }
                 }
                 catch (Exception emailEx)
