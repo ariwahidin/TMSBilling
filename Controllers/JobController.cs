@@ -2050,6 +2050,24 @@ namespace TMSBilling.Controllers
                         .Select(e => e.email_address));
 
 
+                    // Ambil email dari CustomerMain
+                    if (custGroup != null)
+                    {
+                        var customerMain = await _context.CustomerMains
+                            .FirstOrDefaultAsync(c => c.MAIN_CUST == custGroup.MAIN_CUST);
+
+                        if (customerMain != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(customerMain.TO_EMAIL))
+                                emailTo = string.Join(",", new[] { emailTo, customerMain.TO_EMAIL }
+                                    .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+                            if (!string.IsNullOrWhiteSpace(customerMain.CC_EMAIL))
+                                emailCc = string.Join(",", new[] { emailCc, customerMain.CC_EMAIL }
+                                    .Where(s => !string.IsNullOrWhiteSpace(s)));
+                        }
+                    }
+
 
                     _mailer.TriggerEvent("spk.printed", new Dictionary<string, string>
                     {
