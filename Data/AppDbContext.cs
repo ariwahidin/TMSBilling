@@ -384,6 +384,8 @@ namespace TMSBilling.Data
         public DbSet<ProformaHeader> ProformaHeaders { get; set; }
         public DbSet<ProformaDetail> ProformaDetails { get; set; }
 
+        public DbSet<MstHoliday> MstHolidays { get; set; }
+
         protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Integration>(e =>

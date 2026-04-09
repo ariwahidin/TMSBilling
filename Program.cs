@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Globalization;
 using TMSBilling.Data;
+using TMSBilling.Extensions;
 using TMSBilling.Filters;
 using TMSBilling.Jobs;
 using TMSBilling.Models;
@@ -193,13 +194,12 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthorization();
-
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
+
+await app.SeedDatabaseAsync();
 
 app.Run();
