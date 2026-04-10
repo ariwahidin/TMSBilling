@@ -1,0 +1,57 @@
+﻿@model TMSBilling.Models.MstHoliday
+
+<form id="holidayForm">
+    <input type="hidden" asp-for="IdSeq" />
+
+    <!-- Error alert -->
+    <div id="formError" class="alert alert-danger py-2 d-none"></div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Tanggal <span class="text-danger">*</span></label>
+        <div class="col-sm-8">
+            <input asp-for="HolDate" type="date" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Nama Holiday <span class="text-danger">*</span></label>
+        <div class="col-sm-8">
+            <input asp-for="HolName" class="form-control" placeholder="cth: Hari Raya Idul Fitri" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Deskripsi</label>
+        <div class="col-sm-8">
+            <textarea asp-for="Description" class="form-control" rows="2"
+                      placeholder="Opsional"></textarea>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Status</label>
+        <div class="col-sm-8 d-flex align-items-center gap-2">
+            <div class="form-check form-switch mb-0">
+                <input asp-for="IsActive" class="form-check-input" type="checkbox"
+                       id="switchIsActive" role="switch" style="width:2.5em; height:1.4em;">
+                <label class="form-check-label" for="switchIsActive" id="labelIsActive">
+                    @(Model.IsActive ? "Active" : "Inactive")
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-floppy"></i> Save
+        </button>
+    </div>
+</form>
+
+<script>
+    // Live label update untuk toggle
+    document.getElementById("switchIsActive").addEventListener("change", function () {
+        document.getElementById("labelIsActive").textContent = this.checked ? "Active" : "Inactive";
+    });
+</script>
