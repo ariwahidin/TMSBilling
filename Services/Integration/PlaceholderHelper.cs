@@ -22,6 +22,7 @@ namespace TMSBilling.Services.Integration
                 return key switch
                 {
                     "date"      => DateTime.Now.ToString("yyyy-MM-dd"),
+                    "filedatetime" => DateTime.Now.ToString("yyyy-MM-dd_hh-mm-ss_tt"),
                     "datetime"  => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     "timestamp" => DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
                     "year"      => DateTime.Now.Year.ToString(),
