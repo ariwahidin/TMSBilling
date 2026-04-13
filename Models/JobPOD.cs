@@ -25,6 +25,7 @@ namespace TMSBilling.Models
         [StringLength(10)]
         public string? outorigin_time { get; set; }
 
+        public DateTime? unloading_date { get; set; }
         public DateTime? arriv_date { get; set; }
 
         [StringLength(10)]

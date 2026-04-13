@@ -1619,6 +1619,9 @@ namespace TMSBilling.Controllers
                  arriv_date = pod.arriv_date == null
                      ? null
                      : pod.arriv_date.Value.ToString("yyyy-MM-dd"),
+                 unloading_date = pod.unloading_date == null
+                     ? null
+                     : pod.unloading_date.Value.ToString("yyyy-MM-dd"),
 
                  pod_ret_date = pod.pod_ret_date == null
                      ? null
@@ -1712,6 +1715,9 @@ namespace TMSBilling.Controllers
                  arriv_date = pod.arriv_date == null
                      ? null
                      : pod.arriv_date.Value.ToString("yyyy-MM-dd"),
+                 unloading_date = pod.unloading_date == null
+                     ? null
+                     : pod.unloading_date.Value.ToString("yyyy-MM-dd"),
 
                  pod_ret_date = pod.pod_ret_date == null
                      ? null
@@ -1741,6 +1747,7 @@ namespace TMSBilling.Controllers
                  arriv_date = y.First().arriv_date,
                  arriv_time = y.First().arriv_time,
                  arriv_pic = y.First().arriv_pic,
+                 unloading_date = y.First().unloading_date,
                  pod_ret_date = y.First().pod_ret_date,
                  pod_ret_time = y.First().pod_ret_time,
                  pod_ret_pic = y.First().pod_ret_pic,
@@ -1780,6 +1787,7 @@ namespace TMSBilling.Controllers
                     existing.outorigin_time = item.outorigin_time;
                     existing.arriv_date = item.arriv_date;
                     existing.arriv_time = item.arriv_time;
+                    existing.unloading_date = item.unloading_date;
                     existing.arriv_pic = item.arriv_pic;
                     existing.pod_ret_date = item.pod_ret_date;
                     existing.pod_ret_time = item.pod_ret_time;
@@ -1804,6 +1812,8 @@ namespace TMSBilling.Controllers
                         inv_no = item.inv_no,
                         outorigin_date = item.outorigin_date,
                         outorigin_time = item.outorigin_time,
+                        unloading_date = item.unloading_date,
+
                         arriv_date = item.arriv_date,
                         arriv_time = item.arriv_time,
                         arriv_pic = item.arriv_pic,
@@ -1874,10 +1884,12 @@ namespace TMSBilling.Controllers
                             // UPDATE
                             existing.outorigin_date = podData.outorigin_date;
                             existing.outorigin_time = podData.outorigin_time;
+                            existing.unloading_date = podData.unloading_date;
                             existing.arriv_date = podData.arriv_date;
                             existing.arriv_time = podData.arriv_time;
                             existing.arriv_pic = podData.arriv_pic;
                             existing.pod_ret_date = podData.pod_ret_date;
+
                             existing.pod_ret_time = podData.pod_ret_time;
                             existing.pod_ret_pic = podData.pod_ret_pic;
                             existing.pod_send_date = podData.pod_send_date;
@@ -1896,6 +1908,7 @@ namespace TMSBilling.Controllers
                             {
                                 jobid = job.jobid,
                                 inv_no = job.inv_no,
+                                unloading_date = podData.unloading_date,
                                 outorigin_date = podData.outorigin_date,
                                 outorigin_time = podData.outorigin_time,
                                 arriv_date = podData.arriv_date,
