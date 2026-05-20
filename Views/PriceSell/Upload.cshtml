@@ -5,35 +5,6 @@
 
 @section Styles {
     <style>
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .loading-text {
-            color: white;
-            margin-top: 20px;
-            font-size: 16px;
-            font-weight: 500;
-        }
-
         @@keyframes spin {
             0% {
                 transform: rotate(0deg);
@@ -53,8 +24,8 @@
             .btn-loading::after {
                 content: '';
                 position: absolute;
-                width: 16px;
-                height: 16px;
+                width: 14px;
+                height: 14px;
                 margin: auto;
                 border: 2px solid transparent;
                 border-top-color: #ffffff;
@@ -68,36 +39,37 @@
     </style>
 }
 
-<div class="d-flex align-items-center gap-2">
-    <form id="uploadForm" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
-        <a href="/PriceSell/Index" class="btn btn-primary">Back</a>
-        <a href="/PriceSell/DownloadTemplate" class="btn btn-secondary">Download Template Excel</a>
-        <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" style="width:auto;">
-        <button type="button" class="btn btn-primary" id="previewBtn" onclick="previewExcel()">Preview</button>
-    </form>
-    <div class="d-flex align-items-center">
-        <select id="operationType" class="form-select me-3" style="width: 200px;">
-            <option value="add">Add</option>
-            <option value="edit">Edit</option>
-        </select>
-        <button class="btn btn-success" id="submitBtn" onclick="submitData()">Submit</button>
-    </div>
+<div class="d-flex align-items-center gap-2 flex-wrap">
+    <a href="/PriceSell/Index" class="btn btn-primary">Back</a>
+    <a href="/PriceSell/DownloadTemplate" class="btn btn-secondary">Download Template Excel</a>
+    <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" style="width:auto;" />
+    <button type="button" class="btn btn-primary" id="previewBtn" onclick="previewExcel()">Preview</button>
+    <select id="operationType" class="form-select" style="width:160px;">
+        <option value="add">Add</option>
+        <option value="edit">Edit</option>
+    </select>
+    <button class="btn btn-success" id="submitBtn" onclick="submitData()">Submit</button>
 </div>
 
 <hr />
 
+<div id="resultCard"></div>
+
 <h4>Preview Data</h4>
-<p>Total rows : <span id="spanRows"></span></p>
-<table class="table table-bordered nowrap" id="previewTable" style="font-size:12px;">
-    <thead></thead>
-    <tbody></tbody>
-</table>
+<p>Total rows: <span id="spanRows">0</span></p>
+
+<div style="overflow-x:auto;">
+    <table class="table table-bordered table-sm nowrap" id="previewTable" style="font-size:12px;">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+</div>
 
 <!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
+<div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:9999;">
     <div class="text-center">
-        <div class="loading-spinner"></div>
-        <div class="loading-text" id="loadingText">Processing...</div>
+        <div style="width:48px;height:48px;border:5px solid #f3f3f3;border-top:5px solid #007bff;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;"></div>
+        <div id="loadingText" style="color:white;margin-top:16px;font-size:16px;font-weight:500;">Processing...</div>
     </div>
 </div>
 
@@ -106,90 +78,86 @@
     <script>
         let parsedData = [];
 
-        function showLoading(text = 'Processing...') {
-            document.getElementById('loadingText').textContent = text;
+        /* ── loading helpers ── */
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text || 'Processing...';
             document.getElementById('loadingOverlay').style.display = 'flex';
         }
-
         function hideLoading() {
             document.getElementById('loadingOverlay').style.display = 'none';
         }
-
-        function setButtonLoading(buttonId, isLoading) {
-            const button = document.getElementById(buttonId);
-            if (isLoading) {
-                button.classList.add('btn-loading');
-                button.disabled = true;
-            } else {
-                button.classList.remove('btn-loading');
-                button.disabled = false;
-            }
+        function setButtonLoading(id, on) {
+            const btn = document.getElementById(id);
+            if (on) { btn.classList.add('btn-loading');    btn.disabled = true;  }
+            else    { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
 
+        /* ── excel date fix ── */
         function fixExcelDate(value) {
-            if (typeof value === "number") {
-                const excelEpoch = new Date(1899, 11, 30);
-                const dateObj = new Date(excelEpoch.getTime() + value * 86400000);
-                return dateObj.toISOString().split("T")[0];
-            } else if (typeof value === "string") {
-                const parsed = new Date(value);
-                return isNaN(parsed) ? "" : parsed.toISOString().split("T")[0];
+            if (typeof value === 'number') {
+                const epoch = new Date(1899, 11, 30);
+                return new Date(epoch.getTime() + value * 86400000).toISOString().split('T')[0];
             }
-            return "";
+            if (typeof value === 'string') {
+                const d = new Date(value);
+                return isNaN(d) ? '' : d.toISOString().split('T')[0];
+            }
+            return '';
         }
 
+        /* ── preview ── */
         function previewExcel() {
-            const fileInput = document.getElementById('excelFile');
-            const file = fileInput.files[0];
+            const file = document.getElementById('excelFile').files[0];
+            if (!file) return alert('Pilih file Excel terlebih dahulu!');
 
-            if (!file) return alert("Pilih file Excel terlebih dahulu!");
-
-            // Show loading
-            showLoading('Processing Excel file...');
+            showLoading('Membaca file Excel...');
             setButtonLoading('previewBtn', true);
 
             const reader = new FileReader();
             reader.onload = function (e) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    const ws   = wb.Sheets[wb.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-                    parsedData = json.map(row => {
-                        const {
-                            cust_code, origin, dest, serv_type, serv_moda,
-                            truck_size, charge_uom, flag_min, charge_min,
-                            flag_range, min_range, max_range,
-                            sell1, sell2, sell3,
-                            sell_ret_empty, sell_ret_cargo, sell_ovnight, sell_cancel,
-                            selltrip2, selltrip3, sell_diff_area,
-                            valid_date, active_flag, curr, rate_value
-                        } = row;
+                    parsedData = json.map(row => ({
+                        cust_code:      row.cust_code,
+                        origin:         row.origin,
+                        dest:           row.dest,
+                        serv_type:      row.serv_type,
+                        serv_moda:      row.serv_moda,
+                        truck_size:     row.truck_size,
+                        charge_uom:     row.charge_uom,
+                        flag_min:       row.flag_min,
+                        charge_min:     row.charge_min,
+                        flag_range:     row.flag_range,
+                        min_range:      row.min_range,
+                        max_range:      row.max_range,
+                        sell1:          row.sell1,
+                        sell2:          row.sell2,
+                        sell3:          row.sell3,
+                        sell_ret_empty: row.sell_ret_empty,
+                        sell_ret_cargo: row.sell_ret_cargo,
+                        sell_ovnight:   row.sell_ovnight,
+                        sell_cancel:    row.sell_cancel,
+                        selltrip2:      row.selltrip2,
+                        selltrip3:      row.selltrip3,
+                        sell_diff_area: row.sell_diff_area,
+                        valid_date:     fixExcelDate(row.valid_date),
+                        active_flag:    row.active_flag,
+                        curr:           row.curr,
+                        rate_value:     row.rate_value
+                    }));
 
-                        return {
-                            cust_code, origin, dest, serv_type, serv_moda,
-                            truck_size, charge_uom, flag_min, charge_min,
-                            flag_range, min_range, max_range,
-                            sell1, sell2, sell3,
-                            sell_ret_empty, sell_ret_cargo, sell_ovnight, sell_cancel,
-                            selltrip2, selltrip3, sell_diff_area,
-                            valid_date: fixExcelDate(valid_date),
-                            active_flag, curr, rate_value
-                        };
-                    });
-
-                    // Simulate processing delay for better UX
                     setTimeout(() => {
                         renderTable(parsedData);
                         hideLoading();
                         setButtonLoading('previewBtn', false);
-                    }, 500);
+                    }, 300);
 
-                } catch (error) {
-                    console.error('Error processing file:', error);
-                    alert('Error processing Excel file');
+                } catch (err) {
+                    console.error(err);
+                    alert('Gagal membaca file Excel.');
                     hideLoading();
                     setButtonLoading('previewBtn', false);
                 }
@@ -197,66 +165,115 @@
             reader.readAsArrayBuffer(file);
         }
 
+        /* ── render table ── */
         function renderTable(data) {
             const table = document.getElementById('previewTable');
             const thead = table.querySelector('thead');
             const tbody = table.querySelector('tbody');
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            document.getElementById('spanRows').textContent = data.length;
 
-            thead.innerHTML = "";
-            tbody.innerHTML = "";
-
-            if (data.length === 0) return;
+            if (!data.length) return;
 
             const headers = Object.keys(data[0]);
-            const headerRow = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-            thead.innerHTML = headerRow;
-
-            data.forEach(item => {
-                const row = `<tr>${headers.map(h => `<td style="min-width:120px;">${item[h]}</td>`).join('')}</tr>`;
-                tbody.innerHTML += row;
-            });
-
-            document.getElementById("spanRows").innerText = data.length;
+            thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            tbody.innerHTML = data.map(item =>
+                `<tr>${headers.map(h => `<td style="min-width:110px;">${item[h] ?? ''}</td>`).join('')}</tr>`
+            ).join('');
         }
 
+        /* ── submit ── */
         function submitData() {
-            if (parsedData.length === 0) return showToast('Preview the data beforehand', 'error');
+            if (!parsedData.length) {
+                alert('Preview data terlebih dahulu!');
+                return;
+            }
 
-            const op = document.getElementById('operationType').value;
-
-            // Show loading
-            showLoading('Submitting data...');
+            const mode = document.getElementById('operationType').value;
+            showLoading('Menyimpan data...');
             setButtonLoading('submitBtn', true);
 
             fetch('/PriceSell/UploadExcel', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode: op, data: parsedData })
+                body: JSON.stringify({ mode: mode, data: parsedData })
             })
             .then(res => res.json())
             .then(result => {
                 hideLoading();
                 setButtonLoading('submitBtn', false);
-
-                if (result.errors) {
-                    const errorMessages = JSON.stringify(result.errors)
-                        .replace(/[{"}\[\]]/g, '') // buang kurung & tanda kutip
-                        .replace(/,/g, '\n');      // ganti koma jadi newline
-
-                    showToast(errorMessages, 'error');
-                    return;
-                }
-                showToast(result.message, 'success');
-                setTimeout(() => {
-                    window.location.href = '/PriceSell/Index';
-                }, 500);
+                renderResultCard(result);
             })
             .catch(err => {
                 console.error(err);
                 hideLoading();
                 setButtonLoading('submitBtn', false);
-                alert("Gagal upload data.");
+                alert('Gagal menghubungi server.');
             });
+        }
+
+        /* ── result card ── */
+        function renderResultCard(result) {
+            console.log('renderResultCard', result);
+
+            const processed = Array.isArray(result.processed) ? result.processed : [];
+            const skipped   = Array.isArray(result.skipped)   ? result.skipped   : [];
+            const errors    = Array.isArray(result.errors)    ? result.errors    : [];
+
+            function makeSection(label, colorClass, items) {
+                if (!items.length) return '';
+                const lis = items.map(i =>
+                    `<li class="list-group-item py-1 px-3" style="font-size:13px;">${i}</li>`
+                ).join('');
+                return `
+                    <div class="mt-3">
+                        <p class="mb-1 fw-semibold ${colorClass}" style="font-size:14px;">${label} (${items.length})</p>
+                        <ul class="list-group">${lis}</ul>
+                    </div>`;
+            }
+
+            const html = `
+                <div class="card mb-4 shadow-sm" id="resultCard" style="max-width: 1200px;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Upload Result</strong>
+                        <button type="button" class="btn-close" onclick="document.getElementById('resultCard').remove()"></button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-1">
+                            <div class="col-4">
+                                <div class="border border-success rounded text-center py-2">
+                                    <div class="text-muted" style="font-size:12px;">Succeed</div>
+                                    <div class="text-success fw-bold fs-3">${processed.length}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="border border-warning rounded text-center py-2">
+                                    <div class="text-muted" style="font-size:12px;">Skipped</div>
+                                    <div class="text-warning fw-bold fs-3">${skipped.length}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="border border-danger rounded text-center py-2">
+                                    <div class="text-muted" style="font-size:12px;">Error</div>
+                                    <div class="text-danger fw-bold fs-3">${errors.length}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${makeSection('Successfully processed', 'text-success', processed)}
+                        ${makeSection('Skipped — already in the database', 'text-warning', skipped)}
+                        ${makeSection('Error', 'text-danger', errors)}
+
+                        ${processed.length > 0 ? `
+                        <div class="mt-3 text-end">
+                            <a href="/PriceSell/Index" class="btn btn-primary btn-sm">View Data &rarr;</a>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+
+            document.getElementById('resultCard').outerHTML = html;
+            document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     </script>
 }

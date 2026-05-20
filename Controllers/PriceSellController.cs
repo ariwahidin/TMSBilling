@@ -209,40 +209,195 @@ public class PriceSellController : Controller
         return (true, null);
     }
 
+    //[HttpPost]
+    //public async Task<IActionResult> UploadExcel([FromBody] UploadPriceSellRequest request)
+    //{
+    //    if (!ModelState.IsValid)
+    //    {
+    //        var errors = ModelState
+    //            .Where(e => e.Value?.Errors.Count > 0)
+    //            .ToDictionary(
+    //                kvp => kvp.Key,
+    //                kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
+    //            );
+
+    //        return BadRequest(new { message = "Model binding failed.", errors });
+    //    }
+
+    //    if (request?.data == null || !request.data.Any())
+    //        return BadRequest(new { message = "Data is empty or unreadable." });
+
+    //    // VALIDASI DUPLIKAT DI FILE
+    //    var duplicates = request.data
+    //        .GroupBy(x => new { x.cust_code, x.origin, x.dest, x.serv_type, x.serv_moda, x.truck_size, x.charge_uom })
+    //        .Where(g => g.Count() > 1)
+    //        .Select(g => $"Duplicate data found: {g.Key.cust_code} | {g.Key.origin} | {g.Key.dest} | {g.Key.serv_type} | {g.Key.serv_moda} | {g.Key.truck_size} | {g.Key.charge_uom}")
+    //        .ToList();
+
+    //    if (duplicates.Any())
+    //        return BadRequest(new { message = "Duplicate data found in the uploaded file.", errors = duplicates });
+
+    //    // VALIDASI MODE
+    //    var modeErrors = new List<string>();
+
+    //    foreach (var item in request.data)
+    //    {
+    //        var query = _context.PriceSells.Where(x =>
+    //            x.cust_code == item.cust_code &&
+    //            x.origin == item.origin &&
+    //            x.dest == item.dest &&
+    //            x.serv_type == item.serv_type &&
+    //            x.serv_moda == item.serv_moda &&
+    //            x.truck_size == item.truck_size &&
+    //            x.charge_uom == item.charge_uom
+    //        );
+
+    //        var exists = await query.AnyAsync();
+
+    //        if (request.mode == "add" && exists)
+    //            modeErrors.Add($"(ADD) Data already exists: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
+
+    //        if (request.mode == "edit" && !exists)
+    //            modeErrors.Add($"(EDIT) Data not found: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
+    //    }
+
+    //    if (modeErrors.Any())
+    //        return BadRequest(new { message = "Validation based on mode failed.", errors = modeErrors });
+
+    //    // VALIDASI MASTER
+    //    var validationErrors = new List<string>();
+    //    foreach (var item in request.data)
+    //    {
+    //        var (isValid, errorMessage) = await ValidatePriceSellItemAsync(item);
+    //        if (!isValid && errorMessage != null)
+    //            validationErrors.Add($"[{item.cust_code}-{item.origin}-{item.dest}] {errorMessage}");
+    //    }
+
+    //    if (validationErrors.Any())
+    //        return BadRequest(new { message = "Master validation failed.", errors = validationErrors });
+
+    //    // INSERT / UPDATE
+    //    foreach (var item in request.data)
+    //    {
+    //        var entity = new PriceSell
+    //        {
+    //            cust_code = item.cust_code,
+    //            origin = item.origin,
+    //            dest = item.dest,
+    //            serv_type = item.serv_type,
+    //            serv_moda = item.serv_moda,
+    //            truck_size = item.truck_size,
+    //            charge_uom = item.charge_uom,
+    //            flag_min = item.flag_min.HasValue ? (byte?)item.flag_min : null,
+    //            charge_min = item.charge_min,
+    //            flag_range = item.flag_range.HasValue ? (byte?)item.flag_range : null,
+    //            min_range = item.min_range,
+    //            max_range = item.max_range,
+    //            sell1 = item.sell1,
+    //            sell2 = item.sell2,
+    //            sell3 = item.sell3,
+    //            sell_ret_empty = item.sell_ret_empty,
+    //            sell_ret_cargo = item.sell_ret_cargo,
+    //            sell_ovnight = item.sell_ovnight,
+    //            sell_cancel = item.sell_cancel,
+    //            selltrip2 = item.selltrip2,
+    //            selltrip3 = item.selltrip3,
+    //            sell_diff_area = item.sell_diff_area,
+    //            valid_date = item.valid_date,
+    //            active_flag = item.active_flag,
+    //            curr = item.curr,
+    //            rate_value = item.rate_value,
+    //            entry_user = HttpContext.Session.GetString("username") ?? "System",
+    //            entry_date = DateTime.Now
+    //        };
+
+    //        if (request.mode == "edit")
+    //        {
+    //            var existing = await _context.PriceSells.FirstOrDefaultAsync(x =>
+    //                x.cust_code == item.cust_code &&
+    //                x.origin == item.origin &&
+    //                x.dest == item.dest &&
+    //                x.serv_type == item.serv_type &&
+    //                x.serv_moda == item.serv_moda &&
+    //                x.truck_size == item.truck_size &&
+    //                x.charge_uom == item.charge_uom
+    //            );
+
+    //            if (existing != null)
+    //            {
+    //                // Update all fields
+    //                existing.flag_min = entity.flag_min;
+    //                existing.charge_min = entity.charge_min;
+    //                existing.flag_range = entity.flag_range;
+    //                existing.min_range = entity.min_range;
+    //                existing.max_range = entity.max_range;
+    //                existing.sell1 = entity.sell1;
+    //                existing.sell2 = entity.sell2;
+    //                existing.sell3 = entity.sell3;
+    //                existing.sell_ret_empty = entity.sell_ret_empty;
+    //                existing.sell_ret_cargo = entity.sell_ret_cargo;
+    //                existing.sell_ovnight = entity.sell_ovnight;
+    //                existing.sell_cancel = entity.sell_cancel;
+    //                existing.selltrip2 = entity.selltrip2;
+    //                existing.selltrip3 = entity.selltrip3;
+    //                existing.sell_diff_area = entity.sell_diff_area;
+    //                existing.valid_date = entity.valid_date;
+    //                existing.active_flag = entity.active_flag;
+    //                existing.curr = entity.curr;
+    //                existing.rate_value = entity.rate_value;
+    //                existing.update_user = HttpContext.Session.GetString("username") ?? "System";
+    //                existing.update_date = DateTime.Now;
+
+    //                continue; // skip insert
+    //            }
+    //        }
+
+    //        // Tambah baru
+    //        _context.PriceSells.Add(entity);
+    //    }
+
+    //    await _context.SaveChangesAsync();
+
+    //    return Ok(new { message = "PriceSell data processed successfully." });
+    //}
+
     [HttpPost]
     public async Task<IActionResult> UploadExcel([FromBody] UploadPriceSellRequest request)
     {
         if (!ModelState.IsValid)
-        {
-            var errors = ModelState
-                .Where(e => e.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
-                );
-
-            return BadRequest(new { message = "Model binding failed.", errors });
-        }
+            return BadRequest(new { message = "Model binding failed." });
 
         if (request?.data == null || !request.data.Any())
             return BadRequest(new { message = "Data is empty or unreadable." });
 
-        // VALIDASI DUPLIKAT DI FILE
-        var duplicates = request.data
-            .GroupBy(x => new { x.cust_code, x.origin, x.dest, x.serv_type, x.serv_moda, x.truck_size, x.charge_uom })
-            .Where(g => g.Count() > 1)
-            .Select(g => $"Duplicate data found: {g.Key.cust_code} | {g.Key.origin} | {g.Key.dest} | {g.Key.serv_type} | {g.Key.serv_moda} | {g.Key.truck_size} | {g.Key.charge_uom}")
-            .ToList();
+        var processed = new List<string>();
+        var skipped = new List<string>();
+        var errors = new List<string>();
 
-        if (duplicates.Any())
-            return BadRequest(new { message = "Duplicate data found in the uploaded file.", errors = duplicates });
-
-        // VALIDASI MODE
-        var modeErrors = new List<string>();
+        var seen = new HashSet<string>();
 
         foreach (var item in request.data)
-        { 
-            var query = _context.PriceSells.Where(x =>
+        {
+            var key = $"{item.cust_code}|{item.origin}|{item.dest}|{item.serv_type}|{item.serv_moda}|{item.truck_size}|{item.charge_uom}";
+            var label = $"{item.cust_code} › {item.origin} › {item.dest} › {item.serv_type} › {item.serv_moda} › {item.truck_size} › {item.charge_uom}";
+
+            // 1. Cek duplikat antar baris di file
+            if (!seen.Add(key))
+            {
+                errors.Add($"[Duplikat di file] {label}");
+                continue;
+            }
+
+            // 2. Validasi master data
+            var (isValid, errorMessage) = await ValidatePriceSellItemAsync(item);
+            if (!isValid)
+            {
+                errors.Add($"[Validasi] {label} — {errorMessage}");
+                continue;
+            }
+
+            // 3. Cek eksistensi di DB
+            var exists = await _context.PriceSells.AnyAsync(x =>
                 x.cust_code == item.cust_code &&
                 x.origin == item.origin &&
                 x.dest == item.dest &&
@@ -252,33 +407,19 @@ public class PriceSellController : Controller
                 x.charge_uom == item.charge_uom
             );
 
-            var exists = await query.AnyAsync();
-
             if (request.mode == "add" && exists)
-                modeErrors.Add($"(ADD) Data already exists: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
+            {
+                skipped.Add(label);
+                continue;
+            }
 
             if (request.mode == "edit" && !exists)
-                modeErrors.Add($"(EDIT) Data not found: {item.cust_code} | {item.origin} | {item.dest} | {item.serv_type} | {item.serv_moda} | {item.truck_size} | {item.charge_uom}");
-        }
+            {
+                errors.Add($"[Tidak ditemukan] {label}");
+                continue;
+            }
 
-        if (modeErrors.Any())
-            return BadRequest(new { message = "Validation based on mode failed.", errors = modeErrors });
-
-        // VALIDASI MASTER
-        var validationErrors = new List<string>();
-        foreach (var item in request.data)
-        {
-            var (isValid, errorMessage) = await ValidatePriceSellItemAsync(item);
-            if (!isValid && errorMessage != null)
-                validationErrors.Add($"[{item.cust_code}-{item.origin}-{item.dest}] {errorMessage}");
-        }
-
-        if (validationErrors.Any())
-            return BadRequest(new { message = "Master validation failed.", errors = validationErrors });
-
-        // INSERT / UPDATE
-        foreach (var item in request.data)
-        {
+            // 4. Build entity
             var entity = new PriceSell
             {
                 cust_code = item.cust_code,
@@ -311,6 +452,7 @@ public class PriceSellController : Controller
                 entry_date = DateTime.Now
             };
 
+            // 5. Insert atau Update
             if (request.mode == "edit")
             {
                 var existing = await _context.PriceSells.FirstOrDefaultAsync(x =>
@@ -325,7 +467,6 @@ public class PriceSellController : Controller
 
                 if (existing != null)
                 {
-                    // Update all fields
                     existing.flag_min = entity.flag_min;
                     existing.charge_min = entity.charge_min;
                     existing.flag_range = entity.flag_range;
@@ -348,17 +489,24 @@ public class PriceSellController : Controller
                     existing.update_user = HttpContext.Session.GetString("username") ?? "System";
                     existing.update_date = DateTime.Now;
 
-                    continue; // skip insert
+                    processed.Add(label);
+                    continue;
                 }
             }
 
-            // Tambah baru
             _context.PriceSells.Add(entity);
+            processed.Add(label);
         }
 
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "PriceSell data processed successfully." });
+        return Ok(new
+        {
+            message = $"Selesai. {processed.Count} berhasil, {skipped.Count} dilewati, {errors.Count} error.",
+            processed,
+            skipped,
+            errors
+        });
     }
 
     [HttpGet]
