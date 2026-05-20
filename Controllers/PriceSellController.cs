@@ -192,7 +192,7 @@ public class PriceSellController : Controller
             return (false, $"Origin is invalid: {item.origin}");
 
         if (!await _context.Destinations.AnyAsync(l => l.destination_code == item.dest))
-            return (false, $"Origin is invalid: {item.dest}");
+            return (false, $"Destination is invalid: {item.dest}");
 
         if (!await _context.ServiceTypes.AnyAsync(s => s.serv_name == item.serv_type))
             return (false, $"Service Type is invalid: {item.serv_type}");
