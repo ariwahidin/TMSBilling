@@ -76,7 +76,8 @@ namespace TMSBilling.Controllers
                     SELECT 
                         id_seq_order, 
                         COUNT(item_name) AS total_item,
-                        SUM(item_qty) AS total_qty
+                        SUM(item_qty) AS total_qty,
+                        SUM(unit_qty) AS total_pcs
                     FROM TRC_ORDER_DTL
                     GROUP BY id_seq_order
                 ),
@@ -94,7 +95,8 @@ namespace TMSBilling.Controllers
                     a.mceasy_status AS MCOrderStatus,
                     a.mceasy_order_id AS McEasyOrderId,
                     COALESCE(od.total_item, 0) AS TotalItem,
-                    COALESCE(od.total_qty, 0) AS TotalQty
+                    COALESCE(od.total_qty, 0) AS TotalQty,
+                    COALESCE(od.total_pcs, 0) AS TotalPcs
                 FROM TRC_ORDER a 
                 LEFT JOIN od ON a.id_seq = od.id_seq_order
                 LEFT JOIN MC_ORDER mo ON a.mceasy_order_id = mo.id
@@ -1855,6 +1857,7 @@ namespace TMSBilling.Controllers
         public string? McEasyOrderId { get; set; }
         public int? TotalItem { get; set; }
         public int? TotalQty { get; set; }
+        public int? TotalPcs { get; set; } = 0;
 
         public string? JobID { get; set; }
     }

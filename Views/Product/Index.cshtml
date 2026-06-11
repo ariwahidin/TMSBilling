@@ -3,20 +3,42 @@
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Product";
     var metadata = ViewBag.Metadata as TMSBilling.Models.Metadata;
+    var selectedCust = ViewBag.SelectedCust as string ?? "";
+    var isApi = (bool)(ViewBag.IsApi ?? false);
+    var subCode = ViewBag.SelectedCust as string ?? ""; // tambah ini
 }
 
-<button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Product</button>
+<button class="btn btn-primary btn-sm mb-3" id="btnAdd" @(string.IsNullOrEmpty(selectedCust) ? "disabled" : "")>Add Product</button>
 <a href="/Product/Type" class="btn btn-primary btn-sm mb-3">Product Type</a>
 <a href="/Product/Category" class="btn btn-primary btn-sm mb-3">Product Category</a>
+
 <form method="get" asp-action="Index" class="mb-3">
     <div class="input-group">
-        <input 
-            type="text" 
-            name="search" 
-            class="form-control" 
+        <!-- Dropdown Customer -->
+        <select name="subCode" class="form-select" style="max-width: 220px;" onchange="this.form.submit()">
+            <option value="">-- Pilih Customer --</option>
+            @foreach (var item in ViewBag.CustomerGroups)
+            {
+                @if (item.Value == selectedCust)
+                {
+                    <option value="@item.Value" selected>@item.Text</option>
+                }
+                else
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            }
+        </select>
+
+        <!-- Search -->
+        <input
+            type="text"
+            name="search"
+            class="form-control"
             value="@Context.Request.Query["search"]"
-            placeholder="Search..." />
-        <button type="submit" class="btn btn-primary">Search</button>
+            placeholder="Search..."
+            @(string.IsNullOrEmpty(selectedCust) ? "disabled" : "") />
+        <button type="submit" class="btn btn-primary" @(string.IsNullOrEmpty(selectedCust) ? "disabled" : "")>Search</button>
     </div>
 </form>
 
@@ -27,8 +49,12 @@
             <th>Name</th>
             <th>Type</th>
             <th>UOM</th>
-            <th>Weight</th>
-            <th>Volume</th>
+            <th>Width (cm)</th>
+            <th>Length (cm)</th>
+            <th>Height (cm)</th>
+            <th>Cbm (m³)</th>
+            <th>Weight (kg)</th>
+            <th>Volume (L)</th>
             <th>Price</th>
             <th>Actions</th>
         </tr>
@@ -41,12 +67,18 @@
                 <td>@item.name</td>
                 <td>@item?.product_type?.name</td>
                 <td>@item?.uom</td>
+                <td>@item?.width</td>
+                <td>@item?.length</td>
+                <td>@item?.height</td>
+                <td>@item?.cbm</td>
                 <td>@item?.weight</td>
                 <td>@item?.volume</td>
                 <td>@item?.price</td>
                 <td>
-                    @* <button class="btn btn-sm btn-warning btnEdit" data-id="@item.id">Edit</button> *@
-                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item?.id">Delete</button>
+                    <button class="btn btn-sm btn-warning btnEdit" 
+                            data-id="@item?.id">Edit</button>
+                    <button class="btn btn-sm btn-danger btnDelete" 
+                            data-id="@item?.id">Delete</button>
                 </td>
             </tr>
         }
@@ -60,14 +92,12 @@
             @for (int i = 1; i <= metadata.total_page; i++)
             {
                 <li class="page-item @(i == metadata.page ? "active" : "")">
-                    <a class="page-link" href="@Url.Action("Index", new { page = i })">@i</a>
+                    <a class="page-link" href="@Url.Action("Index", new { page = i, custCode = selectedCust })">@i</a>
                 </li>
             }
         </ul>
     </nav>
 }
-
-
 
 <div class="modal fade" id="productModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -84,32 +114,32 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            $('#productTable').DataTable();
             let modal = new bootstrap.Modal(document.getElementById("productModal"));
+            const isApi = @isApi.ToString().ToLower();
+            const subCode = '@subCode';
 
             $("#btnAdd").click(function () {
-                $.get("/Product/Form", function (html) {
+                if (!subCode) return;
+                $.get(`/Product/Form?subCode=${subCode}`, function (html) {
                     $("#modalContent").html(html);
                     modal.show();
                 });
             });
 
-            $(".btnEdit").click(function () {
+            $(document).on("click", ".btnEdit", function () {
                 const id = $(this).data("id");
-                $.get("/Product/Form?id=" + id, function (html) {
+                $.get(`/Product/Form?id=${id}&subCode=${subCode}`, function (html) {
                     $("#modalContent").html(html);
                     modal.show();
                 });
             });
 
-            $(".btnDelete").click(function () {
+            $(document).on("click", ".btnDelete", function () {
                 if (!confirm("Yakin hapus data ini?")) return;
                 const id = $(this).data("id");
-
                 $.ajax({
-                    url: '/Product/Delete/'+id,
+                    url: `/Product/Delete/${id}?subCode=${subCode}`,
                     type: 'DELETE',
-                    data: { id: id },
                     success: function (result) {
                         alert("Product deleted!");
                         location.reload();
@@ -119,16 +149,10 @@
                         console.log(err);
                     }
                 });
-
-                // $.delete("/Product/Delete", { id }, function () {
-                //     location.reload();
-                // }).fail(function () {
-                //     alert("Gagal menghapus data.");
-                // });
             });
 
+            // Submit Form
             $(document).on("submit", "#productForm", function (e) {
-
                 e.preventDefault();
 
                 $.ajax({
@@ -138,17 +162,13 @@
                     success: function (res) {
                         if (res.success) {
                             alert("Product saved!");
-                            // misalnya reload table
                             location.reload();
                         } else {
-                            let errorMsg = res.message; // default message
+                            let errorMsg = res.message;
                             if (res.detail) {
                                 try {
                                     let detail = JSON.parse(res.detail);
-
-                                    // cek apakah ada detail.errors
                                     if (detail.errors) {
-                                        // contoh ambil semua error
                                         let errors = [];
                                         for (let key in detail.errors) {
                                             errors.push(key + ": " + detail.errors[key].join(", "));
@@ -159,7 +179,6 @@
                                     console.error("Parse error:", e);
                                 }
                             }
-
                             alert("Error:\n" + errorMsg);
                         }
                     },

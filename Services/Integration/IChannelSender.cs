@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace TMSBilling.Services.Integration
@@ -25,6 +25,8 @@ namespace TMSBilling.Services.Integration
         public bool Success { get; set; }
         public string? Message { get; set; }
         public string? ErrorDetail { get; set; }
+        public string? ResponseBody { get; set; }   // ← tambah
+        public string? RequestPayload { get; set; } // ← tambah
         public int RowCount { get; set; }
         public long DurationMs { get; set; }
 

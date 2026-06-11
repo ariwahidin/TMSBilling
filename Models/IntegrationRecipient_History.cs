@@ -56,6 +56,9 @@ namespace TMSBilling.Models
 
         public string? ErrorDetail { get; set; }
 
+        public string? ResponseBody { get; set; }   // ← tambah
+        public string? RequestPayload { get; set; } // ← tambah
+
         /// <summary>Number of rows sent/processed</summary>
         public int? RowCount { get; set; }
 

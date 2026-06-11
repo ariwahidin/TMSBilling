@@ -119,6 +119,8 @@ namespace TMSBilling.Services.Integration
             history.Status = result.Success ? "success" : "failed";
             history.Message = result.Message;
             history.ErrorDetail = result.ErrorDetail;
+            history.ResponseBody = result.ResponseBody;     // ← tambah
+            history.RequestPayload = result.RequestPayload; // ← tambah
             history.RowCount = result.RowCount;
             history.DurationMs = result.DurationMs;
 

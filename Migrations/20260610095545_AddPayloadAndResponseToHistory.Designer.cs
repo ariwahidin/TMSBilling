@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260610095545_AddPayloadAndResponseToHistory")]
+    partial class AddPayloadAndResponseToHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,9 +318,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("TotalItem")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TotalPcs")
                         .HasColumnType("int");
 
                     b.Property<int?>("TotalQty")
@@ -1364,9 +1364,6 @@ namespace TMSBilling.Migrations
 
                     b.Property<int>("IntegrationId")
                         .HasColumnType("int");
-
-                    b.Property<string>("ItemTemplate")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("KeyColumn")
                         .HasMaxLength(100)

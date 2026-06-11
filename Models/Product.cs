@@ -72,6 +72,15 @@ namespace TMSBilling.Models
         [DataType(DataType.Currency)]
         public decimal? Price { get; set; }
 
+        // Di ProductTable, tambah kolom ini
+        [Column("CUST_CODE")]
+        [MaxLength(50)]
+        public string? CustCode { get; set; }
+
+        [Column("SUB_CODE")]
+        [MaxLength(50)]
+        public string? SubCode { get; set; }
+
         [Column("CREATED_AT")]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -150,6 +159,27 @@ namespace TMSBilling.Models
 
         [JsonPropertyName("price")]
         public decimal Price { get; set; }
+
+
+        [JsonIgnore]
+        public string? SubCode { get; set; }
+        [JsonIgnore]
+        public string? CustCode { get; set; }
+
+        [JsonIgnore]
+        public bool IsApi { get; set; }
+
+        [JsonIgnore]
+        public decimal? Width { get; set; }
+
+        [JsonIgnore]
+        public decimal? Length { get; set; }
+
+        [JsonIgnore]
+        public decimal? Height { get; set; }
+
+        [JsonIgnore]
+        public decimal? Cbm { get; set; }
     }
 
     public class Product
@@ -164,6 +194,11 @@ namespace TMSBilling.Models
         public decimal? weight { get; set; }
         public decimal? volume { get; set; }
         public decimal? price { get; set; }
+
+        public decimal? width { get; set; } = 0;
+        public decimal? length { get; set; } = 0;
+        public decimal? height { get; set; } = 0;
+        public decimal? cbm { get; set; } = 0;
     }
 
     public class ProductType

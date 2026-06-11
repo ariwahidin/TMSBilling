@@ -99,7 +99,38 @@
                                     }
                                     else { <span class="text-muted">—</span> }
                                 </td>
+
                                 <td>
+                                    <span class="text-truncate d-inline-block" style="max-width:300px"
+                                          title="@h.Message">@h.Message</span>
+
+                                    @if (!string.IsNullOrEmpty(h.ErrorDetail))
+                                    {
+                                        <button class="btn btn-link btn-sm text-danger p-0 ms-1"
+                                                onclick="showDetail('@h.Id', 'error')"
+                                                data-error="@System.Text.Json.JsonSerializer.Serialize(h.ErrorDetail)">
+                                            <i class="bi bi-bug"></i>
+                                        </button>
+                                    }
+                                    @if (!string.IsNullOrEmpty(h.RequestPayload) || !string.IsNullOrEmpty(h.ResponseBody))
+                                    {
+                                        <button class="btn btn-link btn-sm text-info p-0 ms-1"
+                                                onclick="showDetail('@h.Id', 'payload')"
+                                                data-request="@System.Text.Json.JsonSerializer.Serialize(h.RequestPayload)"
+                                                data-response="@System.Text.Json.JsonSerializer.Serialize(h.ResponseBody)">
+                                            <i class="bi bi-code"></i>
+                                        </button>
+                                    }
+                                    @if (!string.IsNullOrEmpty(h.EventDataJson))
+                                    {
+                                        <button class="btn btn-link btn-sm text-secondary p-0 ms-1"
+                                                onclick="showDetail('@h.Id', 'event')"
+                                                data-event="@System.Text.Json.JsonSerializer.Serialize(h.EventDataJson)">
+                                            <i class="bi bi-braces"></i>
+                                        </button>
+                                    }
+                                </td>
+                                @* <td>
                                     <span class="text-truncate d-inline-block" style="max-width:300px"
                                           title="@h.Message">@h.Message</span>
                                     @if (!string.IsNullOrEmpty(h.ErrorDetail))
@@ -120,7 +151,7 @@
                                             <pre class="bg-light rounded p-2 small mt-1">@h.EventDataJson</pre>
                                         </div>
                                     }
-                                </td>
+                                </td> *@
                             </tr>
                         }
                         @if (!Model.Any())
@@ -135,7 +166,7 @@
 </div>
 
 <!-- Error Modal -->
-<div class="modal fade" id="errorModal" tabindex="-1">
+@* <div class="modal fade" id="errorModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -147,9 +178,100 @@
             </div>
         </div>
     </div>
+</div> *@
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <ul class="nav nav-tabs card-header-tabs" id="detailTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-request">
+                            <i class="bi bi-upload me-1"></i>Request
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-response">
+                            <i class="bi bi-download me-1"></i>Response
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-event">
+                            <i class="bi bi-braces me-1"></i>Event Data
+                        </button>
+                    </li>
+                    <li class="nav-item" id="tabErrorItem" style="display:none">
+                        <button class="nav-link text-danger" data-bs-toggle="tab" data-bs-target="#tab-error">
+                            <i class="bi bi-bug me-1"></i>Error
+                        </button>
+                    </li>
+                </ul>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active p-3" id="tab-request">
+                        <pre id="requestContent" class="bg-light rounded p-3 small overflow-auto mb-0" style="max-height:400px"></pre>
+                    </div>
+                    <div class="tab-pane fade p-3" id="tab-response">
+                        <pre id="responseContent" class="bg-light rounded p-3 small overflow-auto mb-0" style="max-height:400px"></pre>
+                    </div>
+                    <div class="tab-pane fade p-3" id="tab-event">
+                        <pre id="eventContent" class="bg-light rounded p-3 small overflow-auto mb-0" style="max-height:400px"></pre>
+                    </div>
+                    <div class="tab-pane fade p-3" id="tab-error">
+                        <pre id="errorContent" class="bg-light rounded p-3 small overflow-auto mb-0" style="max-height:400px"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+
 @section Scripts {
+    <script>
+        function tryFormatJson(str) {
+            try { return JSON.stringify(JSON.parse(str), null, 2); }
+            catch { return str || '—'; }
+        }
+
+        function showDetail(id, focus) {
+            const btn = event.target.closest('button');
+            const row = btn.closest('tr');
+
+            const reqBtn = row.querySelector('[data-request]');
+            const resBtn = row.querySelector('[data-response]');
+            const evtBtn = row.querySelector('[data-event]');
+            const errBtn = row.querySelector('[data-error]');
+
+            function safeGet(btn, attr) {
+                if (!btn) return '';
+                const raw = btn.dataset[attr];
+                if (!raw) return '';
+                try { return JSON.parse(raw) ?? ''; }
+                catch { return raw; }
+            }
+
+            document.getElementById('requestContent').textContent  = tryFormatJson(safeGet(reqBtn, 'request'));
+            document.getElementById('responseContent').textContent = tryFormatJson(safeGet(resBtn, 'response'));
+            document.getElementById('eventContent').textContent    = tryFormatJson(safeGet(evtBtn, 'event'));
+            document.getElementById('errorContent').textContent    = safeGet(errBtn, 'error');
+
+            document.getElementById('tabErrorItem').style.display = errBtn ? 'block' : 'none';
+
+            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+            modal.show();
+
+            const tabMap = { error: 'tab-error', payload: 'tab-request', event: 'tab-event' };
+            const targetTab = document.querySelector(`[data-bs-target="#${tabMap[focus] ?? 'tab-request'}"]`);
+            setTimeout(() => targetTab?.click(), 150);
+        }
+    </script>
+}
+
+@* @section Scripts {
 <script>
 function showError(id) {
     const btn = event.target.closest('button');
@@ -158,4 +280,4 @@ function showError(id) {
     new bootstrap.Modal(document.getElementById('errorModal')).show();
 }
 </script>
-}
+} *@

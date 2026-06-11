@@ -1,8 +1,10 @@
 ﻿
 using AspNetCore.ReportingServices.ReportProcessing.ReportObjectModel;
+using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
@@ -21,6 +23,7 @@ using TMSBilling.Models.ViewModels;
 using TMSBilling.Services;
 using TMSBilling.Services.Integration;
 using static TMSBilling.Models.ViewModels.JobViewModel;
+using RouteAttribute = Microsoft.AspNetCore.Mvc.RouteAttribute;
 
 namespace TMSBilling.Controllers
 {
@@ -2096,6 +2099,15 @@ namespace TMSBilling.Controllers
                         ["email_cc"] = emailCc
                     }, HttpContext.Session.GetString("username") ?? "System");
 
+                }
+
+                if(jobHeader != null && !preview && custGroup?.MAIN_CUST == "BOSCH")
+                {
+                    // Lakukan sesuatu untuk customer BOSCH
+                    await _integrationDispatcher.DispatchAsync("spk_bosch_printed", new Dictionary<string, object?>
+                    {
+                        { "jobid", jobHeader.jobid }
+                    });
                 }
             }
 

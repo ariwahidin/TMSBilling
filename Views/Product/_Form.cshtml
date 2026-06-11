@@ -1,4 +1,4 @@
-﻿@model TMSBilling.Models.ProductStore
+﻿@* @model TMSBilling.Models.ProductStore
 
 <form id="productForm" method="post" asp-action="Form" asp-controller="Product">
     <input type="hidden" asp-for="Id" />
@@ -43,6 +43,83 @@
     </div>
 
 
+
+    <div class="mb-3">
+        <label class="form-label">Price</label>
+        <input type="number" asp-for="Price" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form> *@
+
+
+@model TMSBilling.Models.ProductStore
+
+<form id="productForm" method="post" asp-action="Form" asp-controller="Product">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="SubCode" />
+    <input type="hidden" asp-for="IsApi" />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" asp-for="Name" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">SKU</label>
+        <input type="text" asp-for="Sku" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <input type="text" asp-for="Description" class="form-control" />
+    </div>
+
+    @* Product Type hanya tampil kalau API customer *@
+    @if (Model.IsApi)
+    {
+        <div class="mb-3">
+            <label class="form-label">Product Type</label>
+            <select asp-for="ProductTypeId" class="form-control" asp-items="ViewBag.TypeList">
+                <option value="">-- Select Type --</option>
+            </select>
+        </div>
+    }
+
+    <div class="row">
+        <div class="mb-3 col-md-4">
+            <label class="form-label">Weight (kg)</label>
+            <input type="number" asp-for="Weight" class="form-control" />
+        </div>
+        <div class="mb-3 col-md-4">
+            <label class="form-label">Volume (L)</label>
+            <input type="number" asp-for="Volume" class="form-control" />
+        </div>
+        <div class="mb-3 col-md-4">
+            <label class="form-label">UoM</label>
+            <input type="text" asp-for="Uom" class="form-control" />
+        </div>
+    </div>
+
+    @if (!Model.IsApi)
+    {
+        <div class="row">
+            <div class="mb-3 col-md-3">
+                <label class="form-label">Width (cm)</label>
+                <input type="number" asp-for="Width" class="form-control" step="0.01" />
+            </div>
+            <div class="mb-3 col-md-3">
+                <label class="form-label">Length (cm)</label>
+                <input type="number" asp-for="Length" class="form-control" step="0.01" />
+            </div>
+            <div class="mb-3 col-md-3">
+                <label class="form-label">Height (cm)</label>
+                <input type="number" asp-for="Height" class="form-control" step="0.01" />
+            </div>
+            <div class="mb-3 col-md-3">
+                <label class="form-label">CBM (m³)</label>
+                <input type="number" asp-for="Cbm" class="form-control" step="0.0001" />
+            </div>
+        </div>
+    }
 
     <div class="mb-3">
         <label class="form-label">Price</label>

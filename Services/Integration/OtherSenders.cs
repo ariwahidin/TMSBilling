@@ -104,28 +104,110 @@ namespace TMSBilling.Services.Integration
                 var client = _httpClientFactory.CreateClient("IntegrationHub");
 
                 // Set token if available
-                if (!string.IsNullOrWhiteSpace(conn.ApiToken))
-                {
-                    var decryptedToken = _encryption.Decrypt(conn.ApiToken);
-                    client.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", decryptedToken);
-                }
+
+
+
+                //if (!string.IsNullOrWhiteSpace(conn.ApiToken))
+                //{
+                //    var decryptedToken = _encryption.Decrypt(conn.ApiToken);
+                //    client.DefaultRequestHeaders.Authorization =
+                //        new AuthenticationHeaderValue("Bearer", decryptedToken);
+                //}
 
                 // Set custom headers
+                //if (!string.IsNullOrWhiteSpace(conn.ApiHeaders))
+                //{
+                //    var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(conn.ApiHeaders);
+                //    if (headers != null)
+                //        foreach (var (k, v) in headers)
+                //            client.DefaultRequestHeaders.TryAddWithoutValidation(k, v);
+                //}
+
+                // Set custom headers DULU
                 if (!string.IsNullOrWhiteSpace(conn.ApiHeaders))
                 {
                     var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(conn.ApiHeaders);
                     if (headers != null)
                         foreach (var (k, v) in headers)
+                        {
+                            _logger.LogDebug("Header: {Key} = {Value}", k, v); // ← log
                             client.DefaultRequestHeaders.TryAddWithoutValidation(k, v);
+                        }
                 }
 
-                // Build payload: array of rows OR single event data
-                object payload = context.Rows.Count > 0 ? (object)context.Rows : context.EventData;
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                // Set ApiToken HANYA jika tidak ada Authorization di custom headers
+                if (!string.IsNullOrWhiteSpace(conn.ApiToken) &&
+                    !client.DefaultRequestHeaders.Contains("Authorization"))
+                {
+                    var decryptedToken = _encryption.Decrypt(conn.ApiToken);
+                    _logger.LogDebug("Using ApiToken as Bearer");
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", decryptedToken);
+                }
 
+                // Log final Authorization
+                _logger.LogDebug("Final Authorization: {Auth}",
+                    client.DefaultRequestHeaders.Authorization?.ToString());
+
+                // Build payload: array of rows OR single event data
+                //object payload = context.Rows.Count > 0 ? (object)context.Rows : context.EventData;
+                //var json = JsonSerializer.Serialize(payload);
+
+                //string json;
+                //if (!string.IsNullOrWhiteSpace(conn.PayloadTemplate))
+                //{
+                //    // Render template dengan data dari row pertama (atau eventData)
+                //    var data = context.Rows.Count > 0 ? context.Rows[0] : context.EventData;
+                //    json = ResolvePlaceholders(conn.PayloadTemplate, data);
+
+                //    _logger.LogDebug(">> Using PayloadTemplate, resolved length: {Len}", json.Length);
+                //}
+                //else
+                //{
+                //    object payload = context.Rows.Count > 0 ? (object)context.Rows : context.EventData;
+                //    json = JsonSerializer.Serialize(payload);
+                //}
+
+                string json;
+                if (!string.IsNullOrWhiteSpace(conn.PayloadTemplate))
+                {
+                    if (conn.PayloadTemplate.Contains("{{__rows__}}") && !string.IsNullOrWhiteSpace(conn.ItemTemplate))
+                    {
+                        var items = context.Rows
+                            .Select(row => ResolvePlaceholders(conn.ItemTemplate, row))
+                            .ToList();
+                        var arrayJson = "[" + string.Join(",", items) + "]";
+                        json = conn.PayloadTemplate.Replace("{{__rows__}}", arrayJson);
+                    }
+                    else
+                    {
+                        var data = context.Rows.Count > 0 ? context.Rows[0] : context.EventData;
+                        json = ResolvePlaceholders(conn.PayloadTemplate, data);
+                    }
+                    _logger.LogDebug(">> Using PayloadTemplate, resolved length: {Len}", json.Length);
+                }
+                else
+                {
+                    object payload = context.Rows.Count > 0 ? (object)context.Rows : context.EventData;
+                    json = JsonSerializer.Serialize(payload);
+                }
+
+
+
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var method = (conn.ApiMethod ?? "POST").ToUpper();
+
+                // Log semua headers yang akan dikirim
+                foreach (var h in client.DefaultRequestHeaders)
+                    _logger.LogDebug(">> Header: {Key}: {Value}", h.Key, string.Join(", ", h.Value));
+
+                _logger.LogDebug(">> URL: {Method} {Url}", method, conn.ApiUrl);
+
+                _logger.LogDebug(">> Payload: {Json}", json);
+
+
+
+
                 HttpResponseMessage response = method switch
                 {
                     "GET"   => await client.GetAsync(conn.ApiUrl),
@@ -135,6 +217,7 @@ namespace TMSBilling.Services.Integration
                 };
 
                 var responseBody = await response.Content.ReadAsStringAsync();
+                //var responseBody = await response.Content.ReadAsStringAsync();
 
                 sw.Stop();
                 if (response.IsSuccessStatusCode)
@@ -144,7 +227,9 @@ namespace TMSBilling.Services.Integration
                         Success = true,
                         Message = $"API {method} {conn.ApiUrl} → {(int)response.StatusCode}",
                         RowCount = context.Rows.Count,
-                        DurationMs = sw.ElapsedMilliseconds
+                        DurationMs = sw.ElapsedMilliseconds,
+                        ResponseBody = responseBody,   // ← tambah
+                        RequestPayload = json          // ← tambah
                     };
                 }
                 else
@@ -154,7 +239,9 @@ namespace TMSBilling.Services.Integration
                         Success = false,
                         Message = $"API response error: {(int)response.StatusCode}",
                         ErrorDetail = responseBody,
-                        DurationMs = sw.ElapsedMilliseconds
+                        DurationMs = sw.ElapsedMilliseconds,
+                        ResponseBody = responseBody,   // ← tambah
+                        RequestPayload = json          // ← tambah
                     };
                 }
             }
@@ -163,6 +250,23 @@ namespace TMSBilling.Services.Integration
                 sw.Stop();
                 return new SenderResult { Success = false, Message = "API call gagal.", ErrorDetail = ex.ToString(), DurationMs = sw.ElapsedMilliseconds };
             }
+        }
+
+        private static string ResolvePlaceholders(string template, Dictionary<string, object?> data)
+        {
+            foreach (var (key, value) in data)
+            {
+                string strVal = value switch
+                {
+                    null => "null",
+                    bool b => b.ToString().ToLower(),
+                    int or long or float or double
+                        or decimal => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "0",
+                    _ => JsonSerializer.Serialize(value.ToString())[1..^1]
+                };
+                template = template.Replace($"{{{{{key}}}}}", strVal);
+            }
+            return template;
         }
     }
 
@@ -219,4 +323,7 @@ namespace TMSBilling.Services.Integration
             }
         }
     }
+
+    
+
 }

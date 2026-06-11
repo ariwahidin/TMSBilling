@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TMSBilling.Data;
 
@@ -11,9 +12,11 @@ using TMSBilling.Data;
 namespace TMSBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260522063606_AddCustomerAtProduct")]
+    partial class AddCustomerAtProduct
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,9 +318,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("TotalItem")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TotalPcs")
                         .HasColumnType("int");
 
                     b.Property<int?>("TotalQty")
@@ -1365,9 +1365,6 @@ namespace TMSBilling.Migrations
                     b.Property<int>("IntegrationId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ItemTemplate")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("KeyColumn")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -1375,9 +1372,6 @@ namespace TMSBilling.Migrations
                     b.Property<string>("Password")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("PayloadTemplate")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("Port")
                         .HasColumnType("int");
@@ -1451,12 +1445,6 @@ namespace TMSBilling.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RequestPayload")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ResponseBody")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("RowCount")
@@ -3577,11 +3565,6 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("SKU");
-
-                    b.Property<string>("SubCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("SUB_CODE");
 
                     b.Property<string>("Uom")
                         .HasMaxLength(20)

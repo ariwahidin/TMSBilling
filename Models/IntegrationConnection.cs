@@ -53,6 +53,13 @@ namespace TMSBilling.Models
         [MaxLength(2000)]
         public string? ApiToken { get; set; }
 
+        /// <summary>
+        /// Optional JSON template with {{placeholder}} from query columns.
+        /// If set, overrides default flat-array payload.
+        /// </summary>
+        public string? PayloadTemplate { get; set; }
+        public string? ItemTemplate { get; set; }
+
         // ── File ──────────────────────────────────────────────────────────
         [MaxLength(1000)]
         public string? FileOutputPath { get; set; }

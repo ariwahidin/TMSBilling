@@ -192,6 +192,29 @@
                             <div class="col-12"><label class="form-label">Custom Headers (JSON)</label>
                                 <textarea asp-for="Connection.ApiHeaders" class="form-control font-monospace" rows="3"
                                           placeholder='{"X-Custom-Header": "value"}'></textarea></div>
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Payload Template (JSON)
+                                    <span class="badge bg-secondary ms-1 small">Opsional</span>
+                                </label>
+                                <textarea asp-for="Connection.PayloadTemplate" class="form-control font-monospace" rows="8"
+                                            placeholder='Kosongkan untuk kirim flat array dari query.&#10;Gunakan {{nama_kolom}} untuk mapping data.&#10;Contoh:&#10;{&#10;  "trackings": [{"tracking_number": "{{jobid}}", "status": "{{status_job}}"}]&#10;}'></textarea>
+                                <small class="text-muted">
+                                    Placeholder <code>{{kolom}}</code> diambil dari kolom hasil SQL Query.
+                                    Kosongkan untuk kirim raw array rows.
+                                </small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Item Template (JSON per-row)
+                                    <span class="badge bg-secondary ms-1 small">Opsional</span>
+                                </label>
+                                <textarea asp-for="Connection.ItemTemplate" class="form-control font-monospace" rows="6"
+                                            placeholder='Dipakai jika Payload Template mengandung {{__rows__}}.&#10;Isi struktur JSON untuk 1 item, gunakan {{nama_kolom}}.&#10;Contoh:&#10;{"tracking_number": "{{jobid}}", "status": "{{status_job}}"}'></textarea>
+                                <small class="text-muted">
+                                    Setiap row dari query akan di-render dengan template ini, lalu digabung jadi array di <code>{{__rows__}}</code>.
+                                </small>
+                            </div>
                         </div>
                     </div>
 
