@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using TMSBilling.Data;
 using TMSBilling.Models;
+using TMSBilling.Services.Integration;
 
 namespace TMSBilling.Services
 {
@@ -25,86 +26,140 @@ namespace TMSBilling.Services
             _apiService = apiService;
         }
 
-        // Entry point utama (ini dipanggil dari controller atau console app)
         public async Task Run()
         {
-            var totalStart = DateTime.UtcNow;
-            _logger.LogInformation("=== Mulai sync data McEasy === {time}", DateTime.UtcNow);
+            var totalStart = DateTime.Now;
+            _logger.LogInformation("=== Mulai sync data McEasy === {time}", DateTime.Now);
 
+            // Step 1: ORDER
             try
             {
-                // --------------------- ORDER ------------------------
-                var orderStart = DateTime.UtcNow;
                 _logger.LogInformation("Mulai sync ORDER...");
-
                 var orders = await FetchOrderFromApi(1000);
-                var orderCount = orders?.Count ?? 0;
-
-                _logger.LogInformation("Order API mengembalikan {count} data", orderCount);
-
-                if (orderCount > 0)
-                {
+                _logger.LogInformation("Order API mengembalikan {count} data", orders?.Count ?? 0);
+                if (orders?.Any() == true)
                     await SyncOrderToDatabase(orders);
-                    var orderDuration = DateTime.UtcNow - orderStart;
-
-                    _logger.LogInformation(
-                        "Sync ORDER selesai. Total: {count} | Durasi: {duration} detik",
-                        orderCount,
-                        orderDuration.TotalSeconds.ToString("0.000")
-                    );
-                }
                 else
-                {
                     _logger.LogWarning("Tidak ada data ORDER yang perlu disinkronkan.");
-                }
-
-
-                // --------------------- JOB ------------------------
-                var jobStart = DateTime.UtcNow;
-                _logger.LogInformation("Mulai sync JOB...");
-
-                var jobs = await FetchFO(1000);
-                var jobCount = jobs?.Count ?? 0;
-
-                _logger.LogInformation("Job API mengembalikan {count} data", jobCount);
-
-                if (jobCount > 0)
-                {
-                    await SyncFOToDatabase(jobs);
-                    var jobDuration = DateTime.UtcNow - jobStart;
-
-                    _logger.LogInformation(
-                        "Sync JOB selesai. Total: {count} | Durasi: {duration} detik",
-                        jobCount,
-                        jobDuration.TotalSeconds.ToString("0.000")
-                    );
-                }
-                else
-                {
-                    _logger.LogWarning("Tidak ada data JOB yang perlu disinkronkan.");
-                }
-
-                //---------------------- ORDER IN JOB -----------------
-                var jobOrderStart = DateTime.UtcNow;
-                _logger.LogInformation("Mulai sync ORDER IN JOB...");
-
-                var resultCount = await SyncOrderInJob();
-
-                _logger.LogInformation("ORDER IN JOB mengembalikan data : {count}", resultCount);
-
-
-                // --------------------- TOTAL ------------------------
-                var totalDuration = DateTime.UtcNow - totalStart;
-                _logger.LogInformation(
-                    "=== Sync selesai. Total durasi: {duration} detik ===",
-                    totalDuration.TotalSeconds.ToString("0.000")
-                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Terjadi error saat sync");
+                _logger.LogError(ex, "Gagal sync ORDER");
             }
+
+            // Step 2: JOB
+            try
+            {
+                _logger.LogInformation("Mulai sync JOB...");
+                var jobs = await FetchFO(1000);
+                _logger.LogInformation("Job API mengembalikan {count} data", jobs?.Count ?? 0);
+                if (jobs?.Any() == true)
+                    await SyncFOToDatabase(jobs);
+                else
+                    _logger.LogWarning("Tidak ada data JOB yang perlu disinkronkan.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Gagal sync JOB");
+            }
+
+            // Step 3: ORDER IN JOB
+            try
+            {
+                _logger.LogInformation("Mulai sync ORDER IN JOB...");
+                var resultCount = await SyncOrderInJob();
+                _logger.LogInformation("ORDER IN JOB selesai: {count}", resultCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Gagal sync ORDER IN JOB");
+            }
+
+            var totalDuration = DateTime.Now - totalStart;
+            _logger.LogInformation("=== Sync McEasy selesai. Total durasi: {duration} detik ===",
+                totalDuration.TotalSeconds.ToString("0.000"));
         }
+
+        // Entry point utama (ini dipanggil dari controller atau console app)
+        //public async Task Run()
+        //{
+        //    var totalStart = DateTime.Now;
+        //    _logger.LogInformation("=== Mulai sync data McEasy === {time}", DateTime.Now);
+
+        //    try
+        //    {
+        //        // --------------------- ORDER ------------------------
+        //        var orderStart = DateTime.Now;
+        //        _logger.LogInformation("Mulai sync ORDER...");
+
+        //        var orders = await FetchOrderFromApi(1000);
+        //        var orderCount = orders?.Count ?? 0;
+
+        //        _logger.LogInformation("Order API mengembalikan {count} data", orderCount);
+
+        //        if (orderCount > 0)
+        //        {
+        //            await SyncOrderToDatabase(orders);
+        //            var orderDuration = DateTime.Now - orderStart;
+
+        //            _logger.LogInformation(
+        //                "Sync ORDER selesai. Total: {count} | Durasi: {duration} detik",
+        //                orderCount,
+        //                orderDuration.TotalSeconds.ToString("0.000")
+        //            );
+        //        }
+        //        else
+        //        {
+        //            _logger.LogWarning("Tidak ada data ORDER yang perlu disinkronkan.");
+        //        }
+
+
+        //        // --------------------- JOB ------------------------
+        //        var jobStart = DateTime.Now;
+        //        _logger.LogInformation("Mulai sync JOB...");
+
+        //        var jobs = await FetchFO(1000);
+        //        var jobCount = jobs?.Count ?? 0;
+
+        //        _logger.LogInformation("Job API mengembalikan {count} data", jobCount);
+
+        //        if (jobCount > 0)
+        //        {
+        //            await SyncFOToDatabase(jobs);
+        //            var jobDuration = DateTime.Now - jobStart;
+
+        //            _logger.LogInformation(
+        //                "Sync JOB selesai. Total: {count} | Durasi: {duration} detik",
+        //                jobCount,
+        //                jobDuration.TotalSeconds.ToString("0.000")
+        //            );
+        //        }
+        //        else
+        //        {
+        //            _logger.LogWarning("Tidak ada data JOB yang perlu disinkronkan.");
+        //        }
+
+        //        //---------------------- ORDER IN JOB -----------------
+        //        var jobOrderStart = DateTime.Now;
+        //        _logger.LogInformation("Mulai sync ORDER IN JOB...");
+
+        //        var resultCount = await SyncOrderInJob();
+
+        //        _logger.LogInformation("ORDER IN JOB mengembalikan data : {count}", resultCount);
+
+
+        //        // --------------------- TOTAL ------------------------
+        //        var totalDuration = DateTime.Now - totalStart;
+        //        _logger.LogInformation(
+        //            "=== Sync selesai. Total durasi: {duration} detik ===",
+        //            totalDuration.TotalSeconds.ToString("0.000")
+        //        );
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Terjadi error saat sync");
+        //    }
+        //}
 
 
         // ================================
@@ -552,6 +607,175 @@ namespace TMSBilling.Services
         public string? FoStatus { get; set; }
 
         public string? IsJob { get; set; }
+    }
+
+
+    public class SyncWithAfterShip
+    {
+        private readonly AppDbContext _context;
+        private readonly IIntegrationDispatcher _dispatcher;
+        private readonly ILogger<SyncWithAfterShip> _logger;
+
+        public SyncWithAfterShip(
+            AppDbContext context,
+            IIntegrationDispatcher dispatcher,
+            ILogger<SyncWithAfterShip> logger)
+        {
+            _context = context;
+            _dispatcher = dispatcher;
+            _logger = logger;
+        }
+
+        public async Task Run()
+        {
+            _logger.LogInformation("=== Mulai SyncWithAfterShip === {time}", DateTime.Now);
+
+            try
+            {
+                // ← Cek dulu apakah ada integrasi aktif untuk event ini
+                var hasActiveIntegration = await _context.Integrations
+                    .AnyAsync(i => i.EventKey == "spk_bosch_started" && i.IsActive == true);
+
+                if (!hasActiveIntegration)
+                {
+                    _logger.LogInformation("Tidak ada integrasi aktif untuk spk_bosch_started, skip.");
+                    return;
+                }
+
+                // Query job STARTED ...
+                var jobs = await _context.JobHeaders
+                    .Where(j =>
+                        j.status_job == "STARTED" &&
+                        j.job_in_plan == true &&
+                        (j.job_on_delivery == false || j.job_on_delivery == null))
+                    .ToListAsync();
+
+                _logger.LogInformation("Ditemukan {count} job untuk di-sync ke AfterShip", jobs.Count);
+
+                foreach (var job in jobs)
+                {
+                    try
+                    {
+                        // Cek MAIN_CUST = BOSCH
+                        var customerGroup = await _context.CustomerGroups
+                            .FirstOrDefaultAsync(g => g.SUB_CODE == job.cust_group);
+
+                        if (customerGroup == null)
+                        {
+                            _logger.LogWarning("CustomerGroup tidak ditemukan untuk job {jobid}", job.jobid);
+                            continue;
+                        }
+
+                        if (customerGroup.MAIN_CUST != "BOSCH")
+                            continue;
+
+                        _logger.LogInformation("Dispatch AfterShip untuk job {jobid}", job.jobid);
+
+                        await _dispatcher.DispatchAsync("spk_bosch_started", new Dictionary<string, object?>
+                        {
+                            { "jobid", job.jobid },
+                            { "status", "On Delivery" },
+                            { "raw_tag", 2 },
+                            { "platform", "AfterShip" },
+                            { "date_time", DateTime.Now }
+                        });
+
+                        // Update flag
+                        job.job_on_delivery = true;
+                        job.job_on_delivery_time = DateTime.Now;
+                        job.update_user = "System";
+                        job.update_date = DateTime.Now;
+                        _context.JobHeaders.Update(job);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Gagal dispatch job {jobid}", job.jobid);
+                        // Lanjut ke job berikutnya, tidak stop semua
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error di SyncWithAfterShip");
+            }
+
+            _logger.LogInformation("=== Selesai SyncWithAfterShip === {time}", DateTime.Now);
+        }
+
+
+        public async Task RunFinished()
+        {
+            _logger.LogInformation("=== Mulai SyncWithAfterShip FINISHED === {time}", DateTime.Now);
+            try
+            {
+                var hasActiveIntegration = await _context.Integrations
+                    .AnyAsync(i => i.EventKey == "spk_bosch_finished" && i.IsActive == true);
+
+                if (!hasActiveIntegration)
+                {
+                    _logger.LogInformation("Tidak ada integrasi aktif untuk spk_bosch_finished, skip.");
+                    return;
+                }
+
+                var jobs = await _context.JobHeaders
+                    .Where(j =>
+                        (j.status_job == "ENDED" || j.status_job == "CLOSED") &&
+                        j.job_on_delivery == true &&
+                        (j.job_is_finish == false || j.job_is_finish == null) &&
+                        j.job_finish_time == null)
+                    .ToListAsync();
+
+                _logger.LogInformation("Ditemukan {count} job finished untuk di-sync ke AfterShip", jobs.Count);
+
+                foreach (var job in jobs)
+                {
+                    try
+                    {
+                        var customerGroup = await _context.CustomerGroups
+                            .FirstOrDefaultAsync(g => g.SUB_CODE == job.cust_group);
+
+                        if (customerGroup == null)
+                        {
+                            _logger.LogWarning("CustomerGroup tidak ditemukan untuk job {jobid}", job.jobid);
+                            continue;
+                        }
+
+                        if (customerGroup.MAIN_CUST != "BOSCH")
+                            continue;
+
+                        _logger.LogInformation("Dispatch AfterShip FINISHED untuk job {jobid}", job.jobid);
+
+                        await _dispatcher.DispatchAsync("spk_bosch_finished", new Dictionary<string, object?>
+                        {
+                            { "jobid", job.jobid },
+                            { "status", "Finished" },
+                            { "raw_tag", 3 },
+                            { "platform", "AfterShip" },
+                            { "date_time", DateTime.Now }
+                        });
+
+                        // Update flag
+                        job.job_is_finish = true;
+                        job.job_finish_time = DateTime.Now;
+                        job.update_user = "System";
+                        job.update_date = DateTime.Now;
+                        _context.JobHeaders.Update(job);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Gagal dispatch finished job {jobid}", job.jobid);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error di SyncWithAfterShip RunFinished");
+            }
+
+            _logger.LogInformation("=== Selesai SyncWithAfterShip FINISHED === {time}", DateTime.Now);
+        }
     }
 }
 

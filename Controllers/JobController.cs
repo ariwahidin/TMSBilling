@@ -184,7 +184,6 @@ namespace TMSBilling.Controllers
             ViewBag.ListWarehouse = _selectList.GetWarehouse();
             ViewBag.ListConsignee = _selectList.GetConsignee();
             ViewBag.ListOrigin = _selectList.GetOrigins();
-            //ViewBag.ListDestination = _selectList.GetDestinations();
 
             var accessibleCustomers = _context.UserXCustomers
             .Where(x => x.UserName == username)
@@ -211,7 +210,6 @@ namespace TMSBilling.Controllers
             ViewBag.ListStartingPoint = _selectList.GetStartingPoint();
             ViewBag.ListJobType = _selectList.JobTypeOption();
 
-            // ✅ Default selalu diset dulu
             vm.Header.job_type = "NORMAL";
             vm.Header.status_job = "DRAFT";
 
@@ -340,11 +338,43 @@ namespace TMSBilling.Controllers
                 .Where(o => invNos.Contains(o.inv_no) && o.is_b2c == "1")
                 .Any();
 
-
+            var userId = HttpContext.Session.GetString("username") ?? "System";
             if (customerApi && !isB2C)
             {
                 var run = await RunSaveWithApi(Header, Details, jobid);
                 if (!run.ok) return BadRequest(new { success = false, message = run.message });
+
+                if (customerGroup.MAIN_CUST == "BOSCH")
+                {
+                    Console.WriteLine("MASUK INTEGRASI " + jobid);
+                    var jobHeader = await _context.JobHeaders.FirstOrDefaultAsync(jo => jo.jobid == run.jobid);
+                    if (jobHeader != null && (jobHeader.job_in_plan == false || jobHeader.job_plan_time == null))
+                    {
+                        jobHeader.update_user = userId;
+                        jobHeader.job_in_plan = true;
+                        jobHeader.job_plan_time = DateTime.Now;
+                        jobHeader.update_date = DateTime.Now;
+                        _context.JobHeaders.Update(jobHeader);
+                        await _context.SaveChangesAsync();
+
+                        // ← Cek dulu ada integrasi aktif, kalau tidak ada skip dispatch
+                        var hasActiveIntegration = await _context.Integrations
+                            .AnyAsync(i => i.EventKey == "spk_bosch_created" && i.IsActive == true);
+
+                        if (hasActiveIntegration)
+                        {
+                            await _integrationDispatcher.DispatchAsync("spk_bosch_created", new Dictionary<string, object?>
+                            {
+                                { "jobid", run.jobid },
+                                { "status", "Plan" },
+                                { "raw_tag", 1 },
+                                { "platform", "AfterShip" },
+                                { "execute_by", userId },
+                                { "date_time", DateTime.Now },
+                            });
+                        }
+                    }
+                }
             }
             else
             {
@@ -353,7 +383,9 @@ namespace TMSBilling.Controllers
             }
 
 
-            var userId = HttpContext.Session.GetString("username") ?? "System";
+
+
+
 
 
             // Panggil setelah update status order
@@ -390,12 +422,12 @@ namespace TMSBilling.Controllers
             //        ["email_cc"] = emailCc
             //    }, HttpContext.Session.GetString("username") ?? "System");
             //}
-           
+
 
             return Json(new { success = true, message = "Job saved successfully" });
         }
 
-        private async Task<(bool ok, string message)> RunSaveWithApi(
+        private async Task<(bool ok, string message, string? jobid)> RunSaveWithApi(
             HeaderFormJob Header,
             List<OrderForJobForm> Details,
             string? jobid
@@ -404,7 +436,7 @@ namespace TMSBilling.Controllers
 
             if (Details == null || Details.Count == 0)
             {
-                return (false, "Order detail not found.");
+                return (false, "Order detail not found.", null);
             }
 
             var CostRate = _context.PriceBuys.FirstOrDefault(hm =>
@@ -416,7 +448,7 @@ namespace TMSBilling.Controllers
 
             if (CostRate == null)
             {
-                return (false, "Header, price buy not found");
+                return (false, "Header, price buy not found", null);
             }
 
             var OriginIsMatch = false;
@@ -434,7 +466,7 @@ namespace TMSBilling.Controllers
 
             if (!OriginIsMatch)
             {
-                return (false, $"Origin not found in order. Required origin: {CostRate.origin}");
+                return (false, $"Origin not found in order. Required origin: {CostRate.origin}", null);
             }
 
             // check destination order min 1 is match
@@ -449,7 +481,7 @@ namespace TMSBilling.Controllers
 
             if (!DestinationMatch)
             {
-                return (false, $"Destination not found in order. Required destination : {CostRate.dest}");
+                return (false, $"Destination not found in order. Required destination : {CostRate.dest}", null);
             }
 
 
@@ -458,21 +490,21 @@ namespace TMSBilling.Controllers
                 var orderExisting = _context.Orders.FirstOrDefault(or => or.inv_no == ord.inv_no);
                 if (orderExisting == null)
                 {
-                    return (false, "Order not found");
+                    return (false, "Order not found", null);
                 }
 
                 var customerGroup = _context.CustomerGroups.FirstOrDefault(g => g.SUB_CODE == orderExisting.sub_custid);
 
                 if (customerGroup == null)
                 {
-                    return (false, "Customer group not found");
+                    return (false, "Customer group not found", null);
                 }
 
                 var customer = _context.Customers.FirstOrDefault(c => c.CUST_CODE == customerGroup.CUST_CODE);
 
                 if (customer == null)
                 {
-                    return (false, "Customer not found");
+                    return (false, "Customer not found", null);
                 }
 
 
@@ -487,7 +519,7 @@ namespace TMSBilling.Controllers
                                     );
                 if (SellRateCheck == null)
                 {
-                    return (false, "Sell rate not found for INV " + orderExisting.inv_no);
+                    return (false, "Sell rate not found for INV " + orderExisting.inv_no, null);
 
                 }
             }
@@ -507,8 +539,6 @@ namespace TMSBilling.Controllers
 
             string newJobId = jobid ?? GenerateJobId(existingCount + 1);
 
-            //return Json(new { success = true, message = "BOLEH LANJUT, JOB ID : "+jobid });
-
             // awal kosong
             var deliveryOrderIds = new List<string>();
             var mceasy_job_id = string.Empty;
@@ -518,7 +548,7 @@ namespace TMSBilling.Controllers
             var result = InsertOrderToJob(Details, newJobId, Header, CostRate);
 
             if (!result.ok)
-                return (false, result.message);
+                return (false, result.message, null);
 
             deliveryOrderIds = result.deliveryOrderIds;
 
@@ -536,7 +566,7 @@ namespace TMSBilling.Controllers
                 );
                 if (!ok)
                 {
-                    return (false, "Gagal kirim ke API Store Fleet Task");
+                    return (false, "Gagal kirim ke API Store Fleet Task", null);
                 }
 
                 mceasy_job_id = json.GetProperty("data").GetProperty("id").GetString();
@@ -557,7 +587,7 @@ namespace TMSBilling.Controllers
                 );
                 if (!ok2)
                 {
-                    return (false, "Gagal kirim ke API Patch Fleet Task");
+                    return (false, "Gagal kirim ke API Patch Fleet Task", null);
                 }
 
                 var payload3 = new
@@ -573,7 +603,7 @@ namespace TMSBilling.Controllers
 
                 if (!ok3)
                 {
-                    return (false, "Gagal kirim ke API Do Transition Fleet Task!");
+                    return (false, "Gagal kirim ke API Do Transition Fleet Task!", null);
                 }  
 
             }
@@ -731,7 +761,7 @@ namespace TMSBilling.Controllers
                 }
                 else
                 {
-                    return (false, "Data job not found!");
+                    return (false, "Data job not found!", null);
                 }
             }
             else
@@ -742,7 +772,7 @@ namespace TMSBilling.Controllers
                 );
 
                 if (!ok4)
-                    return (false, "Gagal kirim ke API Show Fleet Task!");
+                    return (false, "Gagal kirim ke API Show Fleet Task!", null);
 
                 var fo = json4.GetProperty("data")
                              .Deserialize<FleetOrderMcEasy>()
@@ -783,6 +813,7 @@ namespace TMSBilling.Controllers
                 jobHeader.starting_point = Header.starting_point;
                 jobHeader.status_job = "DRAFT";
 
+
                 _context.JobHeaders.Add(jobHeader);
             }
 
@@ -809,7 +840,7 @@ namespace TMSBilling.Controllers
 
             await _context.SaveChangesAsync();
 
-            return (true, "OK");
+            return (true, "OK", newJobId);
         }
 
 
@@ -1015,14 +1046,23 @@ namespace TMSBilling.Controllers
                 jobHeader.job_type = Header.job_type;
                 jobHeader.entry_user = HttpContext.Session.GetString("username") ?? "System";
                 jobHeader.entry_date = DateTime.Now;
-                //jobHeader.starting_point = Header.starting_point;
                 jobHeader.is_integration = 0;
                 jobHeader.status_job = "DRAFT";
+
 
                 _context.JobHeaders.Add(jobHeader);
             }
 
             await _context.SaveChangesAsync();
+
+            //if (JobHeader.)
+            //{
+            //    // Lakukan sesuatu untuk customer BOSCH
+            //    await _integrationDispatcher.DispatchAsync("spk_bosch_created", new Dictionary<string, object?>
+            //        {
+            //            { "jobid", jobHeader.jobid }
+            //        });
+            //}
 
             return (true, "OK");
         }
@@ -1204,7 +1244,6 @@ namespace TMSBilling.Controllers
                     v.vehicle_active == 1 &&
                     v.sup_code == supCode
                 )
-                //.OrderBy(v => v.buy1)
                 .Select(v => new {
                     DriverName = v.vehicle_driver,
                     TruckId = v.vehicle_no

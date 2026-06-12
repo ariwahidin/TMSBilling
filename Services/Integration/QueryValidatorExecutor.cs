@@ -183,6 +183,9 @@ namespace TMSBilling.Services.Integration
             var resolvedQuery = ResolveQueryParameters(finalQuery, parameters, command);
             command.CommandText = resolvedQuery;
 
+            _logger.LogDebug("Resolved query: {Query}", resolvedQuery); // ← tambah
+            _logger.LogDebug("Parameters: {Params}", string.Join(", ", command.Parameters.Cast<SqlParameter>().Select(p => $"{p.ParameterName}={p.Value}")));
+
             await using var reader = await command.ExecuteReaderAsync();
 
             // Skip result sets dari SET ROWCOUNT (tidak ada result set, langsung ke data)
@@ -219,23 +222,62 @@ namespace TMSBilling.Services.Integration
         /// Ganti {{field}} di query dengan @field SQL parameter.
         /// Contoh: WHERE order_no = '{{order_no}}' → WHERE order_no = @order_no
         /// </summary>
+        //private static string ResolveQueryParameters(
+        //    string query,
+        //    Dictionary<string, object?> parameters,
+        //    SqlCommand command)
+        //{
+        //    if (!parameters.Any()) return query;
+
+        //    var result = query;
+        //    foreach (var (key, value) in parameters)
+        //    {
+        //        var placeholder = $"{{{{{key}}}}}"; // {{key}}
+        //        var paramName = $"@{Regex.Replace(key, @"[^a-zA-Z0-9_]", "_")}";
+
+        //        if (result.Contains(placeholder))
+        //        {
+        //            result = result.Replace(placeholder, paramName);
+        //            command.Parameters.AddWithValue(paramName, value ?? DBNull.Value);
+        //        }
+        //    }
+        //    return result;
+        //}
+
         private static string ResolveQueryParameters(
-            string query,
-            Dictionary<string, object?> parameters,
-            SqlCommand command)
+    string query,
+    Dictionary<string, object?> parameters,
+    SqlCommand command)
         {
             if (!parameters.Any()) return query;
 
             var result = query;
             foreach (var (key, value) in parameters)
             {
-                var placeholder = $"{{{{{key}}}}}"; // {{key}}
+                var placeholder = $"{{{{{key}}}}}";
                 var paramName = $"@{Regex.Replace(key, @"[^a-zA-Z0-9_]", "_")}";
 
                 if (result.Contains(placeholder))
                 {
                     result = result.Replace(placeholder, paramName);
-                    command.Parameters.AddWithValue(paramName, value ?? DBNull.Value);
+
+                    // ← Fix: unwrap JsonElement ke native type
+                    object? sqlValue = value switch
+                    {
+                        null => DBNull.Value,
+                        System.Text.Json.JsonElement je => je.ValueKind switch
+                        {
+                            System.Text.Json.JsonValueKind.String => je.GetString(),
+                            System.Text.Json.JsonValueKind.Number => je.TryGetInt64(out var l) ? l : je.GetDouble(),
+                            System.Text.Json.JsonValueKind.True => true,
+                            System.Text.Json.JsonValueKind.False => false,
+                            System.Text.Json.JsonValueKind.Null => DBNull.Value,
+                            _ => je.ToString()
+                        },
+                        _ => value
+                    };
+
+                    command.Parameters.AddWithValue(paramName, sqlValue ?? DBNull.Value);
                 }
             }
             return result;

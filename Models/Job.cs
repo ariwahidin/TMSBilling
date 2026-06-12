@@ -163,6 +163,15 @@ namespace TMSBilling.Models
         [Column(TypeName = "money")]
         public decimal? sell_cc { get; set; }
 
+
+        public bool? order_in_plan { get; set; } = false;
+        public DateTime? order_plan_time { get; set; }
+        public bool? order_on_delivery { get; set; } = false;
+        public DateTime? order_on_delivery_time { get; set; }
+        public bool? order_is_finish { get; set; } = false;
+        public DateTime? order_finish_time { get; set; }
+
+
         [StringLength(50)]
         public string? entry_user { get; set; }
 
@@ -235,6 +244,15 @@ namespace TMSBilling.Models
         public int? ritase_seq { get; set; }
 
         public int? starting_point { get; set; }
+
+        public string? main_cust { get; set; }
+
+        public bool? job_in_plan { get; set; } = false;
+        public DateTime? job_plan_time { get; set; }
+        public bool? job_on_delivery { get; set; } = false;
+        public DateTime? job_on_delivery_time { get; set; }
+        public bool? job_is_finish { get; set; } = false;
+        public DateTime? job_finish_time { get; set; }
 
         public int? is_integration { get; set; } = 1;
         public string? mceasy_job_id { get; set; }

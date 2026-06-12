@@ -79,5 +79,7 @@ namespace TMSBilling.Repositories
 
         // ── Scheduler ────────────────────────────────────────────────────────
         Task UpdateRunTimesAsync(int integrationId, DateTime lastRun, DateTime? nextRun, string status);
+
+        Task<IntegrationHistory?> GetHistoryByIdAsync(int id);
     }
 }

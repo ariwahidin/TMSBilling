@@ -41,6 +41,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddScoped<SelectListService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<SyncronizeWithMcEasy>();
+builder.Services.AddScoped<SyncWithAfterShip>();
 
 // Daftarkan background worker
 builder.Services.AddHostedService<SyncWorker>();

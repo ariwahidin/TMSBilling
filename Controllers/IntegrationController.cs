@@ -657,6 +657,28 @@ namespace TMSBilling.Controllers
                 p.Category
             }));
         }
+
+
+        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> Retrigger(int historyId)
+        {
+            var history = await _repo.GetHistoryByIdAsync(historyId);
+            if (history == null)
+                return Json(new { success = false, message = "History tidak ditemukan." });
+
+            var integration = await _repo.GetByIdWithConnectionAsync(history.IntegrationId);
+            if (integration == null)
+                return Json(new { success = false, message = "Integration tidak ditemukan." });
+
+            var eventData = string.IsNullOrWhiteSpace(history.EventDataJson)
+                ? new Dictionary<string, object?>()
+                : JsonSerializer.Deserialize<Dictionary<string, object?>>(history.EventDataJson) ?? new();
+
+            await _dispatcher.RunRetriggerAsync(integration, eventData);
+
+            return Json(new { success = true, message = "Retrigger berhasil." });
+        }
     }
 
     // ── ViewModels ────────────────────────────────────────────────────────────

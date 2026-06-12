@@ -174,11 +174,12 @@
 //}
 
 
+using DocumentFormat.OpenXml.InkML;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using TMSBilling.Data;
 using TMSBilling.Models;
 
@@ -367,6 +368,11 @@ namespace TMSBilling.Repositories
                 entity.UpdatedAt = DateTime.Now;
                 await _db.SaveChangesAsync();
             }
+        }
+
+        public async Task<IntegrationHistory?> GetHistoryByIdAsync(int id)
+        {
+            return await _db.IntegrationHistories.FindAsync(id);
         }
     }
 }

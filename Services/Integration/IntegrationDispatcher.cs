@@ -13,6 +13,8 @@ namespace TMSBilling.Services.Integration
     {
         Task DispatchAsync(string eventKey, Dictionary<string, object?> eventData);
         Task DispatchScheduledAsync(int integrationId, Dictionary<string, object?> eventData);
+
+        Task RunRetriggerAsync(TMSBilling.Models.Integration integration, Dictionary<string, object?> eventData);
     }
 
     public class IntegrationDispatcher : IIntegrationDispatcher
@@ -171,6 +173,11 @@ namespace TMSBilling.Services.Integration
             foreach (var s in _senders)
                 if (s.ChannelType.Equals(channelType, StringComparison.OrdinalIgnoreCase)) return s;
             return null;
+        }
+
+        public async Task RunRetriggerAsync(TMSBilling.Models.Integration integration, Dictionary<string, object?> eventData)
+        {
+            await RunIntegrationAsync(integration, eventData, "manual_retry");
         }
     }
 }

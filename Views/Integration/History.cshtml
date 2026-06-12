@@ -66,6 +66,7 @@
                             <th>Durasi</th>
                             <th>Email</th>
                             <th>Pesan</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -130,28 +131,12 @@
                                         </button>
                                     }
                                 </td>
-                                @* <td>
-                                    <span class="text-truncate d-inline-block" style="max-width:300px"
-                                          title="@h.Message">@h.Message</span>
-                                    @if (!string.IsNullOrEmpty(h.ErrorDetail))
-                                    {
-                                        <button class="btn btn-link btn-sm text-danger p-0 ms-1"
-                                                onclick="showError('@h.Id')" data-error="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(h.ErrorDetail))">
-                                            <i class="bi bi-bug"></i>
-                                        </button>
-                                    }
-                                    @if (!string.IsNullOrEmpty(h.EventDataJson))
-                                    {
-                                        <button class="btn btn-link btn-sm text-info p-0 ms-1"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#payload-@h.Id">
-                                            <i class="bi bi-code"></i>
-                                        </button>
-                                        <div class="collapse" id="payload-@h.Id">
-                                            <pre class="bg-light rounded p-2 small mt-1">@h.EventDataJson</pre>
-                                        </div>
-                                    }
-                                </td> *@
+                                <td>
+                                    <button class="btn btn-outline-warning btn-sm retrigger-btn"
+                                            data-id="@h.Id" title="Retrigger">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </td>
                             </tr>
                         }
                         @if (!Model.Any())
@@ -164,21 +149,6 @@
         </div>
     </div>
 </div>
-
-<!-- Error Modal -->
-@* <div class="modal fade" id="errorModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-danger"><i class="bi bi-bug me-2"></i>Error Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <pre id="errorContent" class="bg-light rounded p-3 small overflow-auto" style="max-height:400px"></pre>
-            </div>
-        </div>
-    </div>
-</div> *@
 
 <!-- Detail Modal -->
 <div class="modal fade" id="detailModal" tabindex="-1">
@@ -268,16 +238,36 @@
             const targetTab = document.querySelector(`[data-bs-target="#${tabMap[focus] ?? 'tab-request'}"]`);
             setTimeout(() => targetTab?.click(), 150);
         }
+
+        document.querySelectorAll('.retrigger-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                if (!confirm('Jalankan ulang eksekusi ini?')) return;
+
+                const id = this.dataset.id;
+                const originalHtml = this.innerHTML;
+                this.disabled = true;
+                this.innerHTML = '<i class="bi bi-hourglass"></i>';
+
+                try {
+                    const res = await fetch(`/Integration/Retrigger?historyId=${id}`, { method: 'POST' });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        this.innerHTML = '<i class="bi bi-check"></i>';
+                        this.classList.replace('btn-outline-warning', 'btn-outline-success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        alert('Gagal: ' + data.message);
+                        this.disabled = false;
+                        this.innerHTML = originalHtml;
+                    }
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    this.disabled = false;
+                    this.innerHTML = originalHtml;
+                }
+            });
+        });
     </script>
 }
 
-@* @section Scripts {
-<script>
-function showError(id) {
-    const btn = event.target.closest('button');
-    const errorText = JSON.parse(btn.dataset.error);
-    document.getElementById('errorContent').textContent = errorText;
-    new bootstrap.Modal(document.getElementById('errorModal')).show();
-}
-</script>
-} *@
