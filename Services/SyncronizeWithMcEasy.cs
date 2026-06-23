@@ -356,8 +356,14 @@ namespace TMSBilling.Services
                     $"fleet-planning/api/web/v1/fleet-task/{data[i].OrderID}"
                 );
 
+                //if (!ok)
+                //    throw new Exception($"Gagal ambil halaman ke-{i} dari API get fo");
+
                 if (!ok)
-                    throw new Exception($"Gagal ambil halaman ke-{i} dari API get fo");
+                {
+                    _logger.LogWarning("Gagal ambil FO index ke-{i}, dilewati.", i);
+                    continue;
+                }
 
                 var fo = json.GetProperty("data")
                              .Deserialize<FleetOrderMcEasy>()

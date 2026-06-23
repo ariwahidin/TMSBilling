@@ -321,6 +321,13 @@ namespace TMSBilling.Controllers
                 Header.starting_point = GeofenceStartingPoint.GeofenceId;
             }
 
+            var Area = await _context.Destinations.FirstOrDefaultAsync(d => d.destination_code == Header.dest_area && d.area == "INTERCITY");
+            bool isIntercity = false;
+            if (Area != null)
+            {
+                isIntercity = true;
+            }
+
             //// check order is b2c
             //var isB2C = false;
             //foreach (var ord in Details) {
@@ -344,11 +351,13 @@ namespace TMSBilling.Controllers
                 var run = await RunSaveWithApi(Header, Details, jobid);
                 if (!run.ok) return BadRequest(new { success = false, message = run.message });
 
-                if (customerGroup.MAIN_CUST == "BOSCH")
+                if (customerGroup.MAIN_CUST == "BOSCH" && isIntercity)
                 {
                     Console.WriteLine("MASUK INTEGRASI " + jobid);
+                    var hasActiveIntegration = await _context.Integrations
+                        .AnyAsync(i => i.EventKey == "spk_bosch_created" && i.IsActive == true);
                     var jobHeader = await _context.JobHeaders.FirstOrDefaultAsync(jo => jo.jobid == run.jobid);
-                    if (jobHeader != null && (jobHeader.job_in_plan == false || jobHeader.job_plan_time == null))
+                    if (jobHeader != null && hasActiveIntegration &&(jobHeader.job_in_plan == false || jobHeader.job_plan_time == null))
                     {
                         jobHeader.update_user = userId;
                         jobHeader.job_in_plan = true;
@@ -357,22 +366,19 @@ namespace TMSBilling.Controllers
                         _context.JobHeaders.Update(jobHeader);
                         await _context.SaveChangesAsync();
 
-                        // ← Cek dulu ada integrasi aktif, kalau tidak ada skip dispatch
-                        var hasActiveIntegration = await _context.Integrations
-                            .AnyAsync(i => i.EventKey == "spk_bosch_created" && i.IsActive == true);
-
-                        if (hasActiveIntegration)
+                        await _integrationDispatcher.DispatchAsync("spk_bosch_created", new Dictionary<string, object?>
                         {
-                            await _integrationDispatcher.DispatchAsync("spk_bosch_created", new Dictionary<string, object?>
-                            {
-                                { "jobid", run.jobid },
-                                { "status", "Plan" },
-                                { "raw_tag", 1 },
-                                { "platform", "AfterShip" },
-                                { "execute_by", userId },
-                                { "date_time", DateTime.Now },
-                            });
-                        }
+                            { "jobid", run.jobid },
+                            { "status", "Plan" },
+                            { "raw_tag", 1 },
+                            { "customer", customerGroup.MAIN_CUST },
+                            { "origin", Header.origin_id },
+                            { "destination", Header.dest_area },
+                            { "area" , Area != null ? Area.area : null },
+                            { "platform", "AfterShip" },
+                            { "execute_by", userId },
+                            { "date_time", DateTime.Now },
+                        });
                     }
                 }
             }
