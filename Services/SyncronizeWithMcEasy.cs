@@ -206,6 +206,9 @@ namespace TMSBilling.Services
                 WHERE 
                     mceasy_status != 'Terkirim'
                     AND mceasy_order_id IS NOT NULL
+                    AND mceasy_order_id <> '0'
+                    AND pickup_date >= DATEADD(DAY, -30, GETDATE())
+                ORDER BY pickup_date DESC
             ";
 
             // Jika limit ada → tambahkan TOP
