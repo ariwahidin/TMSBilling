@@ -36,6 +36,14 @@ namespace TMSBilling.Models
 
         public DateTime? pod_ret_date { get; set; }
 
+        public string? picked_by { get; set; }
+
+        public DateTime? picked_on { get; set; }
+
+        public string? dropped_by { get; set; }
+
+        public DateTime? dropped_on { get; set; }
+
         [StringLength(10)]
         public string? pod_ret_time { get; set; }
 

@@ -1799,13 +1799,15 @@ namespace TMSBilling.Controllers
     public class ConfirmOrderID
     {
         public string? OrderID { get; set; }
+        public string? OrderStatus { get; set; }
+        public string? InvNo { get; set; }
+        public string? JobID { get; set; }
     }
 
     public class BulkDownloadRequest
     {
         public List<int> OrderIds { get; set; }
     }
-
 
     public class BulkConfirmRequest
     {

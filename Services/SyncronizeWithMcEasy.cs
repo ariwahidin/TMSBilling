@@ -75,6 +75,36 @@ namespace TMSBilling.Services
                 _logger.LogError(ex, "Gagal sync ORDER IN JOB");
             }
 
+
+            // Step 4: ORDER POD
+            try
+            {
+                _logger.LogInformation("Mulai sync ORDER POD...");
+                var podOrders = await FetchOrderPODFromApi(1000);
+                _logger.LogInformation("Order POD API FROM MCEasy mengembalikan {count} data", podOrders?.Count ?? 0);
+
+                var debugJson = System.Text.Json.JsonSerializer.Serialize(podOrders, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                _logger.LogInformation("Isi podOrders:\n{data}", debugJson);
+
+                if (podOrders != null && podOrders.Count > 0)
+                {
+                    await SaveJobPODAsync(podOrders);
+                }
+
+                // Implementasi sinkronisasi ORDER POD ke database jika diperlukan
+                //if (orders?.Any() == true)
+                //    await SyncOrderToDatabase(orders);
+                //else
+                //    _logger.LogWarning("Tidak ada data ORDER yang perlu disinkronkan.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Gagal sync ORDER POD");
+            }
+
             var totalDuration = DateTime.Now - totalStart;
             _logger.LogInformation("=== Sync McEasy selesai. Total durasi: {duration} detik ===",
                 totalDuration.TotalSeconds.ToString("0.000"));
@@ -201,8 +231,14 @@ namespace TMSBilling.Services
                     $"order/api/web/v1/delivery-order/{data[i].OrderID}"
                 );
 
+                //if (!ok)
+                //    throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
+
                 if (!ok)
-                    throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
+                {
+                    _logger.LogWarning("Gagal fetch order index ke-{i}, dilewati.", i);
+                    continue;
+                }
 
                 var order = json
                     .GetProperty("data")
@@ -599,6 +635,133 @@ namespace TMSBilling.Services
             }
 
             return count;
+        }
+
+
+        // ================================
+        // FETCH ORDER POD FROM MCEASY API
+        // ================================
+
+        public async Task<List<OrderPODMcEasy>> FetchOrderPODFromApi(int? limit = null)
+        {
+            string sql = @"
+                SELECT {0} 
+                    mceasy_order_id AS OrderID,
+                    CAST(order_status AS VARCHAR(20)) AS OrderStatus,
+                    inv_no AS InvNo,
+                    jobid AS JobID
+                FROM TRC_ORDER
+                WHERE 
+                    mceasy_status = 'Terkirim'
+                    AND mceasy_order_id IS NOT NULL
+                    AND pickup_date >= DATEADD(DAY, -30, GETDATE())
+            ";
+            string topClause = "";
+            if (limit.HasValue && limit.Value > 0)
+            {
+                topClause = $"TOP {limit.Value}";
+            }
+            sql = string.Format(sql, topClause);
+
+            var data = await _context.ConfirmOrderID
+                .FromSqlRaw(sql)
+                .ToListAsync();
+
+            var allOrders = new List<OrderPODMcEasy>();
+            for (int i = 0; i < data.Count; i++)
+            {
+                var (ok, json) = await _apiService.SendRequestAsync(
+                    HttpMethod.Get,
+                    $"order/api/web/v1/delivery-order/{data[i].OrderID}/activity"
+                );
+                if (!ok)
+                {
+                    _logger.LogWarning("Gagal fetch order POD index ke-{i}, dilewati.", i);
+                    continue;
+                }
+
+                var activities = json
+                    .GetProperty("data")
+                    .Deserialize<List<OrderPODMcEasy>>() ?? new List<OrderPODMcEasy>();
+
+                foreach (var activity in activities)
+                {
+                    activity.InvNo = data[i].InvNo;
+                    activity.JobID = data[i].JobID;
+                }
+
+                allOrders.AddRange(activities);
+            }
+            return allOrders;
+        }
+
+        private async Task SaveJobPODAsync(List<OrderPODMcEasy> podOrders)
+        {
+            if (podOrders == null || podOrders.Count == 0)
+            {
+                _logger.LogInformation("Tidak ada data POD untuk disimpan.");
+                return;
+            }
+
+            int inserted = 0;
+            int updated = 0;
+
+            // Preload existing records dari DB sekali di awal
+            var jobIds = podOrders.Select(x => x.JobID).Distinct().ToList();
+            var existingList = await _context.JobPODs
+                .Where(x => jobIds.Contains(x.jobid))
+                .ToListAsync();
+
+            // Dictionary buat tracking, termasuk yang baru di-Add dalam batch ini
+            var tracker = existingList
+                .ToDictionary(x => $"{x.jobid}_{x.inv_no}");
+
+            foreach (var order in podOrders)
+            {
+                if (string.IsNullOrEmpty(order.JobID) || string.IsNullOrEmpty(order.InvNo))
+                {
+                    _logger.LogWarning("Skip data POD karena JobID/InvNo kosong. id={id}", order.id);
+                    continue;
+                }
+
+                var key = $"{order.JobID}_{order.InvNo}";
+
+                if (!tracker.TryGetValue(key, out var existing))
+                {
+                    existing = new JobPOD
+                    {
+                        jobid = order.JobID,
+                        inv_no = order.InvNo,
+                        entry_user = "SYSTEM_MCEASY",
+                        entry_date = DateTime.Now
+                    };
+                    _context.JobPODs.Add(existing);
+                    tracker[key] = existing; // penting: masukkan ke tracker biar iterasi berikutnya ketemu
+                    inserted++;
+                }
+                else
+                {
+                    updated++;
+                }
+
+                if (order.type == "PICKUP")
+                {
+                    existing.picked_by = order.contact_person_name;
+                    existing.picked_on = order.completed_on?.DateTime;
+                }
+                else if (order.type == "DROP")
+                {
+                    existing.dropped_by = order.contact_person_name;
+                    existing.dropped_on = order.completed_on?.DateTime;
+                }
+
+                existing.update_user = "SYSTEM_MCEASY";
+                existing.update_date = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Sync JobPOD selesai. Insert: {inserted}, Update: {updated}", inserted, updated);
         }
     }
 

@@ -232,6 +232,17 @@ namespace TMSBilling.Models
         public OrderFleetTaskMcEasy? fleet_task { get; set; }
     }
 
+    public class OrderPODMcEasy
+    {
+        public string? id { get; set; }
+        public string? type { get; set; }
+        public DateTimeOffset? completed_on { get; set; }
+        public string? contact_person_name { get; set; }
+
+        public string? InvNo { get; set; }
+        public string? JobID { get; set; }
+    }
+
     public class OrderStatusMcEasy
     {
         public string? name { get; set; }
