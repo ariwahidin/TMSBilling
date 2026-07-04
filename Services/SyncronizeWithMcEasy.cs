@@ -236,9 +236,6 @@ namespace TMSBilling.Services
                     $"order/api/web/v1/delivery-order/{data[i].OrderID}"
                 );
 
-                //if (!ok)
-                //    throw new Exception($"Gagal ambil halaman ke-{i} dari API get order");
-
                 if (!ok)
                 {
                     _logger.LogWarning("Gagal fetch order index ke-{i}, dilewati.", i);
@@ -651,15 +648,19 @@ namespace TMSBilling.Services
         {
             string sql = @"
                 SELECT {0} 
-                    mceasy_order_id AS OrderID,
-                    CAST(order_status AS VARCHAR(20)) AS OrderStatus,
-                    inv_no AS InvNo,
-                    jobid AS JobID
-                FROM TRC_ORDER
+                    a.mceasy_order_id AS OrderID,
+                    CAST(a.order_status AS VARCHAR(20)) AS OrderStatus,
+                    a.inv_no AS InvNo,
+                    a.jobid AS JobID
+                FROM TRC_ORDER a
+                INNER JOIN TRC_CUST_GROUP b ON a.sub_custid = b.SUB_CODE
                 WHERE 
-                    mceasy_status = 'Terkirim'
-                    AND mceasy_order_id IS NOT NULL
-                    AND pickup_date >= DATEADD(DAY, -30, GETDATE())
+                    a.mceasy_status = 'Terkirim'
+                    AND a.mceasy_order_id IS NOT NULL
+                    AND a.mceasy_order_id <> '0'
+                    AND a.pickup_date >= DATEADD(DAY, -30, GETDATE())
+                    AND b.MAIN_CUST = 'BOSCH'  
+                ORDER BY a.pickup_date DESC
             ";
             string topClause = "";
             if (limit.HasValue && limit.Value > 0)
@@ -756,6 +757,8 @@ namespace TMSBilling.Services
                 }
                 else if (order.type == "DROP")
                 {
+                    existing.arriv_pic = order.contact_person_name;
+                    existing.arriv_date = order.completed_on?.DateTime;
                     existing.dropped_by = order.contact_person_name;
                     existing.dropped_on = order.completed_on?.DateTime;
                 }
