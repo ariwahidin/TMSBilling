@@ -201,7 +201,9 @@ namespace TMSBilling.Services
             string sql = @"
                 SELECT {0} 
                     mceasy_order_id AS OrderID,
-                    order_status AS OrderStatus
+                    CAST(order_status AS VARCHAR(20)) AS OrderStatus,
+                    inv_no AS InvNo,
+                    jobid AS JobID
                 FROM TRC_ORDER
                 WHERE 
                     mceasy_status != 'Terkirim'
