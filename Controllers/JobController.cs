@@ -93,7 +93,7 @@ namespace TMSBilling.Controllers
                 startDate = DateTime.Now.AddDays(-7).Date;
 
             if (!endDate.HasValue)
-                endDate = DateTime.Now.Date;
+                endDate = DateTime.Now.AddDays(+2).Date;
 
             ViewBag.StartDate = startDate.Value.ToString("yyyy-MM-dd");
             ViewBag.EndDate = endDate.Value.ToString("yyyy-MM-dd");

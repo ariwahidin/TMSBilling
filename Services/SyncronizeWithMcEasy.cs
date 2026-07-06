@@ -754,11 +754,13 @@ namespace TMSBilling.Services
                 {
                     existing.picked_by = order.contact_person_name;
                     existing.picked_on = order.completed_on?.DateTime;
+                    existing.picked_time = order.completed_on?.ToString("HH:mm");
                 }
                 else if (order.type == "DROP")
                 {
                     existing.arriv_pic = order.contact_person_name;
                     existing.arriv_date = order.completed_on?.DateTime;
+                    existing.arriv_time = order.completed_on?.ToString("HH:mm");
                     existing.dropped_by = order.contact_person_name;
                     existing.dropped_on = order.completed_on?.DateTime;
                 }

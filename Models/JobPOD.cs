@@ -40,6 +40,9 @@ namespace TMSBilling.Models
 
         public DateTime? picked_on { get; set; }
 
+        [StringLength(10)]
+        public string? picked_time { get; set; }
+
         public string? dropped_by { get; set; }
 
         public DateTime? dropped_on { get; set; }
