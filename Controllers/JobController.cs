@@ -308,6 +308,24 @@ namespace TMSBilling.Controllers
             var Header = model.FormJobHeader;
             var Details = model.FormJobDetails;
 
+            if (Header.dvdate <= Header.pickup_date)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Delivery date must be greater than the pickup date"
+                });
+            }
+
+            //if (!header.pickup_date.HasValue || header.pickup_date.Value.ToUniversalTime() <= DateTime.Today)
+            //{
+            //    return BadRequest(new
+            //    {
+            //        success = false,
+            //        message = "Pick up time must be greater than the current time"
+            //    });
+            //}
+
             var customerGroup = await _context.CustomerGroups.FirstOrDefaultAsync( c => c.SUB_CODE == Header.cust_group);
             if (customerGroup == null) {
                 return Json(new { success = true, message = "Customer group not found!" });

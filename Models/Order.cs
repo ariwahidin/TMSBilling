@@ -40,9 +40,9 @@ namespace TMSBilling.Models
         [StringLength(10)]
         public string? uom { get; set; }
 
-        public int? pallet_consume { get; set; }
+        public int? pallet_consume { get; set; } = 0;
 
-        public int? pallet_delivery { get; set; }
+        public int? pallet_delivery { get; set; } = 0;
 
         [StringLength(50)]
         public string? si_no { get; set; } = "";

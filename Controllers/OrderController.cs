@@ -117,7 +117,7 @@ namespace TMSBilling.Controllers
         {
             // Set default values to ViewBag for the date inputs
             ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(-7).ToString("yyyy-MM-dd");
-            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(+2).ToString("yyyy-MM-dd");
 
             var data = await GetOrderSummaryQuery(startDate, endDate).ToListAsync();
             return View(data);
@@ -247,7 +247,7 @@ namespace TMSBilling.Controllers
 
             if (!_context.Origins.Any(l => l.origin_code == header.origin_id))
                 errors.Add($"Origin '{header.origin_id}' not found");
-
+            
             if (header.id_seq == 0)
                 if (_context.Orders.Any(o => o.inv_no == header.inv_no))
                     errors.Add($"Inv No '{header.inv_no}' already exists!");
@@ -351,7 +351,7 @@ namespace TMSBilling.Controllers
 
                 if (header.id_seq == 0)
                 {
-                    if (!header.delivery_date.HasValue || header.delivery_date.Value.ToUniversalTime() <= DateTime.UtcNow)
+                    if (!header.delivery_date.HasValue || header.delivery_date.Value.ToUniversalTime() <= DateTime.Today)
                     {
                         return BadRequest(new
                         {
@@ -360,7 +360,7 @@ namespace TMSBilling.Controllers
                         });
                     }
 
-                    if (!header.pickup_date.HasValue || header.pickup_date.Value.ToUniversalTime() <= DateTime.UtcNow)
+                    if (!header.pickup_date.HasValue || header.pickup_date.Value.ToUniversalTime() <= DateTime.Today)
                     {
                         return BadRequest(new
                         {
