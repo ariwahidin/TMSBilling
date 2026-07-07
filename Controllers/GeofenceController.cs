@@ -17,6 +17,8 @@ using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Services;
+using ClosedXML.Excel;
+using System.Globalization;
 
 
 namespace TMSBilling.Controllers
@@ -104,6 +106,7 @@ namespace TMSBilling.Controllers
                 {
                     FenceID = c.FenceName,
                     FenceName = c.FenceName,
+                    Description = c.Description,
                     Category = c.Category,
                     Customer = c.CustomerName,
                     Address = c.Address,
@@ -219,6 +222,7 @@ namespace TMSBilling.Controllers
                     model.GeofenceId = consignee.GeofenceId.ToString();
                     model.FenceID = consignee.FenceName;
                     model.FenceName = consignee.FenceName;
+                    model.Description = consignee.Description;
                     model.CUST_GROUP_CODE = consignee.CustomerName;
                     model.Address = consignee.Address;
                     model.PostalCode = consignee.PostalCode;
@@ -415,6 +419,7 @@ namespace TMSBilling.Controllers
                     ng.CompanyId = p.companyId;
                     ng.CustomerId = p.customerId;
                     ng.FenceName = p.fenceName;
+                    ng.Description = model.Description;
                     ng.Type = p.type;
                     ng.PolyData = model.PolyData;
                     ng.CircData = $"<{model.Coordinates},{model.Radius}>";
@@ -446,6 +451,7 @@ namespace TMSBilling.Controllers
                     
 
                     ng.FenceName = model.FenceName;
+                    ng.Description = model.Description;
                     ng.City = model.City;
                     ng.Address = model.Address;
                     ng.PostalCode = model.PostalCode;
@@ -677,6 +683,282 @@ namespace TMSBilling.Controllers
                 message = model.ID > 0 ? "Consignee Updated Successfully" : "Consignee Created Successfully"
             });
         }
+
+
+        // GET: /Geofence/Upload — halaman terpisah
+        public IActionResult Upload()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult Upload(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "File not found or empty." });
+            }
+
+            var added = new List<string>();
+            var skippedExisting = new List<string>();
+            var skippedCustomerNotFound = new List<string>();
+            var skippedDuplicateInFile = new List<string>();
+            var invalid = new List<string>();
+
+            // Load master customer groups (validasi CUST_GROUP_CODE)
+            var validCustomerCodes = _context.CustomerGroups
+                .Select(c => c.SUB_CODE)
+                .ToList()
+                .Select(c => c.Trim().ToUpperInvariant())
+                .ToHashSet();
+
+            // Load existing geofence sebagai composite key: FenceName + CustomerName
+            var existingGeofences = _context.Geofences
+                .Select(g => new { g.FenceName, g.CustomerName })
+                .ToList()
+                .Where(g => g.FenceName != null && g.CustomerName != null)
+                .Select(g => $"{g.FenceName!.Trim().ToUpperInvariant()}|{g.CustomerName!.Trim().ToUpperInvariant()}")
+                .ToHashSet();
+
+            var seenInFile = new HashSet<string>();
+            var username = HttpContext.Session.GetString("username") ?? "System";
+            var now = DateTime.Now;
+
+            // Indonesia bounds — sama seperti INDONESIA_BOUNDS di map
+            const double MinLat = -11.0, MaxLat = 6.0;
+            const double MinLng = 95.0, MaxLng = 141.0;
+
+            try
+            {
+                using var stream = new MemoryStream();
+                file.CopyTo(stream);
+                using var workbook = new XLWorkbook(stream);
+                var worksheet = workbook.Worksheet(1);
+                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1); // skip header
+
+                if (rows == null)
+                {
+                    return BadRequest(new { message = "Excel file is empty or format is invalid." });
+                }
+
+                foreach (var row in rows)
+                {
+                    var fenceName = row.Cell(1).GetValue<string>()?.Trim();
+                    var description = row.Cell(2).GetValue<string>()?.Trim();
+                    var custCode = row.Cell(3).GetValue<string>()?.Trim();
+                    var address = row.Cell(4).GetValue<string>()?.Trim();
+                    var province = row.Cell(5).GetValue<string>()?.Trim();
+                    var city = row.Cell(6).GetValue<string>()?.Trim();
+                    var postalCode = row.Cell(7).GetValue<string>()?.Trim();
+                    var latText = row.Cell(8).GetValue<string>()?.Trim();
+                    var lngText = row.Cell(9).GetValue<string>()?.Trim();
+                    var radiusText = row.Cell(10).GetValue<string>()?.Trim();
+                    var contactName = row.Cell(11).GetValue<string>()?.Trim();
+                    var phoneNo = row.Cell(12).GetValue<string>()?.Trim();
+                    var isGarageText = row.Cell(13).GetValue<string>()?.Trim();
+
+                    if (string.IsNullOrWhiteSpace(fenceName) && string.IsNullOrWhiteSpace(custCode))
+                        continue; // empty row, skip silently
+
+                    var identifier = !string.IsNullOrWhiteSpace(fenceName) ? fenceName : "(no fence name)";
+
+                    // Required fields
+                    var requiredErrors = new List<string>();
+                    if (string.IsNullOrWhiteSpace(fenceName)) requiredErrors.Add("Fence Name is required");
+                    if (string.IsNullOrWhiteSpace(description)) requiredErrors.Add("Description is required");
+                    if (string.IsNullOrWhiteSpace(custCode)) requiredErrors.Add("Customer Group Code is required");
+                    //if (string.IsNullOrWhiteSpace(city)) requiredErrors.Add("City is required");
+
+                    if (requiredErrors.Any())
+                    {
+                        invalid.Add($"{identifier} ({string.Join(", ", requiredErrors)})");
+                        continue;
+                    }
+
+                    // Length validation (sesuai MaxLength di model)
+                    var lengthErrors = new List<string>();
+                    if (fenceName!.Length > 100) lengthErrors.Add("Fence Name > 100 chars");
+    
+                    if (address?.Length > 255) lengthErrors.Add("Address > 255 chars");
+                    if (province?.Length > 100) lengthErrors.Add("Province > 100 chars");
+                    if (city!.Length > 100) lengthErrors.Add("City > 100 chars");
+                    if (postalCode?.Length > 10) lengthErrors.Add("Postal Code > 10 chars");
+                    if (contactName?.Length > 100) lengthErrors.Add("Contact Name > 100 chars");
+                    if (phoneNo?.Length > 20) lengthErrors.Add("Phone No > 20 chars");
+
+                    // Lat/Lng validation
+                    var coordErrors = new List<string>();
+                    double lat = 0, lng = 0;
+
+                    if (!string.IsNullOrWhiteSpace(latText) && !string.IsNullOrWhiteSpace(lngText))
+                    {
+                        if (!double.TryParse(latText, NumberStyles.Float, CultureInfo.InvariantCulture, out lat))
+                            coordErrors.Add("Latitude is not a valid number");
+                        else if (lat < MinLat || lat > MaxLat)
+                            coordErrors.Add($"Latitude out of Indonesia range ({MinLat} to {MaxLat})");
+
+                        if (!double.TryParse(lngText, NumberStyles.Float, CultureInfo.InvariantCulture, out lng))
+                            coordErrors.Add("Longitude is not a valid number");
+                        else if (lng < MinLng || lng > MaxLng)
+                            coordErrors.Add($"Longitude out of Indonesia range ({MinLng} to {MaxLng})");
+                    }
+
+                        // Radius — optional, default 100
+                        string radius = "100";
+                    if (!string.IsNullOrWhiteSpace(radiusText))
+                    {
+                        if (!int.TryParse(radiusText, out var radiusInt) || radiusInt <= 0)
+                        {
+                            coordErrors.Add("Radius must be a positive whole number");
+                        }
+                        else
+                        {
+                            radius = radiusInt.ToString();
+                        }
+                    }
+
+                    if (lengthErrors.Any() || coordErrors.Any())
+                    {
+                        var allErrors = lengthErrors.Concat(coordErrors);
+                        invalid.Add($"{identifier} ({string.Join(", ", allErrors)})");
+                        continue;
+                    }
+
+                    // Master validation — skip if not found
+                    var normalizedCustCode = custCode!.ToUpperInvariant();
+                    if (!validCustomerCodes.Contains(normalizedCustCode))
+                    {
+                        skippedCustomerNotFound.Add($"{fenceName} (Customer Group Code '{custCode}' not found)");
+                        continue;
+                    }
+
+                    // Is Garage parsing — terima "true"/"false"/"1"/"0"/kosong
+                    bool isGarage = false;
+                    if (!string.IsNullOrWhiteSpace(isGarageText))
+                    {
+                        isGarage = isGarageText.Trim().Equals("true", StringComparison.OrdinalIgnoreCase)
+                            || isGarageText.Trim() == "1";
+                    }
+
+                    // Composite key check
+                    var compositeKey = $"{fenceName.ToUpperInvariant()}|{normalizedCustCode}";
+
+                    if (existingGeofences.Contains(compositeKey))
+                    {
+                        skippedExisting.Add($"{fenceName} (Customer: {custCode})");
+                        continue;
+                    }
+
+                    if (seenInFile.Contains(compositeKey))
+                    {
+                        skippedDuplicateInFile.Add($"{fenceName} (Customer: {custCode})");
+                        continue;
+                    }
+
+                    seenInFile.Add(compositeKey);
+
+                    var latStr = lat.ToString(CultureInfo.InvariantCulture);
+                    var lngStr = lng.ToString(CultureInfo.InvariantCulture);
+
+                    _context.Geofences.Add(new GeofenceTable
+                    {
+                        FenceName = fenceName,
+                        Description = description,
+                        CustomerName = custCode,
+                        Address = address,
+                        Province = province,
+                        City = city,
+                        PostalCode = postalCode,
+                        Lat = latStr,
+                        Long = lngStr,
+                        Cordinates = $"({latStr},{lngStr})",
+                        Radius = radius,
+                        CircData = $"<({latStr},{lngStr}),{radius}>",
+                        Type = "circle",
+                        ContactName = contactName,
+                        PhoneNo = phoneNo,
+                        IsGarage = isGarage,
+                        Category = "Customer",
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    });
+
+                    added.Add($"{fenceName} (Customer: {custCode})");
+                }
+
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to read Excel file: " + ex.Message });
+            }
+
+            return Ok(new
+            {
+                totalProcessed = added.Count + skippedExisting.Count + skippedCustomerNotFound.Count
+                    + skippedDuplicateInFile.Count + invalid.Count,
+                added,
+                skippedExisting,
+                skippedCustomerNotFound,
+                skippedDuplicateInFile,
+                invalid
+            });
+        }
+
+        public IActionResult DownloadTemplate()
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Geofence Template");
+
+            string[] headers = {
+                "Fence Name", "Description", "Customer Group Code", "Address", "Province", "City",
+                "Postal Code", "Latitude", "Longitude", "Radius", "Contact Name", "Phone No", "Is Garage"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cell(1, i + 1).Value = headers[i];
+                worksheet.Cell(1, i + 1).Style.Font.Bold = true;
+                worksheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+            }
+
+            // Example row
+            worksheet.Cell(2, 1).Value = "Warehouse Cikarang";
+            worksheet.Cell(2, 2).Value = "Description of Warehouse Cikarang";
+            worksheet.Cell(2, 3).Value = "CUST001";
+            worksheet.Cell(2, 4).Value = "Jl. Contoh No. 1";
+            worksheet.Cell(2, 5).Value = "Jawa Barat";
+            worksheet.Cell(2, 6).Value = "Cikarang";
+            worksheet.Cell(2, 7).Value = "17530";
+            worksheet.Cell(2, 8).Value = "-6.2088";
+            worksheet.Cell(2, 9).Value = "106.8456";
+            worksheet.Cell(2, 10).Value = "100";
+            worksheet.Cell(2, 11).Value = "John Doe";
+            worksheet.Cell(2, 12).Value = "0812345678";
+            worksheet.Cell(2, 13).Value = "false";
+
+            worksheet.Columns().AdjustToContents();
+
+            // Reference sheet — daftar customer group code yang valid
+            var refSheet = workbook.Worksheets.Add("Reference Lists");
+            refSheet.Cell(1, 1).Value = "Valid Customer Group Codes";
+            refSheet.Cell(1, 1).Style.Font.Bold = true;
+
+            var custCodes = _context.CustomerGroups.Select(c => c.SUB_CODE).ToList();
+            for (int i = 0; i < custCodes.Count; i++)
+                refSheet.Cell(i + 2, 1).Value = custCodes[i];
+
+            refSheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "GeofenceUploadTemplate.xlsx");
+        }
+
     }
 
     public class GeofenceViewModel
@@ -686,6 +968,9 @@ namespace TMSBilling.Controllers
         public string? FenceID { get; set; }
         [Required]
         public string? FenceName { get; set; }
+
+        [Required]
+        public string? Description { get; set; } = null;
 
         public string? Customer {  get; set; }
 

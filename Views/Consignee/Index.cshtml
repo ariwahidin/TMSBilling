@@ -1,16 +1,10 @@
 ﻿@model IEnumerable<TMSBilling.Controllers.ConsigneeViewModel>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
-    ViewData["Title"] = "Consignee";
+    ViewData["Title"] = "Address List";
     var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
-@* <div class="d-flex justify-content-start gap-2 mb-2">
-<button class="btn btn-primary btn-sm mb-3 d-none" id="btnAdd">Add Data</button>
-<a href="/Geofence/Form?category=consignee" class="btn btn-success btn-sm mb-3" id="btnAdd">Add Data</a>
-<button class="btn btn-info btn-sm mb-3" id="btnSyncGeofence">Sync Consignee</button>
-<div id="exportButtons"></div>
-</div> *@
 
 <style>
 
@@ -51,17 +45,17 @@
     <div class="d-flex gap-2">
         <button class="btn btn-primary btn-sm mb-3 d-none" id="btnAdd">Add Data</button>
         <a href="/Geofence/Form?category=consignee" class="btn btn-success btn-sm mb-3" id="btnAdd">Add Data</a>
-        <button class="btn btn-info btn-sm mb-3" id="btnSyncGeofence">Sync Consignee</button>
+        <button class="btn btn-info btn-sm mb-3" id="btnSyncGeofence">Sync</button>
         <div id="exportButtons"></div>
     </div>
 </div>
 
-@* <button class="btn btn-primary btn-sm mb-3" id="btnAddGeofenceConsignee">Add Consignee With Geofence</button> *@
 
 <table class="table table-bordered table-striped w-100" id="dataTable" style="font-size : 13px;"> 
     <thead>     
         <tr>
-            <th>Consignee Name</th>
+            <th>Name</th>
+            <th>Description</th>
             <th>Customer Group</th>
             <th>Main Customer</th>
             <th>Address</th>
@@ -74,6 +68,7 @@
         {
             <tr>
                 <td>@item.FenceName</td>
+                <td>@item.Description</td>
                 <td>@item.CustomerGroup</td>
                 <td>@item.MainCustomer</td>
                 <td>@item.Address</td>

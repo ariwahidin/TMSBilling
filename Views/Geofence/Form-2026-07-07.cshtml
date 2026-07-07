@@ -1,7 +1,6 @@
 ﻿@model TMSBilling.Controllers.GeofenceViewModel
 @{
-    // ViewData["Title"] = "Form " + ViewBag.Category;
-    ViewData["Title"] = "Address Form";
+    ViewData["Title"] = "Form " + ViewBag.Category ;
     Layout = "~/Views/Shared/_MainLayout.cshtml";
 }
 
@@ -96,31 +95,14 @@
         .leaflet-draw-toolbar a {
             background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/images/spritesheet.png');
         }
-
-        #locateBtn.locating i {
-            animation: spin 1s linear infinite;
-        }
-
-        @@keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
     </style>
 }
 
 <div class="container-fluid" style="font-size : 12px;">
     <div class="mb-3">
-        <div class="mb-3">
-            <a href="#" onclick="window.history.back()" class="btn btn-sm btn-primary"> <i class="bi bi-arrow-left"></i> Back</a>
-            <a href="/Geofence/Upload" class="btn btn-sm btn-success"> <i class="bi bi-file-earmark-excel"></i> Upload Excel</a>
-        </div>
+        <a href="#" onclick="window.history.back()" class="btn btn-sm btn-primary"> <i class="bi bi-arrow-left"></i> Back</a>
     </div>
-
+    
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -141,20 +123,14 @@
                                         <span asp-validation-for="FenceName" class="text-danger"></span>
                                     </div>
 
-                                    <div class="mb-3 position-relative">
-                                        <label class="form-label">Description <span class="required">*</span></label>
-                                        <input type="text" class="form-control" asp-for="Description" id="description" name="Description" required>
-                                        <span asp-validation-for="Description" class="text-danger"></span>
-                                    </div>
-
                                     <div class="mb-3">
                                         <label class="form-label">Customer Group</label>
                                         <select id="cust_GROUP_CODE"
-                                                asp-for="CUST_GROUP_CODE"
-                                                name="CUST_GROUP_CODE"
-                                                asp-items="ViewBag.ListCustomerGroupGeofence"
-                                                class="form-select select2"
-                                                required>
+                                            asp-for="CUST_GROUP_CODE"
+                                            name="CUST_GROUP_CODE" 
+                                            asp-items="ViewBag.ListCustomerGroupGeofence" 
+                                            class="form-select select2" 
+                                            required>
                                             <option value="">Select an Option</option>
                                         </select>
                                         <span asp-validation-for="CUST_GROUP_CODE" class="text-danger"></span>
@@ -226,7 +202,7 @@
                                             </div>
                                         </div>
                                     </div>
-
+              
                                 </div>
 
                                 <div class="row mb-2">
@@ -349,11 +325,8 @@
                                         <i class="fas fa-search"></i>
                                     </span>
                                     <input type="text" class="form-control" id="mapSearch" placeholder="Find a location on the map..." autocomplete="off">
-                                    <button class="btn btn-outline-secondary" type="button" id="searchBtn" title="Search address">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchBtn">
                                         <i class="fas fa-search"></i>
-                                    </button>
-                                    <button class="btn btn-outline-primary" type="button" id="locateBtn" title="Use my current location">
-                                        <i class="fas fa-location-crosshairs"></i>
                                     </button>
                                 </div>
                                 <div class="suggestions" id="mapSearchSuggestions"></div>
@@ -384,103 +357,129 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script>
-        // ===================================================================
-        // Config & constants
-        // ===================================================================
-        const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
-        const NOMINATIM_REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse';
-        const INDONESIA_BOUNDS = [
-            [-11.0, 95.0],  // Southwest corner of Indonesia
-            [6.0, 141.0]    // Northeast corner of Indonesia
-        ];
-        const JAKARTA_CENTER = [-6.2088, 106.8456];
-        const DEFAULT_ZOOM = 10;
-        const SELECTED_ZOOM = 16;
-        const SEARCH_DEBOUNCE_MS = 500;
+        // Initialize map
+        let map = L.map('map').setView([-6.2088, 106.8456], 10); // Jakarta center
 
-        // ===================================================================
-        // Map init
-        // ===================================================================
-        const map = L.map('map').setView(JAKARTA_CENTER, DEFAULT_ZOOM);
-
+        // Add tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
+            attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        map.setMaxBounds(INDONESIA_BOUNDS);
-
-        // State
+        // Variables for geofence
         let currentGeofence = null;
+        let isDrawing = false;
         let drawingMode = null;
 
-        // ===================================================================
-        // DOM references
-        // ===================================================================
-        const el = {
-            address: document.getElementById('address'),
-            addressSuggestions: document.getElementById('addressSuggestions'),
-            mapSearch: document.getElementById('mapSearch'),
-            mapSearchSuggestions: document.getElementById('mapSearchSuggestions'),
-            searchBtn: document.getElementById('searchBtn'),
-            locateBtn: document.getElementById('locateBtn'),
-            coordinates: document.getElementById('coordinates'),
-            radius: document.getElementById('radius'),
-            province: document.getElementById('province'),
-            city: document.getElementById('city'),
-            postalCode: document.getElementById('postalCode'),
-            type: document.getElementById('type'),
-            circData: document.getElementById('circData'),
-            polyData: document.getElementById('polyData'),
-        };
+        // OpenStreetMap Nominatim API for geocoding
+        const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
 
-        // ===================================================================
-        // Geocoding helpers
-        // ===================================================================
+        // Address search functionality for form field
+        const addressInput = document.getElementById('address');
+        const suggestionsDiv = document.getElementById('addressSuggestions');
+        let searchTimeout;
+
+        // Map search functionality
+        const mapSearchInput = document.getElementById('mapSearch');
+        const mapSearchSuggestions = document.getElementById('mapSearchSuggestions');
+        const searchBtn = document.getElementById('searchBtn');
+        let mapSearchTimeout;
+
+        addressInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 3) {
+                hideSuggestions();
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                searchAddresses(query, 'address');
+            }, 500);
+        });
+
+        mapSearchInput.addEventListener('input', function() {
+            clearTimeout(mapSearchTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 3) {
+                hideMapSearchSuggestions();
+                return;
+            }
+
+            mapSearchTimeout = setTimeout(() => {
+                searchAddresses(query, 'map');
+            }, 500);
+        });
+
+        searchBtn.addEventListener('click', function() {
+            const query = mapSearchInput.value.trim();
+            if (query.length >= 3) {
+                searchAddresses(query, 'map');
+            }
+        });
+
+        mapSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query.length >= 3) {
+                    searchAddresses(query, 'map');
+                }
+            }
+        });
+
+        async function searchAddresses(query, type) {
+            try {
+                const url = `${NOMINATIM_API}?format=json&q=${encodeURIComponent(query + ', Indonesia')}&limit=5&countrycodes=id&addressdetails=1&extratags=1&namedetails=1&bounded=1&viewbox=95,-11,141,6`;
+                const response = await fetch(url, {
+                  headers: {
+                    "Accept-Language": "id" // minta hasil bahasa Indonesia
+                  }
+                });
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+                const addresses = data.map(item => ({
+                    display_name: item.display_name,
+                    lat: parseFloat(item.lat),
+                    lon: parseFloat(item.lon),
+                    province: getProvinceFromAddress(item.address),
+                    city: getCityFromAddress(item.address),
+                    postcode: item.address.postcode || '',
+                    address_components: item.address
+                }));
+
+                if (type === 'address') {
+                    showSuggestions(addresses);
+                } else {
+                    showMapSearchSuggestions(addresses);
+                }
+
+            } catch (error) {
+                console.error('Error searching addresses:', error);
+                if (type === 'address') {
+                    hideSuggestions();
+                } else {
+                    hideMapSearchSuggestions();
+                }
+            }
+        }
+
         function getProvinceFromAddress(address) {
+            // Try different fields that might contain province info
             return address.state || address.province || address.region || '';
         }
 
         function getCityFromAddress(address) {
+            // Try different fields that might contain city info
             return address.city || address.town || address.village || address.municipality || address.county || '';
         }
 
-        function getShortName(fullName) {
-            return fullName.split(',')[0];
-        }
+        function showSuggestions(addresses) {
+            suggestionsDiv.innerHTML = '';
 
-        async function searchAddresses(query) {
-            const url = `${NOMINATIM_SEARCH_URL}?format=json&q=${encodeURIComponent(query + ', Indonesia')}&limit=5&countrycodes=id&addressdetails=1&extratags=1&namedetails=1&bounded=1&viewbox=95,-11,141,6`;
-            const response = await fetch(url, { headers: { 'Accept-Language': 'id' } });
-            if (!response.ok) throw new Error('Network response was not ok');
-
-            const data = await response.json();
-            return data.map(item => ({
-                display_name: item.display_name,
-                lat: parseFloat(item.lat),
-                lon: parseFloat(item.lon),
-                province: getProvinceFromAddress(item.address),
-                city: getCityFromAddress(item.address),
-                postcode: item.address.postcode || '',
-                address_components: item.address
-            }));
-        }
-
-        async function reverseGeocode(lat, lng) {
-            const url = `${NOMINATIM_REVERSE_URL}?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
-            const response = await fetch(url, { headers: { 'Accept-Language': 'id' } });
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        }
-
-        // ===================================================================
-        // Suggestions dropdown (shared renderer for address + map search)
-        // ===================================================================
-        function renderSuggestions(container, addresses, onSelect) {
-            container.innerHTML = '';
-
-            if (!addresses.length) {
-                container.style.display = 'none';
+            if (addresses.length === 0) {
+                hideSuggestions();
                 return;
             }
 
@@ -491,30 +490,89 @@
                     <div style="font-weight: 500; margin-bottom: 2px;">${getShortName(address.display_name)}</div>
                     <small class="text-muted">${address.display_name}</small>
                 `;
-                item.addEventListener('click', () => onSelect(address));
-                container.appendChild(item);
+                item.addEventListener('click', () => selectAddress(address, 'address'));
+                suggestionsDiv.appendChild(item);
             });
 
-            container.style.display = 'block';
+            suggestionsDiv.style.display = 'block';
         }
 
-        function hideAllSuggestions() {
-            el.addressSuggestions.style.display = 'none';
-            el.mapSearchSuggestions.style.display = 'none';
+        function showMapSearchSuggestions(addresses) {
+            mapSearchSuggestions.innerHTML = '';
+
+            if (addresses.length === 0) {
+                hideMapSearchSuggestions();
+                return;
+            }
+
+            addresses.forEach(address => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                    <div style="font-weight: 500; margin-bottom: 2px;">${getShortName(address.display_name)}</div>
+                    <small class="text-muted">${address.display_name}</small>
+                `;
+                item.addEventListener('click', () => selectAddress(address, 'map'));
+                mapSearchSuggestions.appendChild(item);
+            });
+
+            mapSearchSuggestions.style.display = 'block';
         }
 
-        // ===================================================================
-        // Map / marker / geofence rendering
-        // ===================================================================
-        function updateCoordinatesField(lat, lng) {
-            el.coordinates.value = `(${lat}, ${lng})`;
+        function getShortName(fullName) {
+            return fullName.split(',')[0];
         }
 
-        function placeMarker(lat, lng, popupHtml) {
+        function hideSuggestions() {
+            suggestionsDiv.style.display = 'none';
+        }
+
+        function hideMapSearchSuggestions() {
+            mapSearchSuggestions.style.display = 'none';
+        }
+
+        function selectAddress(address, source) {
+            console.log(source);
+            console.log(address);
+            if (source === 'map') {
+                // Fill form fields
+                document.getElementById('address').value = address.display_name;
+                document.getElementById('province').value = address.province;
+                document.getElementById('city').value = address.city;
+                if (address.postcode) {
+                    document.getElementById('postalCode').value = address.postcode;
+                }
+                hideSuggestions();
+                hideMapSearchSuggestions();
+            } else {
+                // Update map search input
+                mapSearchInput.value = getShortName(address.display_name);
+                hideMapSearchSuggestions();
+            }
+
+            // Update coordinates field
+            updateCoordinatesField(address.lat, address.lon);
+
+            // Center map on selected location
+            map.setView([address.lat, address.lon], 16);
+
+            // Add marker
             if (window.currentMarker) {
                 map.removeLayer(window.currentMarker);
             }
-            window.currentMarker = L.marker([lat, lng]).addTo(map).bindPopup(popupHtml).openPopup();
+            window.currentMarker = L.marker([address.lat, address.lon])
+                .addTo(map)
+                .bindPopup(`<strong>${getShortName(address.display_name)}</strong><br>${address.display_name}<br>Lat: ${address.lat}<br>Lng: ${address.lon}`)
+                .openPopup();
+
+            // Create default circular geofence
+            const radius = parseInt(document.getElementById('radius').value) || 100;
+            createCircularGeofence(address.lat, address.lon, radius);
+        }
+
+        function updateCoordinatesField(lat, lng) {
+            const coordinates = `(${lat}, ${lng})`;
+            document.getElementById('coordinates').value = coordinates;
         }
 
         function createCircularGeofence(lat, lng, radius) {
@@ -529,175 +587,71 @@
                 radius: radius
             }).addTo(map);
 
+            // Update coordinates field
             updateCoordinatesField(lat, lng);
 
-            el.type.value = 'circle';
-            el.circData.value = JSON.stringify({ center: [lat, lng], radius: radius });
-            el.polyData.value = '';
+            // Store circle data
+            document.getElementById('type').value = 'circle';
+            document.getElementById('circData').value = JSON.stringify({
+                center: [lat, lng],
+                radius: radius
+            });
+            document.getElementById('polyData').value = '';
         }
 
-        function applyLocationToMap(lat, lng, displayName) {
-            map.setView([lat, lng], SELECTED_ZOOM);
-            placeMarker(lat, lng, `<strong>${getShortName(displayName)}</strong><br>${displayName}<br>Lat: ${lat}<br>Lng: ${lng}`);
-
-            const radius = parseInt(el.radius.value) || 100;
-            createCircularGeofence(lat, lng, radius);
-        }
-
-        function fillFormFromAddress(address) {
-            el.address.value = address.display_name;
-            el.province.value = address.province;
-            el.city.value = address.city;
-            if (address.postcode) {
-                el.postalCode.value = address.postcode;
-            }
-        }
-
-        // ===================================================================
-        // Selection handlers
-        // ===================================================================
-        function selectAddress(address, source) {
-            if (source === 'map') {
-                fillFormFromAddress(address);
-            } else {
-                el.mapSearch.value = getShortName(address.display_name);
-            }
-
-            hideAllSuggestions();
-            applyLocationToMap(address.lat, address.lon, address.display_name);
-        }
-
-        // Click on the map -> reverse geocode and fill the form
-        async function tandainMapnya(lat, lng) {
+        async function tandainMapnya(lat, lng){
+            // Update coordinates field
             updateCoordinatesField(lat, lng);
 
+            // === REVERSE GEOCODING ke Nominatim ===
             try {
-                const data = await reverseGeocode(lat, lng);
-                const displayName = data.display_name || 'Alamat tidak ditemukan';
-
-                map.setView([lat, lng], SELECTED_ZOOM);
-                placeMarker(lat, lng, `<strong>${getShortName(displayName)}</strong><br>Lat: ${lat}<br>Lng: ${lng}<br>${displayName}`);
-
-                el.address.value = displayName;
-                el.province.value = getProvinceFromAddress(data.address);
-                el.city.value = getCityFromAddress(data.address);
-                if (data.address.postcode) {
-                    el.postalCode.value = data.address.postcode;
-                }
-            } catch (err) {
-                console.error('Gagal ambil alamat:', err);
-            }
-        }
-
-        // "Your Location" button -> browser geolocation, then reuse tandainMapnya
-        function useCurrentLocation() {
-            if (!navigator.geolocation) {
-                alert('Browser Anda tidak mendukung fitur lokasi.');
-                return;
-            }
-
-            el.locateBtn.classList.add('locating');
-            el.locateBtn.disabled = true;
-
-            navigator.geolocation.getCurrentPosition(
-                async function (position) {
-                    const { latitude, longitude } = position.coords;
-                    await tandainMapnya(latitude, longitude);
-                    el.locateBtn.classList.remove('locating');
-                    el.locateBtn.disabled = false;
-                },
-                function (error) {
-                    el.locateBtn.classList.remove('locating');
-                    el.locateBtn.disabled = false;
-
-                    let message = 'Tidak dapat mengambil lokasi Anda.';
-                    if (error.code === error.PERMISSION_DENIED) {
-                        message = 'Akses lokasi ditolak. Mohon izinkan akses lokasi di browser.';
-                    } else if (error.code === error.TIMEOUT) {
-                        message = 'Permintaan lokasi timeout, silakan coba lagi.';
+                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+                const response = await fetch(url, {
+                    headers: {
+                        "Accept-Language": "id" // coba pakai bahasa Indonesia
                     }
-                    alert(message);
-                    console.error('Geolocation error:', error);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
+                });
+                const data = await response.json();
+                console.log("Data : ", data)
+                let address = data.display_name || "Alamat tidak ditemukan";
+
+                // Center map on selected location
+                map.setView([lat, lng], 16);
+
+                // Bisa tampilkan di popup marker
+                if (window.currentMarker) {
+                    map.removeLayer(window.currentMarker);
+                }
+                window.currentMarker = L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`<strong>${getShortName(address)}</strong><br>Lat: ${lat}<br>Lng: ${lng}<br>${address}`)
+                    .openPopup();
+
+                // Kalau mau juga simpan ke form field
+                document.getElementById('address').value = address;
+                document.getElementById('province').value = getProvinceFromAddress(data.address);
+                document.getElementById('city').value = getCityFromAddress(data.address);
+                if (data.address.postcode) {
+                    document.getElementById('postalCode').value = data.address.postcode;
+                }
+
+            } catch (err) {
+                console.error("Gagal ambil alamat:", err);
+            }
         }
 
-        // ===================================================================
-        // Event wiring: address field + map search field
-        // ===================================================================
-        let searchTimeout;
-        el.address.addEventListener('input', function () {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim();
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
 
-            if (query.length < 3) {
-                el.addressSuggestions.style.display = 'none';
-                return;
-            }
-
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const addresses = await searchAddresses(query);
-                    renderSuggestions(el.addressSuggestions, addresses, (address) => selectAddress(address, 'address'));
-                } catch (error) {
-                    console.error('Error searching addresses:', error);
-                    el.addressSuggestions.style.display = 'none';
-                }
-            }, SEARCH_DEBOUNCE_MS);
+            await tandainMapnya(lat, lng);
         });
 
-        let mapSearchTimeout;
-        function triggerMapSearch(query) {
-            clearTimeout(mapSearchTimeout);
-            mapSearchTimeout = setTimeout(async () => {
-                try {
-                    const addresses = await searchAddresses(query);
-                    renderSuggestions(el.mapSearchSuggestions, addresses, (address) => selectAddress(address, 'map'));
-                } catch (error) {
-                    console.error('Error searching addresses:', error);
-                    el.mapSearchSuggestions.style.display = 'none';
-                }
-            }, SEARCH_DEBOUNCE_MS);
-        }
 
-        el.mapSearch.addEventListener('input', function () {
-            const query = this.value.trim();
-            if (query.length < 3) {
-                el.mapSearchSuggestions.style.display = 'none';
-                return;
-            }
-            triggerMapSearch(query);
-        });
 
-        el.mapSearch.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                const query = this.value.trim();
-                if (query.length >= 3) triggerMapSearch(query);
-            }
-        });
 
-        el.searchBtn.addEventListener('click', function () {
-            const query = el.mapSearch.value.trim();
-            if (query.length >= 3) triggerMapSearch(query);
-        });
-
-        el.locateBtn.addEventListener('click', useCurrentLocation);
-
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('.position-relative')) {
-                hideAllSuggestions();
-            }
-        });
-
-        // ===================================================================
-        // Map interaction events
-        // ===================================================================
-        map.on('click', async function (e) {
-            await tandainMapnya(e.latlng.lat, e.latlng.lng);
-        });
-
-        map.on('moveend', function () {
+        // Map move handler to update coordinates based on center
+        map.on('moveend', function() {
             const center = map.getCenter();
             if (!window.currentMarker && !drawingMode) {
                 updateCoordinatesField(center.lat, center.lng);
@@ -705,13 +659,14 @@
         });
 
         // Double-click to finish polygon
-        map.on('dblclick', function () {
+        map.on('dblclick', function(e) {
             if (drawingMode === 'polygon' && window.polygonPoints && window.polygonPoints.length >= 3) {
                 drawingMode = null;
                 map.getContainer().style.cursor = '';
-                document.getElementById('polygonBtn')?.classList.remove('active');
+                document.getElementById('polygonBtn').classList.remove('active');
 
-                map.eachLayer(function (layer) {
+                // Clear point markers
+                map.eachLayer(function(layer) {
                     if (layer instanceof L.CircleMarker) {
                         map.removeLayer(layer);
                     }
@@ -719,17 +674,22 @@
             }
         });
 
-        // Radius change -> redraw circle with same center
-        el.radius.addEventListener('change', function () {
-            if (currentGeofence && el.type.value === 'circle') {
-                const circData = JSON.parse(el.circData.value);
+        // Radius change handler
+        document.getElementById('radius').addEventListener('change', function() {
+            if (currentGeofence && document.getElementById('type').value === 'circle') {
+                const circData = JSON.parse(document.getElementById('circData').value);
                 createCircularGeofence(circData.center[0], circData.center[1], parseInt(this.value));
             }
         });
 
-        // ===================================================================
-        // Form submit
-        // ===================================================================
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.position-relative')) {
+                hideSuggestions();
+                hideMapSearchSuggestions();
+            }
+        });
+
         $('#geofenceForm').on('submit', function (e) {
             e.preventDefault();
 
@@ -737,29 +697,33 @@
             $(this).serializeArray().forEach(item => {
                 formData[item.name] = item.value;
             });
-            formData.IsGarage = $('#isGarage').is(':checked');
 
-            console.log('Payload yang dikirim:', formData);
+            formData.IsGarage = $('#isGarage').is(':checked')
+
+            console.log("Payload yang dikirim:", formData);
+
+            // return;
 
             showLoading();
 
             $.ajax({
                 url: '/Geofence/SaveGeofence',
                 type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(formData),
+                contentType: 'application/json',   // kirim sebagai JSON
+                data: JSON.stringify(formData),   // ubah objek ke JSON
                 success: function (response) {
+                    console.log('Sukses:', response);
                     hideLoading();
                     Swal.fire({
-                        position: 'center',
-                        icon: 'success',
-                        title: 'Success',
-                        text: response.message,
-                        showConfirmButton: false,
-                        timer: 1500
+                      position: "center",
+                      icon: "success",
+                      title: "Success",
+                      text : response.message,
+                      showConfirmButton: false,
+                      timer: 1500
                     }).then(() => {
-                        if ('@ViewBag.Category' == 'consignee') {
-                            window.location.href = '/Consignee/Index';
+                        if("@ViewBag.Category" == "consignee"){
+                            window.location.href = "/Consignee/Index";
                         }
                     });
                 },
@@ -770,45 +734,123 @@
             });
         });
 
+
         function cancelForm() {
-            if (!confirm('Apakah Anda yakin ingin membatalkan? Data yang belum disimpan akan hilang.')) {
-                return;
-            }
+            if (confirm('Apakah Anda yakin ingin membatalkan? Data yang belum disimpan akan hilang.')) {
+                document.getElementById('geofenceForm').reset();
+                document.getElementById('coordinates').value = '';
+                if (currentGeofence) {
+                    map.removeLayer(currentGeofence);
+                    currentGeofence = null;
+                }
+                if (window.currentMarker) {
+                    map.removeLayer(window.currentMarker);
+                    window.currentMarker = null;
+                }
 
-            document.getElementById('geofenceForm').reset();
-            el.coordinates.value = '';
-
-            if (currentGeofence) {
-                map.removeLayer(currentGeofence);
-                currentGeofence = null;
-            }
-            if (window.currentMarker) {
-                map.removeLayer(window.currentMarker);
-                window.currentMarker = null;
+                // Redirect to index or previous page
+                // window.location.href = '@Url.Action("Index?id=", "Geofence")';
+                // window.location.href = '/Geofence/Create?id=@ViewBag.CustomerId'
             }
         }
 
-        // ===================================================================
-        // Init: if editing an existing record, mark it on the map
-        // ===================================================================
-        const existingId = $('#id').val();
-        const existingLat = $('#Lat').val();
-        const existingLng = $('#Lng').val();
+        // Initialize with Jakarta bounds
+        map.setMaxBounds([
+            [-11.0, 95.0],  // Southwest corner of Indonesia
+            [6.0, 141.0]    // Northeast corner of Indonesia
+        ]);
 
-        if (existingId > 0) {
-            // tandainMapnya(existingLat, existingLng);
+        // Initialize coordinates with map center
+        // updateCoordinatesField(-6.2088, 106.8456);
+        // createCircularGeofence(-6.2088, 106.8456, 100);
+
+
+        // General function to update location based on form input values
+        function updateLocationFromForm() {
+            const coordinatesInput = document.getElementById('coordinates');
+            const radiusInput = document.getElementById('radius');
+            const addressInput = document.getElementById('address');
+            const provinceInput = document.getElementById('province');
+            const cityInput = document.getElementById('city');
+            const postalCodeInput = document.getElementById('postalCode');
+
+            // Get coordinates from input field
+            if (coordinatesInput && coordinatesInput.value) {
+                const coordinatesValue = coordinatesInput.value.trim();
+
+                // Parse coordinates from format "(-6.2088, 106.8456)" or similar
+                const coordMatch = coordinatesValue.match(/\(?\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*\)?/);
+
+                if (coordMatch) {
+                    const lat = parseFloat(coordMatch[1]);
+                    const lon = parseFloat(coordMatch[2]);
+
+                    // Center map on coordinates
+                    map.setView([lat, lon], 16);
+
+                    // Remove existing marker if any
+                    if (window.currentMarker) {
+                        map.removeLayer(window.currentMarker);
+                    }
+
+                    // Create address object from form inputs
+                    const addressData = {
+                        display_name: addressInput ? addressInput.value : `Location at ${lat}, ${lon}`,
+                        lat: lat,
+                        lon: lon,
+                        province: provinceInput ? provinceInput.value : '',
+                        city: cityInput ? cityInput.value : '',
+                        postcode: postalCodeInput ? postalCodeInput.value : ''
+                    };
+
+                    // Add marker
+                    const shortName = getShortName(addressData.display_name);
+                    window.currentMarker = L.marker([lat, lon])
+                        .addTo(map)
+                        .bindPopup(`<strong>${shortName}</strong><br>${addressData.display_name}<br>Lat: ${lat}<br>Lng: ${lon}`)
+                        .openPopup();
+
+                    // Create default circular geofence
+                    const radius = parseInt(radiusInput ? radiusInput.value : 100) || 100;
+                    createCircularGeofence(lat, lon, radius);
+
+                    console.log('Location updated from form:', addressData);
+                    return true;
+                } else {
+                    console.warn('Invalid coordinates format:', coordinatesValue);
+                    return false;
+                }
+            } else {
+                console.warn('No coordinates found in form');
+                return false;
+            }
         }
+
+        let id = $('#id').val();
+        let lat = $('#Lat').val();
+        let lng = $('#Lng').val();
+        console.log('ID : ', id);
+        console.log('Lat : ', lat);
+        console.log('Lng : ', lng);
+        if(id > 0){
+           tandainMapnya(lat, lng);
+        }
+        
+        
+
     </script>
     <script>
-        $(document).ready(function () {
+        $(document).ready(function(){
+        // aktifin select2 untuk semua <select>
             $('.select2').select2({
-                placeholder: 'Select an option ...',
+                placeholder: "Select an option ...",
                 allowClear: true,
-                width: '100%'
+                width: '100%' // biar full lebar
             });
-        });
-    </script>
+        })
 
+    </script>
+    
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }

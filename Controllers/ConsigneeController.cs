@@ -300,6 +300,7 @@ namespace TMSBilling.Controllers
         tg.Id AS ID,
         tg.GEOFENCE_ID AS GeofenceID,
         tg.FENCE_NAME AS FenceName,
+        tg.[DESC] AS Description,
         tg.CUSTOMER_NAME AS CustomerGroup,
         tcg.CUST_CODE AS Customer,
         tcg.MAIN_CUST AS MainCustomer,
@@ -411,6 +412,8 @@ namespace TMSBilling.Controllers
         public int ID { get; set; }
         public int? GeofenceID { get; set; }
         public string? FenceName { get; set; }
+
+        public string? Description { get; set; } = null;
 
         public string? CustomerGroup { get; set; }
 

@@ -898,6 +898,7 @@
             }
 
             const categoryBadge = getCategoryBadge(address.category);
+            const descriptionBadge = address.description ? '<span class="badge bg-secondary ms-1 font-sm"> '+ address.description +' </span>' : '';
             const customerBadge = address.category ? '<span class="badge bg-info ms-1 font-sm"> '+ address.category +' </span>' : '';
             const serviceBadge = address.customer ? '<span class="badge bg-success ms-1 font-sm"> '+ address.customer +' </span>' : '';
             const depotBadge = address.areaGroup ? '<span class="badge bg-primary ms-1">'+ address.areaGroup +'</span>' : '';
@@ -909,13 +910,12 @@
                         <h6 class="mb-2">
                             <i class="fas fa-building me-1"></i>
                             ${address.fenceName}
-                            ${customerBadge}
-                            ${serviceBadge}
                             ${depotBadge}
                             ${disabledBadge}
                         </h6>
                         <p class="mb-1 text-muted">
                             <i class="fas fa-map-marker-alt me-1"></i>
+                            ${descriptionBadge}
                             ${address.address}
                             
                         </p>
@@ -976,6 +976,7 @@
             } else {
                 filteredAddresses = allAddresses.filter(address =>
                     address.fenceName?.toLowerCase().includes(searchTerm) ||
+                    address.description?.toLowerCase().includes(searchTerm) ||
                     address.address?.toLowerCase().includes(searchTerm) ||
                     address.city?.toLowerCase().includes(searchTerm) ||
                     address.province?.toLowerCase().includes(searchTerm) ||

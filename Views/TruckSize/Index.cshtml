@@ -6,6 +6,9 @@
 }
 
 <button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Truck Size</button>
+<button class="btn btn-success btn-sm mb-3" id="btnUpload">
+    <i class="bi bi-file-earmark-excel"></i> Upload Excel
+</button>
 
 <table class="table table-bordered table-striped" id="truckSizeTable">
     <thead>
@@ -47,6 +50,49 @@
     </div>
 </div>
 
+
+<!-- Modal Upload Excel -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Truck Size dari Excel</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2">
+                    Format: kolom pertama <code>trucksize_code</code>, header di baris 1, data mulai baris 2.
+                </p>
+                <input type="file" id="excelFile" class="form-control" accept=".xlsx,.xls" />
+                <div id="uploadLoading" class="mt-2 text-muted" style="display:none;">
+                    <span class="spinner-border spinner-border-sm"></span> Memproses file...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button class="btn btn-success" id="btnSubmitUpload">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Summary Hasil Upload -->
+<div class="modal fade" id="summaryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Hasil Upload</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="summaryContent"></div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btnCloseSummary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
     <script>
         $(document).ready(function () {
@@ -59,26 +105,6 @@
                     modal.show();
                 });
             });
-
-            // $(".btnEdit").click(function () {
-            //     const id = $(this).data("id");
-            //     $.get("/TruckSize/Form?id=" + id, function (html) {
-            //         $("#modalContent").html(html);
-            //         modal.show();
-            //     });
-            // });
-
-            // $(".btnDelete").click(function () {
-            //     if (!confirm("Yakin hapus data ini?")) return;
-            //     const id = $(this).data("id");
-
-            //     $.post("/TruckSize/Delete", { id }, function () {
-            //         location.reload();
-            //     }).fail(function () {
-            //         alert("Gagal menghapus data.");
-            //     });
-            // });
-
 
             // Edit
             $(document).on("click", ".btnEdit", function () {
@@ -116,6 +142,80 @@
                     }
                 });
             });
+
+
+            let uploadModal = new bootstrap.Modal(document.getElementById("uploadModal"));
+            let summaryModal = new bootstrap.Modal(document.getElementById("summaryModal"));
+
+            $("#btnUpload").click(function () {
+                $("#excelFile").val("");
+                uploadModal.show();
+            });
+
+            $("#btnSubmitUpload").click(function () {
+                const fileInput = document.getElementById("excelFile");
+                if (!fileInput.files.length) {
+                    alert("Pilih file Excel terlebih dahulu.");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+
+                $("#uploadLoading").show();
+                $("#btnSubmitUpload").prop("disabled", true);
+
+                $.ajax({
+                    type: "POST",
+                    url: "/TruckSize/Upload",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        uploadModal.hide();
+                        renderSummary(res);
+                        summaryModal.show();
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.message || "Gagal upload file.";
+                        alert(msg);
+                    },
+                    complete: function () {
+                        $("#uploadLoading").hide();
+                        $("#btnSubmitUpload").prop("disabled", false);
+                    }
+                });
+            });
+
+            $("#btnCloseSummary").click(function () {
+                location.reload();
+            });
+
+            function renderSummary(res) {
+                let html = `<div class="mb-3">
+                    <span class="badge bg-secondary">Total diproses: ${res.totalProcessed}</span>
+                    <span class="badge bg-success">Ditambah: ${res.added.length}</span>
+                    <span class="badge bg-warning text-dark">Sudah ada: ${res.skippedExisting.length}</span>
+                    <span class="badge bg-info text-dark">Duplikat di file: ${res.skippedDuplicateInFile.length}</span>
+                    <span class="badge bg-danger">Invalid: ${res.invalid.length}</span>
+                </div>`;
+
+                html += renderList("Berhasil ditambahkan", res.added, "success");
+                html += renderList("Dilewati (sudah ada di database)", res.skippedExisting, "warning");
+                html += renderList("Dilewati (duplikat dalam file)", res.skippedDuplicateInFile, "info");
+                html += renderList("Invalid", res.invalid, "danger");
+
+                $("#summaryContent").html(html);
+            }
+
+            function renderList(title, items, colorClass) {
+                if (!items || items.length === 0) return "";
+                let listItems = items.map(i => `<li>${i}</li>`).join("");
+                return `<div class="mb-3">
+                    <strong class="text-${colorClass}">${title} (${items.length})</strong>
+                    <ul class="mb-0">${listItems}</ul>
+                </div>`;
+            }
         });
     </script>
 }

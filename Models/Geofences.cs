@@ -23,6 +23,10 @@ namespace TMSBilling.Models
         [MaxLength(100)]
         public string? FenceName { get; set; }
 
+        [Column("DESC")]
+        [MaxLength(100)]
+        public string? Description { get; set; }
+
         [Column("TYPE")]
         [MaxLength(50)]
         public string? Type { get; set; }
@@ -122,7 +126,7 @@ namespace TMSBilling.Models
         [Column("CREATED_AT")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        [Column("UPDATED_AT")]
+        [Column("UPDATED_AT")]  
         public DateTime? UpdatedAt { get; set; }
     }
 }
