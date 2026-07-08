@@ -63,6 +63,10 @@ namespace TMSBilling.Controllers
 
         }
 
+        /// <summary>
+        /// Sinkronisasi data Fleet Order dari McEasy ke database lokal.
+        /// Memanggil McEasy API untuk mengambil data terbaru dan mengupdate ke tabel mc_fo.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SyncronizeFO()
         {
@@ -86,6 +90,11 @@ namespace TMSBilling.Controllers
             }
         }
 
+        /// <summary>
+        /// Halaman utama daftar Job (SPK).
+        /// Menampilkan ringkasan job berdasarkan rentang tanggal (default: 7 hari terakhir s/d 2 hari ke depan).
+        /// Data difilter berdasarkan user yang login (melalui UserXCustomers).
+        /// </summary>
         public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
         {
             // Default: 7 hari terakhir
@@ -102,6 +111,11 @@ namespace TMSBilling.Controllers
             return View(data);
         }
 
+        /// <summary>
+        /// Query untuk mengambil data ringkasan Job berdasarkan rentang tanggal.
+        /// Menggunakan CTE untuk menghitung total DO per job, join dengan mc_fo untuk status McEasy,
+        /// dan difilter berdasarkan user yang login.
+        /// </summary>
         private IQueryable<JobSummaryViewModel> GetJobSummaryQuery(DateTime startDate, DateTime endDate)
         {
             var username = HttpContext.Session.GetString("username") ?? "System";
@@ -150,6 +164,11 @@ namespace TMSBilling.Controllers
             return _context.JobSummaryView.FromSqlRaw(sql, username, startDate, endDate);
         }
 
+        /// <summary>
+        /// Halaman form untuk membuat Job baru atau edit Job yang sudah ada.
+        /// Menyediakan dropdown data (customer group, warehouse, vendor, dll) yang sudah difilter berdasarkan user yang login.
+        /// Jika jobid disediakan, akan load data job existing untuk diedit.
+        /// </summary>
         [Route("Job/Form/{jobid?}")]
         public IActionResult Form(string? jobid)
         {
@@ -234,6 +253,11 @@ namespace TMSBilling.Controllers
             return View(vm);
         }
 
+        /// <summary>
+        /// Mengambil daftar orders berdasarkan tanggal tertentu.
+        /// Digunakan untuk mengisi list order yang tersedia untuk dijadwalkan ke dalam Job.
+        /// Jika jobid disertakan, juga mengambil order yang sudah terkait dengan job tersebut (untuk mode edit).
+        /// </summary>
         [HttpGet]
         public IActionResult GetOrdersByDate(string date, string jobid)
         {
@@ -291,9 +315,15 @@ namespace TMSBilling.Controllers
             }
         }
 
+        /// <summary>
+        /// Menyimpan data Job baru atau mengupdate Job yang sudah ada.
+        /// Jika customer memiliki API_FLAG = 1, menggunakan integrasi McEasy (RunSaveWithApi).
+        /// Jika tidak, menggunakan flow tanpa integrasi (RunSaveWithOutApi).
+        /// Untuk customer BOSCH intercity, akan dispatch event "spk_bosch_created" setelah disimpan.
+        /// </summary>
         [HttpPost]
         [Route("Job/Save/{jobid?}")]
-        public async Task<IActionResult> Save([FromBody] JobViewModel model, string? jobid) 
+        public async Task<IActionResult> Save([FromBody] JobViewModel model, string? jobid)
         {
 
             if (model == null || model.FormJobHeader == null || model.FormJobDetails == null)
@@ -451,6 +481,12 @@ namespace TMSBilling.Controllers
             return Json(new { success = true, message = "Job saved successfully" });
         }
 
+        /// <summary>
+        /// Flow penyimpanan Job DENGAN integrasi McEasy API.
+        /// Validasi harga beli/jual → generate/update Job → kirim ke McEasy fleet-task API
+        /// (Store → Patch → Transition untuk job baru; Delete → Patch → Put/Intervention untuk edit job).
+        /// Juga menyimpan data MCFleetOrder dan update custom field via API order.
+        /// </summary>
         private async Task<(bool ok, string message, string? jobid)> RunSaveWithApi(
             HeaderFormJob Header,
             List<OrderForJobForm> Details,
@@ -868,6 +904,11 @@ namespace TMSBilling.Controllers
         }
 
 
+        /// <summary>
+        /// Flow penyimpanan Job TANPA integrasi McEasy API.
+        /// Validasi harga beli/jual → generate/update Job → simpan ke database lokal saja.
+        /// Digunakan untuk customer yang tidak memiliki API_FLAG atau order B2C.
+        /// </summary>
         private async Task<(bool ok, string message)> RunSaveWithOutApi(
             HeaderFormJob Header,
             List<OrderForJobForm> Details,
@@ -1092,6 +1133,11 @@ namespace TMSBilling.Controllers
         }
 
 
+        /// <summary>
+        /// Helper internal untuk memasukkan detail order ke dalam Job (TRC_JOB).
+        /// Loop setiap order: update status order → lookup harga jual → insert record TRC_JOB
+        /// dengan data harga beli dan jual. Mengembalikan list delivery order ID untuk integrasi McEasy.
+        /// </summary>
         private (bool ok, string message, List<string> deliveryOrderIds) InsertOrderToJob(
             IEnumerable<OrderForJobForm> Details,
             String newJobId,
@@ -1211,6 +1257,10 @@ namespace TMSBilling.Controllers
         }
 
 
+        /// <summary>
+        /// Generate Job ID otomatis dengan format: [PREFIX][YY][MM][NNNN].
+        /// Prefix diambil dari tabel config (key: "job-prefix"), contoh output: SPK25070001.
+        /// </summary>
         private string GenerateJobId(int sequence)
         {
             //string prefix = _configuration["Tms:JobPrefix"];
@@ -1225,6 +1275,10 @@ namespace TMSBilling.Controllers
             return $"{prefix}{year}{month}{sequencePart}";
         }
 
+        /// <summary>
+        /// Mengambil daftar vendor yang tersedia berdasarkan filter origin, destination, truck size, service moda, dan charge UOM.
+        /// Data diambil dari tabel harga beli (PriceBuy) yang masih aktif, diurutkan berdasarkan harga terendah.
+        /// </summary>
         [HttpGet]
         public IActionResult GetVendors(string originId, string destId, string truckSize, string servModa, string chargeUom)
         {
@@ -1260,6 +1314,10 @@ namespace TMSBilling.Controllers
             return BadRequest(new { success = false, data = new List<object>(), message = "Vendor not found!" });
         }
 
+        /// <summary>
+        /// Mengambil daftar driver dan nomor truk dari vendor tertentu.
+        /// Data diambil dari tabel VendorTrucks yang statusnya aktif (vehicle_active = 1).
+        /// </summary>
         [HttpGet]
         public IActionResult GetDriversByVendor(string supCode)
         {
@@ -1283,6 +1341,10 @@ namespace TMSBilling.Controllers
             return Json(new { success = false, drivers = new List<object>() });
         }
 
+        /// <summary>
+        /// Mengambil detail order dalam suatu Job beserta flag-flag pengiriman (flag_cc, flag_ep, flag_rc, dll).
+        /// Data diambil dari TRC_ORDER dan di-join dengan TRC_JOB untuk mendapatkan flag-flag khusus.
+        /// </summary>
         [HttpGet]
         public IActionResult GetJobDetails(string jobid)
         {
@@ -1715,7 +1777,6 @@ namespace TMSBilling.Controllers
 
             return View("JobPod");
         }
-
 
         public IActionResult BulkJobPodByCnee([FromBody] List<int> orderIds)
         {

@@ -609,6 +609,7 @@ namespace TMSBilling.Controllers
                     ng.CompanyId = p.companyId;
                     ng.CustomerId = p.customerId;
                     ng.FenceName = p.fenceName;
+                    ng.Description = model.Description;
                     ng.Type = p.type;
                     ng.PolyData = p.polyData;
                     ng.CircData = p.circData;
@@ -644,6 +645,7 @@ namespace TMSBilling.Controllers
                     //ng.CompanyId = p.companyId;
                     //ng.CustomerId = p.customerId;
                     ng.FenceName = p.fenceName;
+                    ng.Description = model.Description;
                     ng.Type = p.type;
                     ng.PolyData = p.polyData;
                     ng.CircData = p.circData;
@@ -957,6 +959,19 @@ namespace TMSBilling.Controllers
             return File(stream.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "GeofenceUploadTemplate.xlsx");
+        }
+
+
+        [HttpPost]
+        public IActionResult Delete(int id)
+        {
+            var data = _context.Geofences.FirstOrDefault(o => o.Id == id);
+            if (data == null) return NotFound();
+
+            _context.Geofences.Remove(data);
+            _context.SaveChanges();
+
+            return Ok();
         }
 
     }

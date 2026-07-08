@@ -79,7 +79,7 @@
                     </button>
                     <a href="/Geofence/Form?category=consignee&id=@item.ID" class="btn btn-sm btn-success"><i class="bi bi-pencil-square"></i></a>
                     @if(isAdmin){
-                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.GeofenceID" title="Delete">
+                    <button class="btn btn-sm btn-danger btnDelete" data-id="@item.ID" title="Delete">
                         <i class="bi bi-trash"></i>
                     </button>
                     }
@@ -223,10 +223,11 @@
                 });
             });
 
-            $('.btnDelete').click(function () {
+            // $('.btnDelete').click(function () {
+            $(document).on("click", ".btnDelete",function () {
                 if (!confirm("Yakin hapus data?")) return;
                 const id = $(this).data('id');
-                $.post('/Consignee/Delete', { id }, function () {
+                $.post('/Geofence/Delete', { id }, function () {
                     location.reload();
                 });
             });

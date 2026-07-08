@@ -52,7 +52,7 @@ namespace TMSBilling.Models.ViewModels
 
             public string? job_type { get; set; }
 
-            public int? starting_point { get; set; }
+            public int? starting_point { get; set; } = 0;
 
         }
 

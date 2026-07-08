@@ -113,16 +113,30 @@ namespace TMSBilling.Controllers
             return _context.OrderSummaryView.FromSqlRaw(sql, username, startDate.Value, endDate.Value);
         }
 
+        //public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
+        //{
+        //    // Set default values to ViewBag for the date inputs
+        //    ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(-7).ToString("yyyy-MM-dd");
+        //    ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(+2).ToString("yyyy-MM-dd");
+
+        //    var data = await GetOrderSummaryQuery(startDate, endDate).ToListAsync();
+        //    return View(data);
+        //}
+
+
         public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
         {
-            // Set default values to ViewBag for the date inputs
-            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(-7).ToString("yyyy-MM-dd");
-            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.AddDays(+2).ToString("yyyy-MM-dd");
+            // Tentukan default value
+            DateTime start = startDate ?? DateTime.Now.AddDays(-7);
+            DateTime end = endDate ?? DateTime.Now.AddDays(2);
 
-            var data = await GetOrderSummaryQuery(startDate, endDate).ToListAsync();
+            // Set ke ViewBag untuk ditampilkan di input tanggal
+            ViewBag.StartDate = start.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = end.ToString("yyyy-MM-dd");
+
+            var data = await GetOrderSummaryQuery(start, end).ToListAsync();
             return View(data);
         }
-
 
         public async Task<IActionResult> IndexSync()
         {
@@ -1606,6 +1620,26 @@ namespace TMSBilling.Controllers
             }
 
 
+            if (order.mceasy_status == "Draf" && (order.mceasy_order_id == null || order.mceasy_order_id == "0" ))
+            {
+                Console.WriteLine("DELETE ORDER : {0}", id);
+                var rowsA = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", id);
+                var rows2A = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER_DTL WHERE id_seq_order = {0}", id);
+                Console.WriteLine("Rows delete affected: " + rowsA);
+
+                if (rowsA < 1)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Failed deleting order from database",
+                    });
+                }
+
+                return Ok(new { success = true, message = "Order " + order.inv_no + " deleted successfully" });
+            }
+
+
             if (order.is_b2c != "1")
             {
 
@@ -1625,7 +1659,7 @@ namespace TMSBilling.Controllers
 
             }
 
-                Console.WriteLine("DELETE ORDER : {0}", id);
+            Console.WriteLine("DELETE ORDER : {0}", id);
             var rows = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER WHERE id_seq = {0}", id);
             var rows2 = _context.Database.ExecuteSqlRaw("DELETE FROM TRC_ORDER_DTL WHERE id_seq_order = {0}", id);
             Console.WriteLine("Rows delete affected: " + rows);
