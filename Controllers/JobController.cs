@@ -2596,6 +2596,32 @@ namespace TMSBilling.Controllers
         // [HttpPost]  ← tambahkan ini di atas method SetClosed
 
 
+        [HttpGet]
+        public IActionResult GetTrucks()
+        {
+            var trucks = _context.VendorTrucks
+                .Where(t => t.vehicle_active == 1)
+                .Select(t => new { vehicle_no = t.vehicle_no })
+                .Distinct()
+                .OrderBy(t => t.vehicle_no)
+                .ToList();
+
+            return Json(new { success = true, data = trucks });
+        }
+
+        [HttpGet]
+        public IActionResult GetDrivers()
+        {
+            var drivers = _context.Drivers
+                .Where(d => d.driver_status == 1)
+                .Select(d => new { driver_name = d.driver_name })
+                .Distinct()
+                .OrderBy(d => d.driver_name)
+                .ToList();
+
+            return Json(new { success = true, data = drivers });
+        }
+
 
     }
     public class OrderForJob {

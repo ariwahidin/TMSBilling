@@ -325,7 +325,7 @@
                         </div>
                         <div class="col-md-4">
                             
-                            <div class="mb-2 row">
+                            @* <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Truck ID:</label>
                                 <div class="col-sm-8">
                                     <input style="font-size:12px" id="truckid" asp-for="Header.truck_no" class="form-control" type="text" />
@@ -336,7 +336,24 @@
                                 <div class="col-sm-8">
                                     <input style="font-size:12px" id="drivername" asp-for="Header.driver_name" class="form-control" type="text" />
                                 </div>
+                            </div> *@
+
+                        <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Truck ID:</label>
+                            <div class="col-sm-8">
+                                <select style="font-size:12px" id="truckid" name="truck_no"
+                                        class="truck-driver-select"
+                                        data-current="@Model.Header.truck_no"></select>
                             </div>
+                        </div>
+                        <div class="mb-2 row">
+                            <label class="col-sm-4 col-form-label text-end">Driver Name:</label>
+                            <div class="col-sm-8">
+                                <select style="font-size:12px" id="drivername" name="driver_name"
+                                        class="truck-driver-select"
+                                        data-current="@Model.Header.driver_name"></select>
+                            </div>
+                        </div>
                             
                             <div class="mb-2 row">
                                 <label class="col-sm-4 col-form-label text-end">Start/Finish Point:</label>
@@ -1239,6 +1256,62 @@
         function showNoResults(show) {
             document.getElementById('noResults').style.display = show ? 'block' : 'none';
         }
+    </script>
+
+    <script>
+        let truckList = [];
+        let driverList = [];
+
+
+        function loadTruckDriverMaster() {
+            $.when(
+                $.get('/Job/GetTrucks'),
+                $.get('/Job/GetDrivers')
+            ).done(function (truckRes, driverRes) {
+                truckList = (truckRes[0].data || []).map(t => ({ id: t.vehicle_no, text: t.vehicle_no }));
+                driverList = (driverRes[0].data || []).map(d => ({ id: d.driver_name, text: d.driver_name }));
+                initTruckDriverSelect2();
+            }).fail(function () {
+                showToast("Gagal ambil data master truck/driver", "error");
+            });
+        }
+
+        function initTruckDriverSelect2() {
+            const $truck = $('#truckid');
+            const $driver = $('#drivername');
+
+            const currentTruck = $truck.data('current') || '';
+            const currentDriver = $driver.data('current') || '';
+
+            // kalau value existing (misal free text lama) tidak ada di master, tetap dimasukin biar muncul
+            if (currentTruck && !truckList.some(t => t.id === currentTruck)) {
+                truckList.unshift({ id: currentTruck, text: currentTruck });
+            }
+            if (currentDriver && !driverList.some(d => d.id === currentDriver)) {
+                driverList.unshift({ id: currentDriver, text: currentDriver });
+            }
+
+            $truck.empty().select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                tags: true, // <-- ini yang bikin bisa free text
+                placeholder: 'Pilih atau ketik Truck ID',
+                data: truckList
+            }).val(currentTruck).trigger('change');
+
+            $driver.empty().select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                tags: true,
+                placeholder: 'Pilih atau ketik Driver Name',
+                data: driverList
+            }).val(currentDriver).trigger('change');
+        }
+
+        $(document).ready(function () {
+            loadTruckDriverMaster();
+        });
+
     </script>
 
 }

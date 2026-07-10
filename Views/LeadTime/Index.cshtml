@@ -1,4 +1,4 @@
-@model IEnumerable<TMSBilling.Models.LeadTime>
+﻿@model IEnumerable<TMSBilling.Models.LeadTime>
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Lead Time";
@@ -6,6 +6,15 @@
 }
 
 <button class="btn btn-primary btn-sm mb-3" id="btnAdd">Add Lead Time</button>
+<button class="btn btn-success btn-sm mb-3" id="btnUpload">
+    <i class="bi bi-file-earmark-excel"></i> Upload Excel
+</button>
+<a class="btn btn-outline-secondary btn-sm mb-3" href="/LeadTime/DownloadTemplate">
+    <i class="bi bi-download"></i> Download Template
+</a>
+<button class="btn btn-info btn-sm mb-3 text-white" id="btnExport">
+    <i class="bi bi-file-earmark-arrow-down"></i> Export Excel
+</button>
 
 <table class="table table-bordered table-striped" id="leadTimeTable">
     <thead>
@@ -73,11 +82,83 @@
     </div>
 </div>
 
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Lead Times from Excel</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2">
+                    Use the <a href="/LeadTime/DownloadTemplate">template</a> (includes a Reference Lists sheet
+                    with valid Customer, Origin, Destination, Serv Type, Serv Moda, and Truck Size values).
+                    Customer is required for uploads (no "General" option). Header must be in row 1, data starts from row 2.
+                </p>
+                <input type="file" id="excelFile" class="form-control" accept=".xlsx,.xls" />
+                <div id="uploadLoading" class="mt-2 text-muted" style="display:none;">
+                    <span class="spinner-border spinner-border-sm"></span> Processing file...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" id="btnSubmitUpload">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Summary Modal -->
+<div class="modal fade" id="summaryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Result</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="summaryContent"></div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btnCloseSummary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Lead Times</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">Customer</label>
+                <select id="exportCustomer" class="form-select">
+                    <option value="ALL">All Customers</option>
+                </select>
+                <div class="form-text">Only Lead Times with an exact matching Customer will be included (general/all-customer entries are excluded when a specific customer is selected).</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-info text-white" id="btnDownloadExport">
+                    <i class="bi bi-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
     <script>
         $(document).ready(function () {
             $('#leadTimeTable').DataTable();
 
+            let uploadModal = new bootstrap.Modal(document.getElementById("uploadModal"));
+            let summaryModal = new bootstrap.Modal(document.getElementById("summaryModal"));
+            let exportModal = new bootstrap.Modal(document.getElementById("exportModal"));
             let modal = new bootstrap.Modal(document.getElementById("leadTimeModal"));
 
             $("#btnAdd").click(function () {
@@ -86,6 +167,111 @@
                     modal.show();
                 });
             });
+
+            $("#btnUpload").click(function () {
+                $("#excelFile").val("");
+                uploadModal.show();
+            });
+
+
+            $("#btnSubmitUpload").click(function () {
+            const fileInput = document.getElementById("excelFile");
+            if (!fileInput.files.length) {
+                alert("Please select an Excel file first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            $("#uploadLoading").show();
+            $("#btnSubmitUpload").prop("disabled", true);
+
+            $.ajax({
+                    type: "POST",
+                    url: "/LeadTime/Upload",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        uploadModal.hide();
+                        renderSummary(res);
+                        summaryModal.show();
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.message || "Failed to upload file.";
+                        alert(msg);
+                    },
+                    complete: function () {
+                        $("#uploadLoading").hide();
+                        $("#btnSubmitUpload").prop("disabled", false);
+                    }
+                });
+            });
+
+            $("#btnCloseSummary").click(function () {
+                location.reload();
+            });
+
+            function renderSummary(res) {
+                let html = `<div class="mb-3 d-flex flex-wrap gap-1">
+                    <span class="badge bg-secondary">Total processed: ${res.totalProcessed}</span>
+                    <span class="badge bg-success">Added: ${res.added.length}</span>
+                    <span class="badge bg-warning text-dark">Already exists: ${res.skippedExisting.length}</span>
+                    <span class="badge bg-warning text-dark">Customer not found: ${res.skippedCustomerNotFound.length}</span>
+                    <span class="badge bg-warning text-dark">Origin not found: ${res.skippedOriginNotFound.length}</span>
+                    <span class="badge bg-warning text-dark">Destination not found: ${res.skippedDestNotFound.length}</span>
+                    <span class="badge bg-warning text-dark">Serv Type not found: ${res.skippedServTypeNotFound.length}</span>
+                    <span class="badge bg-warning text-dark">Serv Moda not found: ${res.skippedServModaNotFound.length}</span>
+                    <span class="badge bg-warning text-dark">Truck Size not found: ${res.skippedTruckSizeNotFound.length}</span>
+                    <span class="badge bg-info text-dark">Duplicate in file: ${res.skippedDuplicateInFile.length}</span>
+                    <span class="badge bg-danger">Invalid: ${res.invalid.length}</span>
+                </div>`;
+
+                html += renderList("Successfully added", res.added, "success");
+                html += renderList("Skipped (already exists)", res.skippedExisting, "warning");
+                html += renderList("Skipped (Customer not found/inactive)", res.skippedCustomerNotFound, "warning");
+                html += renderList("Skipped (Origin not found)", res.skippedOriginNotFound, "warning");
+                html += renderList("Skipped (Destination not found)", res.skippedDestNotFound, "warning");
+                html += renderList("Skipped (Serv Type not found)", res.skippedServTypeNotFound, "warning");
+                html += renderList("Skipped (Serv Moda not found)", res.skippedServModaNotFound, "warning");
+                html += renderList("Skipped (Truck Size not found)", res.skippedTruckSizeNotFound, "warning");
+                html += renderList("Skipped (duplicate within file)", res.skippedDuplicateInFile, "info");
+                html += renderList("Invalid", res.invalid, "danger");
+
+                $("#summaryContent").html(html);
+            }
+
+            function renderList(title, items, colorClass) {
+                if (!items || items.length === 0) return "";
+                let listItems = items.map(i => `<li>${i}</li>`).join("");
+                return `<div class="mb-3">
+                    <strong class="text-${colorClass}">${title} (${items.length})</strong>
+                    <ul class="mb-0">${listItems}</ul>
+                </div>`;
+            }
+
+            // ── Export ──────────────────────────────────────────────────────────────
+
+            $("#btnExport").click(function () {
+                if ($("#exportCustomer option").length <= 1) {
+                    $.get("/LeadTime/GetActiveCustomers", function (data) {
+                        data.forEach(c => {
+                            $("#exportCustomer").append(
+                                `<option value="${c.MAIN_CUST}">${c.MAIN_CUST} — ${c.CUST_NAME}</option>`
+                            );
+                        });
+                    });
+                }
+                exportModal.show();
+            });
+
+            $("#btnDownloadExport").click(function () {
+                const custCode = $("#exportCustomer").val();
+                window.location.href = `/LeadTime/Export?custCode=${encodeURIComponent(custCode)}`;
+                exportModal.hide();
+            });
+
 
             $(document).on("click", ".btnEdit", function () {
                 const id = $(this).data("id");
