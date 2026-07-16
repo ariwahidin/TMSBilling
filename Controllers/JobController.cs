@@ -1453,8 +1453,6 @@ namespace TMSBilling.Controllers
                     var vendor = _context.Vendors
                         .FirstOrDefault(v => v.SUP_CODE == job.vendor_plan);
 
-                    //  List<DeliveryOrderItem> GetDeliveryOrdersByJobId
-
                     var deliveryDetail = GetDeliveryOrdersByJobId(job?.jobid);
 
                     var details = deliveryDetail.Select((item, index) => new SuratPerintahKirimDetailViewModel
@@ -2305,7 +2303,8 @@ namespace TMSBilling.Controllers
                                       DO = g.Key.inv_no ?? "",
                                       TotalBoxKoli = g.Sum(x => x.orderDtl != null ? x.orderDtl.item_qty ?? 0 : 0),
                                       TotalQtyPcs = g.Sum(x => x.orderDtl != null ? x.orderDtl.unit_qty ?? 0 : 0),
-                                      TotalVolume = 0
+                                      TotalVolume = 0,
+                                      TotalWeight = g.Sum(x => x.orderDtl != null ? x.orderDtl.item_wgt ?? 0 : 0)
                                   })
                                  .ToList();
 
@@ -2778,6 +2777,8 @@ namespace TMSBilling.Controllers
         public int GrandTotalQty => DeliveryOrders?.Sum(d => d.TotalQtyPcs) ?? 0;
         public decimal GrandTotalVolume => DeliveryOrders?.Sum(d => d.TotalVolume) ?? 0;
 
+        public decimal GrandTotalWeight => DeliveryOrders?.Sum(d => d.TotalWeight) ?? 0;
+
         public bool IsPreview { get; set; } = false;
     }
 
@@ -2796,6 +2797,7 @@ namespace TMSBilling.Controllers
         public int TotalBoxKoli { get; set; }
         public int TotalQtyPcs { get; set; }
         public decimal TotalVolume { get; set; }
+        public decimal TotalWeight { get; set; }
     }
 
     public class PodDetailViewModel

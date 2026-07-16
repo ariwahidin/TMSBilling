@@ -2,6 +2,7 @@
 
 @{
     Layout = null;
+    var customer = Context.Request.Query["cust"].ToString();
 }
 
 <!DOCTYPE html>
@@ -388,7 +389,14 @@
                     <th style="width: 15%;">DO</th>
                     <th style="width: 7%;">Total<br />Box/Koli</th>
                     <th style="width: 7%;">Total Qty Pcs</th>
-                    <th style="width: 6%;">Total Volume</th>
+                    @if (customer == "INABATA")
+                    {
+                        <th style="width: 6%;">Total Weight</th>
+                    }
+                    else
+                    {
+                        <th style="width: 6%;">Total Volume</th>
+                    }
                 </tr>
             </thead>
             <tbody>
@@ -404,7 +412,14 @@
                             <td>@item.DO</td>
                             <td class="text-right">@item.TotalBoxKoli</td>
                             <td class="text-right">@item.TotalQtyPcs</td>
-                            <td class="text-right">@item.TotalVolume</td>
+                            @if (customer == "INABATA")
+                            {
+                                <td class="text-right">@item.TotalWeight</td>
+                            }
+                            else
+                            {
+                                <td class="text-right">@item.TotalVolume</td>
+                            }
                         </tr>
                         no++;
                     }
@@ -413,7 +428,14 @@
                     <td colspan="5" class="text-center">Grand Total</td>
                     <td class="text-right">@Model.GrandTotalBox</td>
                     <td class="text-right">@Model.GrandTotalQty</td>
-                    <td class="text-right">@Model.GrandTotalVolume</td>
+                    @if (customer == "INABATA")
+                    {
+                        <td class="text-right">@Model.GrandTotalWeight</td>
+                    }
+                    else
+                    {
+                        <td class="text-right">@Model.GrandTotalVolume</td>
+                    }
                 </tr>
             </tbody>
         </table>
