@@ -238,9 +238,6 @@ namespace TMSBilling.Services
                             var cellVal = dt.Columns.Contains(colName) ? dr[colName] : DBNull.Value;
                             var colDef = dt.Columns.Contains(colName) ? dt.Columns[colName]! : new DataColumn();
 
-                            var cell = table.Cell();
-                            if (zebra) cell = (QuestPDF.Elements.Table.ITableCellContainer)cell.Background("#F7F9FC");
-
                             var text = numericCols.Contains(colName) && cellVal != DBNull.Value
                                 ? Convert.ToDecimal(cellVal).ToString("N2")
                                 : FormatCell(cellVal, colDef);
@@ -251,8 +248,16 @@ namespace TMSBilling.Services
                                 totals[colName] += Convert.ToDecimal(cellVal);
                             }
 
-                            cell.BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3)
-                                .AlignRight_IfNumeric(numericCols.Contains(colName)).Text(text);
+                            // ── FIX: jangan reassign var cell dari table.Cell() ke Background(). ──
+                            // Cell() dipanggil sekali, lalu style diaplikasikan ke IContainer terpisah.
+                            IContainer cellContainer = table.Cell();
+                            if (zebra) cellContainer = cellContainer.Background("#F7F9FC");
+
+                            cellContainer
+                                .BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2)
+                                .Padding(3)
+                                .AlignRight_IfNumeric(numericCols.Contains(colName))
+                                .Text(text);
                         }
                         rIdx++;
                     }
