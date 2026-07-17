@@ -12,6 +12,8 @@ using TMSBilling.Services;
 using TMSBilling.Services.Integration;
 using TMSBilling.Services.Reports;
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -99,6 +101,7 @@ builder.Services.AddScoped<IMailReportService, MailReportService>();
 builder.Services.AddScoped<IExcelLayoutService, ExcelLayoutService>();
 builder.Services.AddScoped<IReportOutputService, ExcelOutputService>();
 builder.Services.AddScoped<IReportOutputService, CsvOutputService>();
+builder.Services.AddScoped<IReportOutputService, PdfOutputService>();
 builder.Services.AddScoped<IReportRunnerService, ReportRunnerService>();
 
 // ── Quartz Scheduler ─────────────────────────────────────────────────────

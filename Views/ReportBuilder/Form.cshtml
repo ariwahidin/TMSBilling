@@ -122,6 +122,11 @@
                                @((Model.Report.allowed_outputs ?? "").Contains("csv") ? "checked" : "") />
                         <label class="form-check-label" style="font-size:.8rem;" for="out_csv">CSV</label>
                     </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="out_pdf"
+                               @((Model.Report.allowed_outputs ?? "").Contains("pdf") ? "checked" : "") />
+                        <label class="form-check-label" style="font-size:.8rem;" for="out_pdf">PDF</label>
+                    </div>
                 </div>
             </div>
             <div class="col-md-1">
@@ -808,6 +813,7 @@ $('#btnSave').on('click', async function () {
     const outputs = [];
     if ($('#out_excel').is(':checked')) outputs.push('excel');
     if ($('#out_csv').is(':checked'))   outputs.push('csv');
+    if ($('#out_pdf').is(':checked')) outputs.push('pdf');
 
     const vm = {
         report: {

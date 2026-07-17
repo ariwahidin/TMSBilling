@@ -24,6 +24,7 @@
     <PackageReference Include="Quartz" Version="3.15.1" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.15.1" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.15.1" />
+    <PackageReference Include="QuestPDF" Version="2024.10.3" />
     <PackageReference Include="Select.HtmlToPdf.NetCore" Version="25.2.0" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
   </ItemGroup>
