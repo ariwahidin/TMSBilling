@@ -17,23 +17,43 @@ namespace TMSBilling.Services
     {
         public string Format => "pdf";
 
+        // ── Tuning konstanta autofit ──────────────────────────
+        private const float CharWidthPt = 5.3f;   // perkiraan lebar 1 karakter pada font 9pt
+        private const float MinColWidth = 50f;
+        private const float MaxColWidth = 220f;
+        private const float HeaderPad = 16f;
+        private const float PageMargin = 25f;
+        private const float SideGapUnitPt = 14f;  // 1 unit side_gap = 14pt
+
         public PdfOutputService(IConfiguration config, ILogger<PdfOutputService> logger)
             : base(config, logger) { }
 
-        // Struktur internal hasil pre-fetch (semua query dijalankan dulu,
-        // karena QuestPDF Compose callback-nya synchronous)
-        private class GroupData
+        // ── Struktur internal hasil pre-fetch + autofit width ──
+        private class SectionRenderInfo
         {
-            public bool SideBySide;
-            public int SideGap;
-            public int BottomGap;
-            public List<(MailReportExcelSection Sec, DataTable Dt)> Items = new();
+            public MailReportExcelSection Sec = null!;
+            public DataTable Dt = null!;
+            public List<string> VisibleCols = new();
+            public Dictionary<string, float> ColWidths = new(); // TABLE mode
+            public float LabelColWidth;  // KEY_VALUE mode
+            public float ValueColWidth;  // KEY_VALUE mode
+            public float TotalWidth;
         }
 
-        private class SheetData
+        private class GroupRenderInfo
+        {
+            public bool SideBySide;
+            public int SideGapPt;
+            public int BottomGap;
+            public List<SectionRenderInfo> Items = new();
+            public float TotalWidth;
+        }
+
+        private class SheetRenderInfo
         {
             public string SheetName = "";
-            public List<GroupData> Groups = new();
+            public List<GroupRenderInfo> Groups = new();
+            public float MaxWidth;
         }
 
         public async Task<ReportOutputResult> GenerateAsync(
@@ -45,22 +65,22 @@ namespace TMSBilling.Services
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int rowCount = 0;
 
-            var sheetsData = new List<SheetData>();
+            var sheetsData = new List<SheetRenderInfo>();
             var hasLayout = layout != null && layout.Layout.use_custom_layout == 1;
 
             if (hasLayout)
             {
                 foreach (var sheetVM in layout!.Sheets.OrderBy(s => s.Sheet.sort_order))
                 {
-                    var sheetData = new SheetData { SheetName = sheetVM.Sheet.sheet_name };
+                    var sheetInfo = new SheetRenderInfo { SheetName = sheetVM.Sheet.sheet_name };
                     var groups = GroupSections(sheetVM.Sections.OrderBy(s => s.sort_order).ToList());
 
                     foreach (var group in groups)
                     {
-                        var gd = new GroupData
+                        var gInfo = new GroupRenderInfo
                         {
                             SideBySide = group.Count > 1 && group[0].layout == "side_by_side",
-                            SideGap = group.Max(g => g.side_gap > 0 ? g.side_gap : 1),
+                            SideGapPt = (int)((group.Max(g => g.side_gap > 0 ? g.side_gap : 1)) * SideGapUnitPt),
                             BottomGap = group[0].bottom_gap > 0 ? group[0].bottom_gap : 2
                         };
 
@@ -68,11 +88,49 @@ namespace TMSBilling.Services
                         {
                             var dt = await RunQueryAsync(sec.sql_query!, sec.sql_where, paramValues, sec.section_label);
                             rowCount += dt.Rows.Count;
-                            gd.Items.Add((sec, dt));
+
+                            var visibleCols = GetVisibleCols(sec.visible_columns, dt);
+                            var secInfo = new SectionRenderInfo { Sec = sec, Dt = dt, VisibleCols = visibleCols };
+
+                            if (sec.display_mode == "KEY_VALUE")
+                            {
+                                var maxLabelLen = visibleCols.Any() ? visibleCols.Max(c => c.Length) : 5;
+                                var maxValLen = 5;
+                                if (dt.Rows.Count > 0)
+                                {
+                                    var row0 = dt.Rows[0];
+                                    foreach (var c in visibleCols)
+                                    {
+                                        if (!dt.Columns.Contains(c)) continue;
+                                        var text = FormatCell(row0[c], dt.Columns[c]!);
+                                        if (text.Length > maxValLen) maxValLen = text.Length;
+                                    }
+                                }
+                                secInfo.LabelColWidth = Clamp(maxLabelLen * CharWidthPt + HeaderPad);
+                                secInfo.ValueColWidth = Clamp(maxValLen * CharWidthPt + HeaderPad);
+                                secInfo.TotalWidth = secInfo.LabelColWidth + secInfo.ValueColWidth;
+                            }
+                            else
+                            {
+                                secInfo.ColWidths = ComputeColumnWidths(visibleCols, dt);
+                                secInfo.TotalWidth = secInfo.ColWidths.Values.DefaultIfEmpty(MinColWidth).Sum();
+                            }
+
+                            // lebar minimal kalau tidak ada data sama sekali
+                            if (secInfo.TotalWidth < 150) secInfo.TotalWidth = 150;
+
+                            gInfo.Items.Add(secInfo);
                         }
-                        sheetData.Groups.Add(gd);
+
+                        gInfo.TotalWidth = gInfo.SideBySide
+                            ? gInfo.Items.Sum(i => i.TotalWidth) + gInfo.SideGapPt * Math.Max(gInfo.Items.Count - 1, 0)
+                            : gInfo.Items.Max(i => i.TotalWidth);
+
+                        sheetInfo.Groups.Add(gInfo);
                     }
-                    sheetsData.Add(sheetData);
+
+                    sheetInfo.MaxWidth = sheetInfo.Groups.Any() ? sheetInfo.Groups.Max(g => g.TotalWidth) : 400;
+                    sheetsData.Add(sheetInfo);
                 }
             }
 
@@ -82,12 +140,18 @@ namespace TMSBilling.Services
             var titleFgHex = "#" + (string.IsNullOrWhiteSpace(layout?.Layout.title_font_color) ? "000000" : layout!.Layout.title_font_color);
             var titleFontSize = layout?.Layout.title_font_size > 0 ? layout.Layout.title_font_size : 14;
 
+            // ── Hitung ukuran halaman dinamis ──────────────────
+            var baseLandscape = PageSizes.A4.Landscape();
+            float pageHeight = baseLandscape.Height;
+            float contentWidth = sheetsData.Any() ? sheetsData.Max(s => s.MaxWidth) : baseLandscape.Width - PageMargin * 2;
+            float pageWidth = Math.Max(baseLandscape.Width, contentWidth + PageMargin * 2);
+
             var document = QuestPDF.Fluent.Document.Create(container =>
             {
                 container.Page(page =>
                 {
-                    page.Size(PageSizes.A4.Landscape());
-                    page.Margin(25);
+                    page.Size(new PageSize(pageWidth, pageHeight));
+                    page.Margin(PageMargin);
                     page.DefaultTextStyle(x => x.FontSize(9));
 
                     page.Header().Column(col =>
@@ -95,8 +159,10 @@ namespace TMSBilling.Services
                         if (!string.IsNullOrWhiteSpace(reportTitle))
                         {
                             var titleItem = col.Item();
-                            if (titleBgHex != "#FFFFFF") titleItem = titleItem.Background(titleBgHex);
-                            titleItem.Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
+                            if (titleBgHex != "#FFFFFF")
+                                titleItem.Background(titleBgHex).Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
+                            else
+                                titleItem.Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
                         }
                         if (!string.IsNullOrWhiteSpace(reportSubtitle))
                             col.Item().PaddingTop(2).Text(reportSubtitle).FontSize(8).Italic().FontColor(Colors.Grey.Darken1);
@@ -123,19 +189,16 @@ namespace TMSBilling.Services
                             {
                                 if (!group.SideBySide)
                                 {
-                                    foreach (var (sec, dt) in group.Items)
-                                        col.Item().PaddingTop(8).Element(c => ComposeSection(c, sec, dt, paramValues));
+                                    var info = group.Items[0];
+                                    col.Item().PaddingTop(8).Element(c => ComposeSection(c, info, paramValues));
                                 }
                                 else
                                 {
                                     col.Item().PaddingTop(8).Row(row =>
                                     {
-                                        row.Spacing(group.SideGap * 8);
-                                        foreach (var (sec, dt) in group.Items)
-                                        {
-                                            var colCount = Math.Max(GetVisibleCols(sec.visible_columns, dt).Count, 1);
-                                            row.RelativeItem(colCount).Element(c => ComposeSection(c, sec, dt, paramValues));
-                                        }
+                                        row.Spacing(group.SideGapPt);
+                                        foreach (var info in group.Items)
+                                            row.ConstantItem(info.TotalWidth).Element(c => ComposeSection(c, info, paramValues));
                                     });
                                 }
                             }
@@ -167,10 +230,13 @@ namespace TMSBilling.Services
         // ── Render 1 section (title + table/key-value + grand total) ──
         private void ComposeSection(
             IContainer container,
-            MailReportExcelSection sec,
-            DataTable dt,
+            SectionRenderInfo info,
             Dictionary<string, string> paramValues)
         {
+            var sec = info.Sec;
+            var dt = info.Dt;
+            var visibleCols = info.VisibleCols;
+
             var titleBg = "#" + (string.IsNullOrWhiteSpace(sec.title_bg_color) ? "FFD700" : sec.title_bg_color);
             var titleFg = "#" + (string.IsNullOrWhiteSpace(sec.title_font_color) ? "000000" : sec.title_font_color);
             var headerBg = "#" + (string.IsNullOrWhiteSpace(sec.header_bg_color) ? "FFD700" : sec.header_bg_color);
@@ -182,8 +248,7 @@ namespace TMSBilling.Services
                 if (!string.IsNullOrWhiteSpace(sec.section_title))
                 {
                     var titleText = ResolveWithDataTable(sec.section_title, dt, paramValues);
-                    col.Item().Background(titleBg).Padding(4)
-                        .Text(titleText).Bold().FontColor(titleFg);
+                    col.Item().Background(titleBg).Padding(4).Text(titleText).Bold().FontColor(titleFg);
                 }
 
                 if (dt.Rows.Count == 0)
@@ -192,7 +257,6 @@ namespace TMSBilling.Services
                     return;
                 }
 
-                var visibleCols = GetVisibleCols(sec.visible_columns, dt);
                 if (!visibleCols.Any()) return;
 
                 if (sec.display_mode == "KEY_VALUE")
@@ -200,11 +264,17 @@ namespace TMSBilling.Services
                     var row0 = dt.Rows[0];
                     col.Item().PaddingTop(2).Table(table =>
                     {
-                        table.ColumnsDefinition(c => { c.RelativeColumn(1); c.RelativeColumn(2); });
+                        table.ColumnsDefinition(c =>
+                        {
+                            c.ConstantColumn(info.LabelColWidth);
+                            c.ConstantColumn(info.ValueColWidth);
+                        });
                         foreach (var colName in visibleCols)
                         {
                             table.Cell().Background("#F7F9FC").Padding(3).Text(colName).Bold();
-                            table.Cell().Padding(3).Text(FormatCell(row0[colName], dt.Columns[colName]!));
+                            table.Cell().Padding(3).Text(dt.Columns.Contains(colName)
+                                ? FormatCell(row0[colName], dt.Columns[colName]!)
+                                : "");
                         }
                     });
                     return;
@@ -221,7 +291,11 @@ namespace TMSBilling.Services
 
                 col.Item().PaddingTop(2).Table(table =>
                 {
-                    table.ColumnsDefinition(c => { foreach (var _ in visibleCols) c.RelativeColumn(); });
+                    table.ColumnsDefinition(c =>
+                    {
+                        foreach (var colName in visibleCols)
+                            c.ConstantColumn(info.ColWidths.TryGetValue(colName, out var w) ? w : MinColWidth);
+                    });
 
                     table.Header(h =>
                     {
@@ -248,8 +322,6 @@ namespace TMSBilling.Services
                                 totals[colName] += Convert.ToDecimal(cellVal);
                             }
 
-                            // ── FIX: jangan reassign var cell dari table.Cell() ke Background(). ──
-                            // Cell() dipanggil sekali, lalu style diaplikasikan ke IContainer terpisah.
                             IContainer cellContainer = table.Cell();
                             if (zebra) cellContainer = cellContainer.Background("#F7F9FC");
 
@@ -292,6 +364,29 @@ namespace TMSBilling.Services
             });
         }
 
+        // ── Autofit lebar kolom, mirip AdjustToContents() di Excel ──
+        private Dictionary<string, float> ComputeColumnWidths(List<string> cols, DataTable dt)
+        {
+            var widths = new Dictionary<string, float>();
+            foreach (var col in cols)
+            {
+                int maxLen = col.Length;
+                if (dt.Columns.Contains(col))
+                {
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        var val = row[col];
+                        var text = val == DBNull.Value || val == null ? "" : FormatCell(val, dt.Columns[col]!);
+                        if (text.Length > maxLen) maxLen = text.Length;
+                    }
+                }
+                widths[col] = Clamp(maxLen * CharWidthPt + HeaderPad);
+            }
+            return widths;
+        }
+
+        private static float Clamp(float w) => Math.Clamp(w, MinColWidth, MaxColWidth);
+
         // ── sama persis dengan GroupSections di ExcelLayoutService ──
         private List<List<MailReportExcelSection>> GroupSections(List<MailReportExcelSection> sections)
         {
@@ -320,7 +415,6 @@ namespace TMSBilling.Services
             return result;
         }
 
-        // ── sama seperti ResolveWithDataTable di ExcelLayoutService ──
         private string ResolveWithDataTable(string template, DataTable dt, Dictionary<string, string> paramValues)
         {
             if (string.IsNullOrEmpty(template)) return template;
@@ -337,11 +431,9 @@ namespace TMSBilling.Services
         }
     }
 
-    // Extension kecil untuk alignment kondisional biar kode di atas lebih ringkas
     internal static class QuestPdfExt
     {
-        public static QuestPDF.Infrastructure.IContainer AlignRight_IfNumeric(
-            this QuestPDF.Infrastructure.IContainer container, bool isNumeric)
+        public static IContainer AlignRight_IfNumeric(this IContainer container, bool isNumeric)
             => isNumeric ? container.AlignRight() : container;
     }
 }
