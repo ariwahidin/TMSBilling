@@ -69,6 +69,7 @@ public class LeadTimeController : Controller
             existing.truck_size = model.truck_size;
             existing.delivery_days = model.delivery_days;
             existing.pod_days = model.pod_days;
+            existing.e_pod_days = model.e_pod_days;
             existing.active_flag = model.active_flag;
             existing.update_user = HttpContext.Session.GetString("username") ?? "System";
             existing.update_date = DateTime.Now;
@@ -217,6 +218,7 @@ public class LeadTimeController : Controller
                 var truckSize = row.Cell(6).GetValue<string>()?.Trim();
                 var deliveryDaysText = row.Cell(7).GetValue<string>()?.Trim();
                 var podDaysText = row.Cell(8).GetValue<string>()?.Trim();
+                var ePodDaysText = row.Cell(9).GetValue<string>()?.Trim();
 
                 if (string.IsNullOrWhiteSpace(custCode) && string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(dest))
                     continue; // empty row, skip silently
@@ -262,6 +264,15 @@ public class LeadTimeController : Controller
                         numErrors.Add("POD Days must be a non-negative whole number");
                     else
                         podDays = pd;
+                }
+
+                int? ePodDays = null;
+                if (!string.IsNullOrWhiteSpace(ePodDaysText))
+                {
+                    if (!int.TryParse(ePodDaysText, out var epd) || epd < 0)
+                        numErrors.Add("E POD Days must be a non-negative whole number");
+                    else
+                        ePodDays = epd;
                 }
 
                 if (lengthErrors.Any() || numErrors.Any())
@@ -335,6 +346,7 @@ public class LeadTimeController : Controller
                     truck_size = truckSize,
                     delivery_days = deliveryDays,
                     pod_days = podDays,
+                    e_pod_days = ePodDays,
                     active_flag = 1,
                     entry_user = username,
                     entry_date = now
@@ -384,7 +396,7 @@ public class LeadTimeController : Controller
 
         string[] headers = {
         "Customer", "Origin", "Destination", "Serv Type", "Serv Moda", "Truck Size",
-        "Delivery Days", "POD Days"
+        "Delivery Days", "POD Days", "E POD Days"
     };
 
         for (int i = 0; i < headers.Length; i++)
@@ -459,7 +471,7 @@ public class LeadTimeController : Controller
 
         string[] headers = {
             "Customer", "Origin", "Destination", "Serv Type", "Serv Moda", "Truck Size",
-            "Delivery Days", "POD Days", "Active"
+            "Delivery Days", "POD Days", "E POD Days", "Active"
         };
 
         for (int i = 0; i < headers.Length; i++)
@@ -480,7 +492,8 @@ public class LeadTimeController : Controller
             worksheet.Cell(row, 6).Value = item.truck_size ?? "";
             worksheet.Cell(row, 7).Value = item.delivery_days ?? (int?)null;
             worksheet.Cell(row, 8).Value = item.pod_days ?? (int?)null;
-            worksheet.Cell(row, 9).Value = item.active_flag == 1 ? "Active" : "Inactive";
+            worksheet.Cell(row, 9).Value = item.e_pod_days ?? (int?)null;
+            worksheet.Cell(row, 10).Value = item.active_flag == 1 ? "Active" : "Inactive";
             row++;
         }
 

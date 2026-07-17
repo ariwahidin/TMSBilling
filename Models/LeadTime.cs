@@ -34,6 +34,8 @@ namespace TMSBilling.Models
         public int? delivery_days { get; set; }
         public int? pod_days { get; set; }
 
+        public int? e_pod_days { get; set; }
+
         public byte? active_flag { get; set; }
 
         [StringLength(50)]
