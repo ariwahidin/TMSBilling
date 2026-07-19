@@ -196,6 +196,15 @@ namespace TMSBilling.Models
         [Required, StringLength(20)]
         public string owner_type { get; set; } = "mailreport";
 
+        [StringLength(300)]
+        public string? logo_path { get; set; }
+
+        // "none" | "last_page" | "every_page"
+        [StringLength(20)]
+        public string signature_placement { get; set; } = "none";
+
+        public List<MailReportSignature> Signatures { get; set; } = new();
+
         //[JsonIgnore]
         //[ForeignKey("report_id")]
         //public MailReport? Report { get; set; }
@@ -295,6 +304,29 @@ namespace TMSBilling.Models
         public MailReportExcelSheet? Sheet { get; set; }
     }
 
+    // ── Class baru: MailReportSignature ──
+    [Table("RPT_SIGNATURE")]
+    public class MailReportSignature
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int ID { get; set; }
+
+        public int layout_id { get; set; }
+
+        [Required, StringLength(100)]
+        public required string label { get; set; }   // e.g. "Pengirim", "Sopir", "Penerima"
+
+        public int sort_order { get; set; } = 0;
+
+        [JsonIgnore]
+        [ForeignKey("layout_id")]
+        public MailReportExcelLayout? Layout { get; set; }
+    }
+
+
+
+
     // ─────────────────────────────────────────────
     // ViewModels
     // ─────────────────────────────────────────────
@@ -302,6 +334,8 @@ namespace TMSBilling.Models
     {
         public MailReportExcelLayout Layout { get; set; } = new MailReportExcelLayout();
         public List<MailReportExcelSheetVM> Sheets { get; set; } = new();
+
+        public List<MailReportSignature> Signatures { get; set; } = new();
     }
 
     public class MailReportExcelSheetVM

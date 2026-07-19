@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
@@ -17,26 +19,30 @@ namespace TMSBilling.Services
     {
         public string Format => "pdf";
 
+        private readonly IWebHostEnvironment _env;
+
         // ── Tuning konstanta autofit ──────────────────────────
-        private const float CharWidthPt = 5.3f;   // perkiraan lebar 1 karakter pada font 9pt
+        private const float CharWidthPt = 5.3f;
         private const float MinColWidth = 50f;
         private const float MaxColWidth = 220f;
         private const float HeaderPad = 16f;
         private const float PageMargin = 25f;
-        private const float SideGapUnitPt = 14f;  // 1 unit side_gap = 14pt
+        private const float SideGapUnitPt = 14f;
 
-        public PdfOutputService(IConfiguration config, ILogger<PdfOutputService> logger)
-            : base(config, logger) { }
+        public PdfOutputService(IConfiguration config, ILogger<PdfOutputService> logger, IWebHostEnvironment env)
+            : base(config, logger)
+        {
+            _env = env;
+        }
 
-        // ── Struktur internal hasil pre-fetch + autofit width ──
         private class SectionRenderInfo
         {
             public MailReportExcelSection Sec = null!;
             public DataTable Dt = null!;
             public List<string> VisibleCols = new();
-            public Dictionary<string, float> ColWidths = new(); // TABLE mode
-            public float LabelColWidth;  // KEY_VALUE mode
-            public float ValueColWidth;  // KEY_VALUE mode
+            public Dictionary<string, float> ColWidths = new();
+            public float LabelColWidth;
+            public float ValueColWidth;
             public float TotalWidth;
         }
 
@@ -116,7 +122,6 @@ namespace TMSBilling.Services
                                 secInfo.TotalWidth = secInfo.ColWidths.Values.DefaultIfEmpty(MinColWidth).Sum();
                             }
 
-                            // lebar minimal kalau tidak ada data sama sekali
                             if (secInfo.TotalWidth < 150) secInfo.TotalWidth = 150;
 
                             gInfo.Items.Add(secInfo);
@@ -140,6 +145,26 @@ namespace TMSBilling.Services
             var titleFgHex = "#" + (string.IsNullOrWhiteSpace(layout?.Layout.title_font_color) ? "000000" : layout!.Layout.title_font_color);
             var titleFontSize = layout?.Layout.title_font_size > 0 ? layout.Layout.title_font_size : 14;
 
+            // ── Load logo (kalau ada) ────────────────────────────
+            byte[]? logoBytes = null;
+            if (!string.IsNullOrWhiteSpace(layout?.Layout.logo_path))
+            {
+                try
+                {
+                    var relative = layout!.Layout.logo_path!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                    var physicalPath = Path.Combine(_env.WebRootPath, relative);
+                    if (File.Exists(physicalPath))
+                        logoBytes = await File.ReadAllBytesAsync(physicalPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "PdfOutputService: gagal load logo dari {Path}", layout?.Layout.logo_path);
+                }
+            }
+
+            var signatures = layout?.Signatures ?? new List<MailReportSignature>();
+            var sigPlacement = layout?.Layout.signature_placement ?? "none";
+
             // ── Hitung ukuran halaman dinamis ──────────────────
             var baseLandscape = PageSizes.A4.Landscape();
             float pageHeight = baseLandscape.Height;
@@ -154,62 +179,86 @@ namespace TMSBilling.Services
                     page.Margin(PageMargin);
                     page.DefaultTextStyle(x => x.FontSize(9));
 
+                    // ── HEADER: logo + title ─────────────────────
                     page.Header().Column(col =>
                     {
-                        if (!string.IsNullOrWhiteSpace(reportTitle))
+                        col.Item().Row(row =>
                         {
-                            var titleItem = col.Item();
-                            if (titleBgHex != "#FFFFFF")
-                                titleItem.Background(titleBgHex).Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
-                            else
-                                titleItem.Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
-                        }
-                        if (!string.IsNullOrWhiteSpace(reportSubtitle))
-                            col.Item().PaddingTop(2).Text(reportSubtitle).FontSize(8).Italic().FontColor(Colors.Grey.Darken1);
+                            if (logoBytes != null)
+                                row.ConstantItem(60).Height(60).Image(logoBytes).FitArea();
+
+                            row.RelativeItem().Column(inner =>
+                            {
+                                if (!string.IsNullOrWhiteSpace(reportTitle))
+                                {
+                                    var titleItem = inner.Item();
+                                    if (titleBgHex != "#FFFFFF")
+                                        titleItem.Background(titleBgHex).Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
+                                    else
+                                        titleItem.Padding(6).Text(reportTitle).FontSize(titleFontSize).Bold().FontColor(titleFgHex);
+                                }
+                                if (!string.IsNullOrWhiteSpace(reportSubtitle))
+                                    inner.Item().PaddingTop(2).Text(reportSubtitle).FontSize(8).Italic().FontColor(Colors.Grey.Darken1);
+                            });
+                        });
                     });
 
+                    // ── CONTENT ───────────────────────────────────
                     page.Content().PaddingTop(10).Column(col =>
                     {
                         if (!hasLayout || !sheetsData.Any())
                         {
                             col.Item().Text("No layout configured. Please set Excel Layout in Report Builder.")
                                 .Italic().FontColor(Colors.Orange.Medium);
-                            return;
                         }
-
-                        bool firstSheet = true;
-                        foreach (var sheet in sheetsData)
+                        else
                         {
-                            if (!firstSheet) col.Item().PaddingTop(14);
-                            firstSheet = false;
-
-                            col.Item().Text($"Sheet: {sheet.SheetName}").FontSize(12).Bold();
-
-                            foreach (var group in sheet.Groups)
+                            bool firstSheet = true;
+                            foreach (var sheet in sheetsData)
                             {
-                                if (!group.SideBySide)
+                                if (!firstSheet) col.Item().PaddingTop(14);
+                                firstSheet = false;
+
+                                col.Item().Text($"Sheet: {sheet.SheetName}").FontSize(12).Bold();
+
+                                foreach (var group in sheet.Groups)
                                 {
-                                    var info = group.Items[0];
-                                    col.Item().PaddingTop(8).Element(c => ComposeSection(c, info, paramValues));
-                                }
-                                else
-                                {
-                                    col.Item().PaddingTop(8).Row(row =>
+                                    if (!group.SideBySide)
                                     {
-                                        row.Spacing(group.SideGapPt);
-                                        foreach (var info in group.Items)
-                                            row.ConstantItem(info.TotalWidth).Element(c => ComposeSection(c, info, paramValues));
-                                    });
+                                        var info = group.Items[0];
+                                        col.Item().PaddingTop(8).Element(c => ComposeSection(c, info, paramValues));
+                                    }
+                                    else
+                                    {
+                                        col.Item().PaddingTop(8).Row(row =>
+                                        {
+                                            row.Spacing(group.SideGapPt);
+                                            foreach (var info in group.Items)
+                                                row.ConstantItem(info.TotalWidth).Element(c => ComposeSection(c, info, paramValues));
+                                        });
+                                    }
                                 }
                             }
                         }
+
+                        // Signature di akhir dokumen (hanya kalau placement = last_page)
+                        if (sigPlacement == "last_page" && signatures.Any())
+                            col.Item().Element(c => ComposeSignatureBlock(c, signatures));
                     });
 
-                    page.Footer().AlignCenter().Text(x =>
+                    // ── FOOTER ────────────────────────────────────
+                    page.Footer().Column(col =>
                     {
-                        x.CurrentPageNumber();
-                        x.Span(" / ");
-                        x.TotalPages();
+                        // Signature berulang tiap halaman kalau placement = every_page
+                        if (sigPlacement == "every_page" && signatures.Any())
+                            col.Item().Element(c => ComposeSignatureBlock(c, signatures));
+
+                        col.Item().AlignCenter().Text(x =>
+                        {
+                            x.CurrentPageNumber();
+                            x.Span(" / ");
+                            x.TotalPages();
+                        });
                     });
                 });
             });
@@ -225,6 +274,26 @@ namespace TMSBilling.Services
                 RowCount = hasLayout ? rowCount : 0,
                 DurationMs = (int)sw.ElapsedMilliseconds
             };
+        }
+
+        // ── Blok tanda tangan, jumlah kolom dinamis ──────────────
+        private void ComposeSignatureBlock(IContainer container, List<MailReportSignature> signatures)
+        {
+            if (signatures == null || !signatures.Any()) return;
+
+            container.PaddingTop(30).Row(row =>
+            {
+                row.Spacing(20);
+                foreach (var sig in signatures.OrderBy(s => s.sort_order))
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Height(50); // ruang kosong untuk tanda tangan fisik
+                        col.Item().BorderTop(1).BorderColor(Colors.Black).PaddingTop(2)
+                            .AlignCenter().Text(sig.label).FontSize(9);
+                    });
+                }
+            });
         }
 
         // ── Render 1 section (title + table/key-value + grand total) ──
@@ -280,7 +349,6 @@ namespace TMSBilling.Services
                     return;
                 }
 
-                // TABLE mode
                 var numericTypes = new[] { typeof(int), typeof(long), typeof(short), typeof(byte),
                                            typeof(decimal), typeof(double), typeof(float) };
                 var numericCols = visibleCols
@@ -364,7 +432,6 @@ namespace TMSBilling.Services
             });
         }
 
-        // ── Autofit lebar kolom, mirip AdjustToContents() di Excel ──
         private Dictionary<string, float> ComputeColumnWidths(List<string> cols, DataTable dt)
         {
             var widths = new Dictionary<string, float>();
@@ -387,7 +454,6 @@ namespace TMSBilling.Services
 
         private static float Clamp(float w) => Math.Clamp(w, MinColWidth, MaxColWidth);
 
-        // ── sama persis dengan GroupSections di ExcelLayoutService ──
         private List<List<MailReportExcelSection>> GroupSections(List<MailReportExcelSection> sections)
         {
             var result = new List<List<MailReportExcelSection>>();

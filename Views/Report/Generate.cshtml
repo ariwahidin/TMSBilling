@@ -164,8 +164,13 @@
                     <button class="btn btn-primary" id="btnGenerate">
                         <i class="bi bi-download me-1"></i>Generate & Download
                     </button>
+                    <button class="btn btn-outline-primary" id="btnPreview" style="display:none;">
+                        <i class="bi bi-eye me-1"></i>Preview
+                    </button>
                     <span id="genStatus" class="ms-2 text-muted" style="font-size:.78rem;"></span>
                 </div>
+
+
             </div>
         </div>
 
@@ -177,6 +182,18 @@
 const reportId      = @(report?.ID ?? 0);
 let selectedFormat  = '@(outputs.FirstOrDefault() ?? "excel")';
 
+// function selectOutput(btn) {
+//     selectedFormat = $(btn).data('fmt');
+//     $('#outputSelector .output-btn').each(function () {
+//         const cls = $(this).data('cls');
+//         if ($(this).data('fmt') === selectedFormat) {
+//             $(this).removeClass('btn-outline-' + cls.replace('btn-','')).addClass(cls);
+//         } else {
+//             $(this).removeClass(cls).addClass('btn-outline-' + cls.replace('btn-',''));
+//         }
+//     });
+// }
+
 function selectOutput(btn) {
     selectedFormat = $(btn).data('fmt');
     $('#outputSelector .output-btn').each(function () {
@@ -187,6 +204,7 @@ function selectOutput(btn) {
             $(this).removeClass(cls).addClass('btn-outline-' + cls.replace('btn-',''));
         }
     });
+    $('#btnPreview').toggle(selectedFormat === 'pdf');   // ← baru
 }
 
 // Load dynamic select options (query source)
@@ -284,7 +302,48 @@ $('#btnGenerate').on('click', async function () {
     }
 });
 
+$('#btnPreview').on('click', async function () {
+    let valid = true;
+    $('.param-input[data-required="1"]').each(function () {
+        if (!$(this).val()) { $(this).addClass('is-invalid'); valid = false; }
+        else $(this).removeClass('is-invalid');
+    });
+    if (!valid) { $('#genStatus').html('<span class="text-danger">Lengkapi field yang wajib diisi.</span>'); return; }
+
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Loading...');
+    $('#genStatus').html('<span class="text-muted">Mohon tunggu...</span>');
+
+    try {
+        const params = collectParams();
+        const req = { reportId, params, outputFormat: 'pdf' };
+
+        const response = await fetch('/Report/Download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req)
+        });
+
+        if (!response.ok) { const err = await response.json(); throw new Error(err.message || 'Preview failed'); }
+        const contentType = response.headers.get('Content-Type') || '';
+        if (contentType.includes('json')) { const err = await response.json(); throw new Error(err.message || 'Preview failed'); }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+
+        $('#genStatus').html('<span class="text-success"><i class="bi bi-check-circle me-1"></i>Preview dibuka di tab baru.</span>');
+    } catch (ex) {
+        $('#genStatus').html(`<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>${ex.message}</span>`);
+    } finally {
+        $(this).prop('disabled', false).html('<i class="bi bi-eye me-1"></i>Preview');
+    }
+});
+
 // Init
 loadSelectOptions();
+$('#btnPreview').toggle(selectedFormat === 'pdf');
+
+// Init
+// loadSelectOptions();
 </script>
 }

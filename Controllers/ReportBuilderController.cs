@@ -21,11 +21,13 @@ namespace TMSBilling.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IExcelLayoutService _layoutSvc;
+        private readonly IWebHostEnvironment _env;
 
-        public ReportBuilderController(AppDbContext db, IExcelLayoutService layoutSvc)
+        public ReportBuilderController(AppDbContext db, IExcelLayoutService layoutSvc, IWebHostEnvironment env)
         {
             _db = db;
             _layoutSvc = layoutSvc;
+            _env = env;
         }
 
         // ─────────────────────────────────────────
@@ -62,8 +64,14 @@ namespace TMSBilling.Controllers
                                      .Where(p => p.report_id == id)
                                      .ToListAsync();
 
+                //if (vm.Report.excel_layout_id.HasValue)
+                //    vm.ExcelLayout = await _layoutSvc.LoadForFormAsync(vm.Report.excel_layout_id.Value, "reportbuilder");
+
                 if (vm.Report.excel_layout_id.HasValue)
+                {
                     vm.ExcelLayout = await _layoutSvc.LoadForFormAsync(vm.Report.excel_layout_id.Value, "reportbuilder");
+                    vm.Signatures = vm.ExcelLayout?.Signatures ?? new List<MailReportSignature>();
+                }
             }
 
             await SetViewBags();
@@ -243,6 +251,43 @@ namespace TMSBilling.Controllers
                     rows.Add(row);
                 }
                 return Json(new { ok = true, columns = cols, rows });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { ok = false, message = ex.Message });
+            }
+        }
+
+        // ─────────────────────────────────────────
+        // UPLOAD LOGO
+        // ─────────────────────────────────────────
+        [HttpPost]
+        public async Task<IActionResult> UploadLogo(IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return Json(new { ok = false, message = "File kosong." });
+
+                var allowedExt = new[] { ".png", ".jpg", ".jpeg" };
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedExt.Contains(ext))
+                    return Json(new { ok = false, message = "Format harus PNG/JPG." });
+
+                if (file.Length > 2 * 1024 * 1024) // max 2MB
+                    return Json(new { ok = false, message = "Ukuran file maksimal 2MB." });
+
+                var folder = Path.Combine(_env.WebRootPath, "uploads", "report-logos");
+                Directory.CreateDirectory(folder);
+
+                var fileName = $"logo_{Guid.NewGuid():N}{ext}";
+                var fullPath = Path.Combine(folder, fileName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                    await file.CopyToAsync(stream);
+
+                var relativePath = $"/uploads/report-logos/{fileName}";
+                return Json(new { ok = true, path = relativePath });
             }
             catch (Exception ex)
             {

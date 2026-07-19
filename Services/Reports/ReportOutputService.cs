@@ -405,7 +405,9 @@ namespace TMSBilling.Services
     public interface IReportRunnerService
     {
         Task<ReportOutputResult> RunAsync(ReportGenerateRequest request, string username);
-        Task<List<ReportDefinition>> GetAccessibleReportsAsync(string username, string? roleName);
+        //Task<List<ReportDefinition>> GetAccessibleReportsAsync(string username, string? roleName);
+
+        Task<List<ReportDefinition>> GetAccessibleReportsAsync(int userId);
         Task<List<ReportParamOptionItem>> GetParamOptionsAsync(int reportId, string paramKey, Dictionary<string, string> currentValues);
     }
 
@@ -416,19 +418,23 @@ namespace TMSBilling.Services
         private readonly IExcelLayoutService _layoutSvc;
         private readonly ILogger<ReportRunnerService> _logger;
         private readonly string _connStr;
+        private readonly IPermissionService _permissionService;
+
 
         public ReportRunnerService(
             AppDbContext db,
             IEnumerable<IReportOutputService> outputServices,
             IExcelLayoutService layoutSvc,
             ILogger<ReportRunnerService> logger,
-            IConfiguration config)
+            IConfiguration config,
+            IPermissionService permissionService)
         {
             _db = db;
             _outputServices = outputServices;
             _layoutSvc = layoutSvc;
             _logger = logger;
             _connStr = config.GetConnectionString("DefaultConnection")!;
+            _permissionService = permissionService;
         }
 
         // ── RunAsync ─────────────────────────────────────────────
@@ -505,13 +511,39 @@ namespace TMSBilling.Services
         }
 
         // ── GetAccessibleReports ─────────────────────────────────
-        public async Task<List<ReportDefinition>> GetAccessibleReportsAsync(string username, string? roleName)
+
+        public async Task<List<ReportDefinition>> GetAccessibleReportsAsync(int userId)
         {
-            // Ambil report yang punya permission ALL, atau match username/roleName
+            // 1. SuperAdmin bypass semua
+            if (_permissionService.IsSuperAdmin())
+            {
+                return await _db.ReportDefinitions
+                    .AsNoTracking()
+                    .Where(r => r.is_active == 1)
+                    .OrderBy(r => r.category)
+                    .ThenBy(r => r.report_name)
+                    .ToListAsync();
+            }
+
+            // 2. Ambil semua role_id milik user
+            var userRoleIds = await _db.UserRoles
+                .Where(ur => ur.UserId == userId)
+                .Select(ur => ur.RoleId)
+                .ToListAsync();
+
+            // 3. Load semua role (untuk resolve hierarki in-memory, sama pola seperti PermissionService)
+            var allRoles = await _db.Roles.ToListAsync();
+
+            // 4. Resolve nama role user + semua parent-nya secara rekursif
+            var effectiveRoleNames = new HashSet<string>();
+            foreach (var roleId in userRoleIds)
+            {
+                CollectRoleNamesRecursive(roleId, allRoles, effectiveRoleNames, new HashSet<int>());
+            }
+
+            // 5. Ambil report_id yang permission-nya "ALL" atau match salah satu role user
             var accessibleIds = await _db.ReportPermissions
-                .Where(p => p.role_name == "ALL"
-                         || p.role_name == username
-                         || (roleName != null && p.role_name == roleName))
+                .Where(p => p.role_name == "ALL" || effectiveRoleNames.Contains(p.role_name))
                 .Select(p => p.report_id)
                 .Distinct()
                 .ToListAsync();
@@ -523,6 +555,44 @@ namespace TMSBilling.Services
                 .ThenBy(r => r.report_name)
                 .ToListAsync();
         }
+
+        private void CollectRoleNamesRecursive(
+            int roleId,
+            List<Role> allRoles,
+            HashSet<string> result,
+            HashSet<int> visited) // guard infinite loop kalau data melingkar
+        {
+            if (visited.Contains(roleId)) return;
+            visited.Add(roleId);
+
+            var role = allRoles.FirstOrDefault(r => r.Id == roleId);
+            if (role == null) return;
+
+            result.Add(role.Name);
+
+            if (role.ParentRoleId.HasValue)
+                CollectRoleNamesRecursive(role.ParentRoleId.Value, allRoles, result, visited);
+        }
+
+
+        //public async Task<List<ReportDefinition>> GetAccessibleReportsAsync(string username, string? roleName)
+        //{
+        //    // Ambil report yang punya permission ALL, atau match username/roleName
+        //    var accessibleIds = await _db.ReportPermissions
+        //        .Where(p => p.role_name == "ALL"
+        //                 || p.role_name == username
+        //                 || (roleName != null && p.role_name == roleName))
+        //        .Select(p => p.report_id)
+        //        .Distinct()
+        //        .ToListAsync();
+
+        //    return await _db.ReportDefinitions
+        //        .AsNoTracking()
+        //        .Where(r => r.is_active == 1 && accessibleIds.Contains(r.ID))
+        //        .OrderBy(r => r.category)
+        //        .ThenBy(r => r.report_name)
+        //        .ToListAsync();
+        //}
 
         // ── GetParamOptions — untuk dropdown dinamis ─────────────
         public async Task<List<ReportParamOptionItem>> GetParamOptionsAsync(

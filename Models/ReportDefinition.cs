@@ -211,6 +211,8 @@ namespace TMSBilling.Models
         public List<ReportParam> Params { get; set; } = new();
         public List<ReportPermission> Permissions { get; set; } = new();
         public MailReportExcelLayoutVM? ExcelLayout { get; set; }
+
+        public List<MailReportSignature> Signatures { get; set; } = new();
     }
 
     public class ReportGenerateRequest

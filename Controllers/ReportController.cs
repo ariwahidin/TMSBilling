@@ -34,8 +34,12 @@ namespace TMSBilling.Controllers
         {
             var username = HttpContext.Session.GetString("username") ?? "";
             var roleName = HttpContext.Session.GetString("role") ?? "";
+            var userId = HttpContext.Session.GetInt32("user_id");
+            if (userId == null)
+                return RedirectToAction("Login", "Account");
 
-            var reports = await _runner.GetAccessibleReportsAsync(username, roleName);
+            var reports = await _runner.GetAccessibleReportsAsync(userId.Value);
+            //var reports = await _runner.GetAccessibleReportsAsync(username, roleName);
 
             // Group by category untuk tampilan UI
             var grouped = reports

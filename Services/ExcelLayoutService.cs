@@ -30,15 +30,18 @@ namespace TMSBilling.Services
         private readonly AppDbContext _db;
         private readonly ILogger<ExcelLayoutService> _logger;
         private readonly string _connStr;
+        private readonly IWebHostEnvironment _env;
 
         public ExcelLayoutService(
             AppDbContext db,
             ILogger<ExcelLayoutService> logger,
-            IConfiguration config)
+            IConfiguration config,
+            IWebHostEnvironment env)
         {
             _db = db;
             _logger = logger;
             _connStr = config.GetConnectionString("DefaultConnection")!;
+            _env = env;
         }
 
         // ──────────────────────────────────────────────
@@ -55,120 +58,120 @@ namespace TMSBilling.Services
         // ──────────────────────────────────────────────
         // LoadForFormAsync
         // ──────────────────────────────────────────────
-        public async Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId, string ownerType = "mailreport")
-        {
-            //var layout = await _db.MailReportExcelLayouts
-            //    .AsNoTracking()
-            //    .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
+        //public async Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId, string ownerType = "mailreport")
+        //{
+        //    //var layout = await _db.MailReportExcelLayouts
+        //    //    .AsNoTracking()
+        //    //    .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
 
-            // DEBUG — hapus setelah selesai
-            var query = _db.MailReportExcelLayouts
-                .Where(l => l.report_id == reportId && l.owner_type == ownerType);
+        //    // DEBUG — hapus setelah selesai
+        //    var query = _db.MailReportExcelLayouts
+        //        .Where(l => l.report_id == reportId && l.owner_type == ownerType);
 
-            Console.WriteLine($"[DEBUG LoadForFormAsync] reportId={reportId}, ownerType={ownerType}");
-            Console.WriteLine($"[DEBUG SQL] {query.ToQueryString()}");
+        //    Console.WriteLine($"[DEBUG LoadForFormAsync] reportId={reportId}, ownerType={ownerType}");
+        //    Console.WriteLine($"[DEBUG SQL] {query.ToQueryString()}");
 
-            var layout = await query.AsNoTracking().FirstOrDefaultAsync();
-            Console.WriteLine($"[DEBUG] reportId={reportId} ownerType={ownerType} layoutID={layout?.ID ?? -1}");
+        //    var layout = await query.AsNoTracking().FirstOrDefaultAsync();
+        //    Console.WriteLine($"[DEBUG] reportId={reportId} ownerType={ownerType} layoutID={layout?.ID ?? -1}");
 
-            Console.WriteLine($"[DEBUG] layout found: {layout?.ID.ToString() ?? "NULL"}");
-            // ─────────────────────────────────────────
+        //    Console.WriteLine($"[DEBUG] layout found: {layout?.ID.ToString() ?? "NULL"}");
+        //    // ─────────────────────────────────────────
 
-            if (layout == null)
-                return new MailReportExcelLayoutVM
-                {
-                    Layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType },
-                    Sheets = new List<MailReportExcelSheetVM>()
-                };
+        //    if (layout == null)
+        //        return new MailReportExcelLayoutVM
+        //        {
+        //            Layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType },
+        //            Sheets = new List<MailReportExcelSheetVM>()
+        //        };
 
-            var sheets = await _db.MailReportExcelSheets
-                .AsNoTracking()
-                .Where(s => s.layout_id == layout.ID)
-                .OrderBy(s => s.sort_order)
-                .ToListAsync();
+        //    var sheets = await _db.MailReportExcelSheets
+        //        .AsNoTracking()
+        //        .Where(s => s.layout_id == layout.ID)
+        //        .OrderBy(s => s.sort_order)
+        //        .ToListAsync();
 
-            Console.WriteLine($"[DEBUG] sheets={sheets.Count}");
+        //    Console.WriteLine($"[DEBUG] sheets={sheets.Count}");
 
-            var sheetIds = sheets.Select(s => s.ID).ToList();
-            var allSections = await _db.MailReportExcelSections
-                .AsNoTracking()
-                .Where(s => sheetIds.Contains(s.sheet_id))
-                .OrderBy(s => s.sort_order)
-                .ToListAsync();
+        //    var sheetIds = sheets.Select(s => s.ID).ToList();
+        //    var allSections = await _db.MailReportExcelSections
+        //        .AsNoTracking()
+        //        .Where(s => sheetIds.Contains(s.sheet_id))
+        //        .OrderBy(s => s.sort_order)
+        //        .ToListAsync();
 
-            return new MailReportExcelLayoutVM
-            {
-                Layout = layout,
-                Sheets = sheets.Select(s => new MailReportExcelSheetVM
-                {
-                    Sheet = s,
-                    Sections = allSections.Where(sec => sec.sheet_id == s.ID).ToList()
-                }).ToList()
-            };
-        }
+        //    return new MailReportExcelLayoutVM
+        //    {
+        //        Layout = layout,
+        //        Sheets = sheets.Select(s => new MailReportExcelSheetVM
+        //        {
+        //            Sheet = s,
+        //            Sections = allSections.Where(sec => sec.sheet_id == s.ID).ToList()
+        //        }).ToList()
+        //    };
+        //}
 
         // ──────────────────────────────────────────────
         // SaveFromFormAsync
         // ──────────────────────────────────────────────
-        public async Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm, string ownerType = "mailreport")
-        {
-            // Upsert layout header — filter by owner_type supaya tidak nabrak
-            var layout = await _db.MailReportExcelLayouts
-                .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
+        //public async Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm, string ownerType = "mailreport")
+        //{
+        //    // Upsert layout header — filter by owner_type supaya tidak nabrak
+        //    var layout = await _db.MailReportExcelLayouts
+        //        .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
 
-            if (layout == null)
-            {
-                layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType };
-                _db.MailReportExcelLayouts.Add(layout);
-            }
+        //    if (layout == null)
+        //    {
+        //        layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType };
+        //        _db.MailReportExcelLayouts.Add(layout);
+        //    }
 
-            layout.use_custom_layout = vm.Layout.use_custom_layout;
-            layout.report_title = vm.Layout.report_title;
-            layout.report_subtitle = vm.Layout.report_subtitle;
-            layout.title_bg_color = vm.Layout.title_bg_color ?? "FFFFFF";
-            layout.title_font_color = vm.Layout.title_font_color ?? "000000";
-            layout.title_font_size = vm.Layout.title_font_size > 0 ? vm.Layout.title_font_size : 14;
+        //    layout.use_custom_layout = vm.Layout.use_custom_layout;
+        //    layout.report_title = vm.Layout.report_title;
+        //    layout.report_subtitle = vm.Layout.report_subtitle;
+        //    layout.title_bg_color = vm.Layout.title_bg_color ?? "FFFFFF";
+        //    layout.title_font_color = vm.Layout.title_font_color ?? "000000";
+        //    layout.title_font_size = vm.Layout.title_font_size > 0 ? vm.Layout.title_font_size : 14;
 
-            await _db.SaveChangesAsync();
+        //    await _db.SaveChangesAsync();
 
-            // Update excel_layout_id di ReportDefinition supaya BuildAsync bisa load layout
-            if (ownerType == "reportbuilder")
-            {
-                var report = await _db.ReportDefinitions.FindAsync(reportId);
-                if (report != null && report.excel_layout_id != layout.ID)
-                {
-                    report.excel_layout_id = layout.ID;
-                    await _db.SaveChangesAsync();
-                }
-            }
+        //    // Update excel_layout_id di ReportDefinition supaya BuildAsync bisa load layout
+        //    if (ownerType == "reportbuilder")
+        //    {
+        //        var report = await _db.ReportDefinitions.FindAsync(reportId);
+        //        if (report != null && report.excel_layout_id != layout.ID)
+        //        {
+        //            report.excel_layout_id = layout.ID;
+        //            await _db.SaveChangesAsync();
+        //        }
+        //    }
 
-            // Replace sheets + sections
-            var oldSheets = _db.MailReportExcelSheets.Where(s => s.layout_id == layout.ID);
-            _db.MailReportExcelSheets.RemoveRange(oldSheets);
-            await _db.SaveChangesAsync();
+        //    // Replace sheets + sections
+        //    var oldSheets = _db.MailReportExcelSheets.Where(s => s.layout_id == layout.ID);
+        //    _db.MailReportExcelSheets.RemoveRange(oldSheets);
+        //    await _db.SaveChangesAsync();
 
-            foreach (var (sheetVM, si) in vm.Sheets.Select((s, i) => (s, i)))
-            {
-                var sheet = new MailReportExcelSheet
-                {
-                    layout_id = layout.ID,
-                    sheet_name = sheetVM.Sheet.sheet_name,
-                    sort_order = si
-                };
-                _db.MailReportExcelSheets.Add(sheet);
-                await _db.SaveChangesAsync();
+        //    foreach (var (sheetVM, si) in vm.Sheets.Select((s, i) => (s, i)))
+        //    {
+        //        var sheet = new MailReportExcelSheet
+        //        {
+        //            layout_id = layout.ID,
+        //            sheet_name = sheetVM.Sheet.sheet_name,
+        //            sort_order = si
+        //        };
+        //        _db.MailReportExcelSheets.Add(sheet);
+        //        await _db.SaveChangesAsync();
 
-                foreach (var (sec, secIdx) in sheetVM.Sections.Select((s, i) => (s, i)))
-                {
-                    sec.ID = 0;
-                    sec.sheet_id = sheet.ID;
-                    sec.sort_order = secIdx;
-                    _db.MailReportExcelSections.Add(sec);
-                }
-            }
+        //        foreach (var (sec, secIdx) in sheetVM.Sections.Select((s, i) => (s, i)))
+        //        {
+        //            sec.ID = 0;
+        //            sec.sheet_id = sheet.ID;
+        //            sec.sort_order = secIdx;
+        //            _db.MailReportExcelSections.Add(sec);
+        //        }
+        //    }
 
-            await _db.SaveChangesAsync();
-        }
+        //    await _db.SaveChangesAsync();
+        //}
 
         // ──────────────────────────────────────────────
         // BuildAsync
@@ -735,6 +738,158 @@ namespace TMSBilling.Services
             foreach (var c in new[] { ':', '\\', '/', '?', '*', '[', ']' }) name = name.Replace(c, '_');
             if (name.Length > 31) name = name[..31];
             return string.IsNullOrWhiteSpace(name) ? "Sheet" : name;
+        }
+
+
+        // ──────────────────────────────────────────────
+        // LoadForFormAsync
+        // ──────────────────────────────────────────────
+        public async Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId, string ownerType = "mailreport")
+        {
+            var layout = await _db.MailReportExcelLayouts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
+
+            if (layout == null)
+                return new MailReportExcelLayoutVM
+                {
+                    Layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType },
+                    Sheets = new List<MailReportExcelSheetVM>(),
+                    Signatures = new List<MailReportSignature>()
+                };
+
+            var sheets = await _db.MailReportExcelSheets
+                .AsNoTracking()
+                .Where(s => s.layout_id == layout.ID)
+                .OrderBy(s => s.sort_order)
+                .ToListAsync();
+
+            var sheetIds = sheets.Select(s => s.ID).ToList();
+            var allSections = await _db.MailReportExcelSections
+                .AsNoTracking()
+                .Where(s => sheetIds.Contains(s.sheet_id))
+                .OrderBy(s => s.sort_order)
+                .ToListAsync();
+
+            var signatures = await _db.MailReportSignatures
+                .AsNoTracking()
+                .Where(s => s.layout_id == layout.ID)
+                .OrderBy(s => s.sort_order)
+                .ToListAsync();
+
+            return new MailReportExcelLayoutVM
+            {
+                Layout = layout,
+                Sheets = sheets.Select(s => new MailReportExcelSheetVM
+                {
+                    Sheet = s,
+                    Sections = allSections.Where(sec => sec.sheet_id == s.ID).ToList()
+                }).ToList(),
+                Signatures = signatures
+            };
+        }
+
+        // ──────────────────────────────────────────────
+        // SaveFromFormAsync
+        // ──────────────────────────────────────────────
+        public async Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm, string ownerType = "mailreport")
+        {
+            var layout = await _db.MailReportExcelLayouts
+                .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
+
+            if (layout == null)
+            {
+                layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType };
+                _db.MailReportExcelLayouts.Add(layout);
+            }
+
+            layout.use_custom_layout = vm.Layout.use_custom_layout;
+            layout.report_title = vm.Layout.report_title;
+            layout.report_subtitle = vm.Layout.report_subtitle;
+            layout.title_bg_color = vm.Layout.title_bg_color ?? "FFFFFF";
+            layout.title_font_color = vm.Layout.title_font_color ?? "000000";
+            layout.title_font_size = vm.Layout.title_font_size > 0 ? vm.Layout.title_font_size : 14;
+            //layout.logo_path = vm.Layout.logo_path;
+            var oldLogoPath = layout.logo_path;
+            var newLogoPath = vm.Layout.logo_path;
+
+
+            if (!string.IsNullOrWhiteSpace(oldLogoPath) && oldLogoPath != newLogoPath)
+            {
+                TryDeleteLogoFile(oldLogoPath);
+            }
+
+            layout.logo_path = newLogoPath;
+
+            layout.signature_placement = vm.Layout.signature_placement ?? "none";
+
+            await _db.SaveChangesAsync();
+
+            if (ownerType == "reportbuilder")
+            {
+                var report = await _db.ReportDefinitions.FindAsync(reportId);
+                if (report != null && report.excel_layout_id != layout.ID)
+                {
+                    report.excel_layout_id = layout.ID;
+                    await _db.SaveChangesAsync();
+                }
+            }
+
+            // Replace sheets + sections
+            var oldSheets = _db.MailReportExcelSheets.Where(s => s.layout_id == layout.ID);
+            _db.MailReportExcelSheets.RemoveRange(oldSheets);
+            await _db.SaveChangesAsync();
+
+            foreach (var (sheetVM, si) in vm.Sheets.Select((s, i) => (s, i)))
+            {
+                var sheet = new MailReportExcelSheet
+                {
+                    layout_id = layout.ID,
+                    sheet_name = sheetVM.Sheet.sheet_name,
+                    sort_order = si
+                };
+                _db.MailReportExcelSheets.Add(sheet);
+                await _db.SaveChangesAsync();
+
+                foreach (var (sec, secIdx) in sheetVM.Sections.Select((s, i) => (s, i)))
+                {
+                    sec.ID = 0;
+                    sec.sheet_id = sheet.ID;
+                    sec.sort_order = secIdx;
+                    _db.MailReportExcelSections.Add(sec);
+                }
+            }
+
+            // Replace signatures
+            var oldSignatures = _db.MailReportSignatures.Where(s => s.layout_id == layout.ID);
+            _db.MailReportSignatures.RemoveRange(oldSignatures);
+            await _db.SaveChangesAsync();
+
+            foreach (var (sig, idx) in vm.Signatures.Select((s, i) => (s, i)))
+            {
+                sig.ID = 0;
+                sig.layout_id = layout.ID;
+                sig.sort_order = idx;
+                _db.MailReportSignatures.Add(sig);
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+
+        private void TryDeleteLogoFile(string relativePath)
+        {
+            try
+            {
+                var relative = relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                var physicalPath = Path.Combine(_env.WebRootPath, relative);
+                if (File.Exists(physicalPath))
+                    File.Delete(physicalPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Gagal hapus file logo lama: {Path}", relativePath);
+            }
         }
     }
 }

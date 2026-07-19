@@ -55,6 +55,11 @@
             <i class="bi bi-shield-check me-1"></i>Permissions
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabSignature">
+            <i class="bi bi-pen me-1"></i>Signature
+        </a>
+    </li>
 </ul>
 
 <div class="tab-content" id="rbTabContent">
@@ -199,6 +204,17 @@
                                placeholder="e.g. Periode: {{date_from}} s/d {{date_to}}  |  Customer: {{customer}}" />
                         <div class="placeholder-hint">Kosongkan kalau tidak perlu sub title.</div>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Logo</label>
+                        <input type="file" id="el_logo_file" class="form-control form-control-sm" accept=".png,.jpg,.jpeg" />
+                        <span id="elLogoStatus" class="placeholder-hint"></span>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-1">
+                        <img id="el_logo_preview" src="" style="display:none;max-height:40px;max-width:100px;object-fit:contain;border:1px solid #dee2e6;border-radius:4px;padding:2px;" />
+                        <button type="button" id="btnRemoveLogo" class="btn btn-sm btn-outline-danger" style="display:none;font-size:.65rem;padding:2px 6px;" title="Hapus logo">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -236,6 +252,30 @@
         <div id="permList"></div>
     </div>
 
+    <div class="tab-pane fade" id="tabSignature">
+        <div class="row g-3 mb-3" style="max-width:400px;">
+            <div class="col-12">
+                <label class="form-label">Signature Placement</label>
+                <select id="sig_placement" class="form-select form-select-sm">
+                    <option value="none">None (tidak perlu tanda tangan)</option>
+                    <option value="last_page">Last Page Only</option>
+                    <option value="every_page">Every Page</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold" style="font-size:.83rem;">Signature Columns</span>
+            <button class="btn btn-sm btn-outline-primary" id="btnAddSignature">
+                <i class="bi bi-plus-lg me-1"></i>Add Column
+            </button>
+        </div>
+        <div class="placeholder-hint mb-2">
+            Kosongkan list ini kalau report ini tidak butuh tanda tangan.
+        </div>
+        <div id="signatureList"></div>
+    </div>
+
 </div>
 
 <style>
@@ -270,6 +310,14 @@ const availRoles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(roles));
 
 let params = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Params));
 let perms  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Permissions));
+let signatures = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Signatures ?? new List<TMSBilling.Models.MailReportSignature>()));
+let currentLogoPath = '';
+let elDirty = false;
+
+function markElDirty() {
+    elDirty = true;
+    $('#elSaveStatus').html('<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Ada perubahan belum disimpan</span>');
+}
 
 // ══════════════════════════════════════════════
 // PARAMS TAB
@@ -448,6 +496,7 @@ $('#tabLayoutBtn').on('shown.bs.tab', async function () {
         $('#layoutLoading').hide();
         $('#layoutContent').show();
         onElToggle();
+        renderSignatures();
         return;
     }
     try {
@@ -464,6 +513,16 @@ $('#tabLayoutBtn').on('shown.bs.tab', async function () {
         $('#el_title_bg').val('#' + (L.title_bg_color || 'FFFFFF'));
         $('#el_title_fg').val('#' + (L.title_font_color || '000000'));
         $('#el_title_size').val(L.title_font_size || 14);
+
+        currentLogoPath = L.logo_path || '';
+        if (currentLogoPath) {
+            $('#el_logo_preview').attr('src', currentLogoPath).show();
+            $('#btnRemoveLogo').show();   // ← tambah ini
+        }
+
+        $('#sig_placement').val(L.signature_placement || 'none');
+        signatures = (res.data.signatures || []).slice();
+        renderSignatures();
 
         elRenderSheets();
         onElToggle();
@@ -748,7 +807,9 @@ function elCollect() {
         report_subtitle:   $('#el_subtitle').val(),
         title_bg_color:    ($('#el_title_bg').val()||'#FFFFFF').replace('#',''),
         title_font_color:  ($('#el_title_fg').val()||'#000000').replace('#',''),
-        title_font_size:   parseInt($('#el_title_size').val()) || 14
+        title_font_size:   parseInt($('#el_title_size').val()) || 14,
+        logo_path:         currentLogoPath,                    // ← baru
+        signature_placement: $('#sig_placement').val()          // ← baru
     };
     elData.sheets = [];
     $('#elSheetList [data-si]').each(function () {
@@ -781,12 +842,15 @@ function elCollect() {
 $('#btnSaveExcelLayout').on('click', async function () {
     if (reportId === 0) { Swal.fire('Info','Simpan report utama dulu.','info'); return; }
     elCollect();
+    collectSignatures();
+    elData.signatures = signatures;
     $(this).prop('disabled',true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
     const res = await $.ajax({ url:'/ReportBuilder/SaveLayout', method:'POST',
         contentType:'application/json',
         data: JSON.stringify({ reportId, layout: elData }) });
     $(this).prop('disabled',false).html('<i class="bi bi-check-lg me-1"></i>Save Excel Layout');
     if (res.ok) {
+        elDirty = false;
         $('#elSaveStatus').html('<span class="text-success">✓ Saved</span>');
         setTimeout(() => $('#elSaveStatus').text(''), 3000);
     } else {
@@ -798,6 +862,89 @@ function elEsc(v) {
     if (!v) return '';
     return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+// ══════════════════════════════════════════════
+// SIGNATURE TAB
+// ══════════════════════════════════════════════
+function renderSignatures() {
+    const c = $('#signatureList').empty();
+    if (!signatures.length) {
+        c.html('<p class="text-muted" style="font-size:.78rem;">Belum ada kolom tanda tangan.</p>');
+        return;
+    }
+    signatures.forEach((s, i) => c.append(buildSignatureRow(s, i)));
+}
+
+function buildSignatureRow(sig, i) {
+    return $(`
+        <div class="d-flex align-items-center gap-2 mb-2" data-sigi="${i}" style="max-width:500px;">
+            <input class="form-control form-control-sm sig-label" value="${elEsc(sig.label||'')}" placeholder="e.g. Pengirim" />
+            <button class="btn btn-outline-secondary sig-up" style="font-size:.62rem;padding:2px 6px;">↑</button>
+            <button class="btn btn-outline-secondary sig-down" style="font-size:.62rem;padding:2px 6px;">↓</button>
+            <button class="btn btn-outline-danger sig-del" style="font-size:.62rem;padding:2px 8px;">✕</button>
+        </div>
+    `);
+}
+
+$('#btnAddSignature').on('click', () => { collectSignatures(); signatures.push({ label: '' }); renderSignatures(); });
+$(document).on('click', '.sig-del', function () {
+    const i = $(this).closest('[data-sigi]').data('sigi');
+    collectSignatures(); signatures.splice(i, 1); renderSignatures();
+});
+$(document).on('click', '.sig-up', function () {
+    const i = $(this).closest('[data-sigi]').data('sigi');
+    collectSignatures(); if (i > 0) [signatures[i-1], signatures[i]] = [signatures[i], signatures[i-1]];
+    renderSignatures();
+});
+$(document).on('click', '.sig-down', function () {
+    const i = $(this).closest('[data-sigi]').data('sigi');
+    collectSignatures(); if (i < signatures.length-1) [signatures[i+1], signatures[i]] = [signatures[i], signatures[i+1]];
+    renderSignatures();
+});
+function collectSignatures() {
+    signatures = [];
+    $('#signatureList [data-sigi]').each(function () {
+        signatures.push({ label: $(this).find('.sig-label').val() });
+    });
+}
+
+// ══════════════════════════════════════════════
+// LOGO UPLOAD
+// ══════════════════════════════════════════════
+$('#el_logo_file').on('change', async function () {
+    const file = this.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    $('#elLogoStatus').text('Uploading...');
+    try {
+        const res = await $.ajax({ url: '/ReportBuilder/UploadLogo', method: 'POST', data: fd, processData: false, contentType: false });
+        if (res.ok) {
+            currentLogoPath = res.path;
+            $('#el_logo_preview').attr('src', res.path).show();
+            $('#btnRemoveLogo').show();
+            $('#elLogoStatus').text('✓ Uploaded');
+            setTimeout(() => $('#elLogoStatus').text(''), 2000);
+        } else {
+            Swal.fire('Error', res.message, 'error');
+            $('#elLogoStatus').text('');
+        }
+        markElDirty();
+    } catch (e) {
+        Swal.fire('Error', 'Upload gagal.', 'error');
+        $('#elLogoStatus').text('');
+    }
+});
+
+$('#btnRemoveLogo').on('click', function () {
+    currentLogoPath = '';
+    $('#el_logo_file').val('');
+    $('#el_logo_preview').attr('src', '').hide();
+    $('#btnRemoveLogo').hide();
+    markElDirty();
+    $('#elLogoStatus').text('Logo dihapus (klik Save Excel Layout untuk simpan).');
+    setTimeout(() => $('#elLogoStatus').text(''), 3000);
+});
 
 // ══════════════════════════════════════════════
 // SAVE REPORT
@@ -845,8 +992,18 @@ $('#btnSave').on('click', async function () {
     }
 });
 
+$(document).on('change input', '#el_use_custom, #el_title, #el_subtitle, #el_title_bg, #el_title_fg, #el_title_size, #sig_placement, .sig-label', markElDirty);
+
+window.addEventListener('beforeunload', function (e) {
+    if (elDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
 // Init
 renderParams();
 renderPerms();
+renderSignatures();
 </script>
 }
