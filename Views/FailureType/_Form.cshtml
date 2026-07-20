@@ -1,0 +1,23 @@
+@model TMSBilling.Models.FailureType
+
+<form id="failureTypeForm">
+    <input type="hidden" asp-for="id" />
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Failure Type Code</label>
+        <div class="col-sm-8">
+            <input asp-for="failure_type_code" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Description</label>
+        <div class="col-sm-8">
+            <input asp-for="failure_type_description" class="form-control" />
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+    </div>
+</form>

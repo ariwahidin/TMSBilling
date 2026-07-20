@@ -100,8 +100,27 @@
             System.Text.Json.JsonSerializer.Serialize(ViewBag.Details)
         )
 
+        var failures = @Html.Raw(
+            System.Text.Json.JsonSerializer.Serialize(ViewBag.Failures)
+        )
+
+        var failureTypes = @Html.Raw(
+            System.Text.Json.JsonSerializer.Serialize(ViewBag.FailureTypes)
+        )
+
         console.log("HEADER:", headerData);
         console.log("DETAIL:", detailData);
+
+        // Build lookup for dropdowns
+        var failuresLookup = {};
+        failures.forEach(f => {
+            failuresLookup[f.id] = f.failure_code + (f.failure_name ? ' - ' + f.failure_name : '');
+        });
+
+        var failureTypesLookup = {};
+        failureTypes.forEach(ft => {
+            failureTypesLookup[ft.id] = ft.failure_type_code;
+        });
 
         //Create Date Editor
         var dateEditor = function(cell, onRendered, success, cancel){
@@ -323,39 +342,36 @@
         }
 
         var table = new Tabulator("#example-table", {
-            height: "311px",
+            height: "calc(100vh - 350px)", // Responsive height
             layout: "fitData",
-            renderHorizontal:"virtual",
+            renderHorizontal: "virtual",
             data: detailData,
             columns: [
                 // Job ID
                 {
                     title: "Job ID",
                     field: "jobid",
-                    width: 150,
+                    width: 130,
                     editor: false,
-                    frozen: true,
-                    width: 130
+                    frozen: true
                 },
 
                 // INVOICE
                 {
                     title: "Invoice No",
                     field: "inv_no",
-                    width: 150,
+                    width: 130,
                     editor: false,
-                    frozen: true,
-                    width: 130
+                    frozen: true
                 },
 
-                // CNEE
+                // CNEE - Not frozen untuk better scrolling
                 {
                     title: "Consignee",
                     field: "cnee_code",
-                    width: 300,
-                    editor: false,
-                    frozen: true,
-                    width: 300
+                    width: 250,
+                    minWidth: 200,
+                    editor: false
                 },
 
                 // LEFT SIDE
@@ -443,6 +459,13 @@
                     width: 160
                 },
                 {
+                    title: "E-Pod Date",
+                    field: "epod_date",
+                    editor: dateAutoFormatEditor,
+                    validator: validateDateISO,
+                    width: 130
+                },
+                {
                     title: "POD Rcv Send",
                     field: "pod_send_pic",
                     editor: "input",
@@ -463,6 +486,34 @@
                     field: "pod_remark",
                     editor: "textarea",
                     width: 130
+                },
+                {
+                    title: "Failure Type",
+                    field: "failure_type_id",
+                    editor: "list",
+                    editorParams: {
+                        values: failureTypesLookup,
+                        clearable: true
+                    },
+                    formatter: function(cell) {
+                        var value = cell.getValue();
+                        return value ? (failureTypesLookup[value] || value) : "";
+                    },
+                    width: 150
+                },
+                {
+                    title: "Failure",
+                    field: "failure_id",
+                    editor: "list",
+                    editorParams: {
+                        values: failuresLookup,
+                        clearable: true
+                    },
+                    formatter: function(cell) {
+                        var value = cell.getValue();
+                        return value ? (failuresLookup[value] || value) : "";
+                    },
+                    width: 200
                 },
             ],
         });

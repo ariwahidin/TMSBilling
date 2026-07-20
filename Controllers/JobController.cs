@@ -108,6 +108,46 @@ namespace TMSBilling.Controllers
             ViewBag.EndDate = endDate.Value.ToString("yyyy-MM-dd");
 
             var data = await GetJobSummaryQuery(startDate.Value, endDate.Value).ToListAsync();
+
+            // Build POD summary for each job
+            var jobIds = data.Select(d => d.JobId).ToList();
+            var podData = await _context.JobPODs
+                .Where(p => jobIds.Contains(p.jobid))
+                .ToListAsync();
+
+            foreach (var job in data)
+            {
+                var pod = podData.FirstOrDefault(p => p.jobid == job.JobId);
+                if (pod != null)
+                {
+                    var filledFields = new List<string>();
+                    if (pod.outorigin_date.HasValue) filledFields.Add("Out Date");
+                    if (pod.arriv_date.HasValue) filledFields.Add("Arriv Date");
+                    if (pod.unloading_date.HasValue) filledFields.Add("Unloading Date");
+                    if (!string.IsNullOrEmpty(pod.arriv_pic)) filledFields.Add("Rcv By");
+                    if (pod.pod_ret_date.HasValue) filledFields.Add("Return Date");
+                    if (!string.IsNullOrEmpty(pod.pod_ret_pic)) filledFields.Add("POD Rcv By");
+                    if (pod.pod_send_date.HasValue) filledFields.Add("POD Send Date");
+                    if (!string.IsNullOrEmpty(pod.pod_send_pic)) filledFields.Add("POD Send By");
+                    if (!string.IsNullOrEmpty(pod.spd_no)) filledFields.Add("SPD No");
+                    if (pod.pod_status.HasValue) filledFields.Add("Pallet Deliv");
+                    if (pod.failure_id.HasValue) filledFields.Add("Failure");
+                    if (pod.failure_type_id.HasValue) filledFields.Add("Failure Type");
+                    if (pod.epod_date.HasValue) filledFields.Add("E-Pod Date");
+                    if (!string.IsNullOrEmpty(pod.pod_remark)) filledFields.Add("Remark");
+
+                    job.PodSummary = $"{filledFields.Count}/14";
+                    job.PodTooltip = filledFields.Any()
+                        ? "Filled: " + string.Join(", ", filledFields)
+                        : "No POD data";
+                }
+                else
+                {
+                    job.PodSummary = "0/14";
+                    job.PodTooltip = "No POD data";
+                }
+            }
+
             return View(data);
         }
 
@@ -151,7 +191,9 @@ namespace TMSBilling.Controllers
                     COALESCE(tj.total_do, 0) AS TotalDo,
                     a.driver_name as DriverName,
                     a.serv_type as ServiceType,
-                    a.is_integration as IsIntegration
+                    a.is_integration as IsIntegration,
+                    '' AS PodSummary,
+                    '' AS PodTooltip
                 FROM TRC_JOB_H a
                 LEFT JOIN tj ON a.jobid = tj.jobid
                 LEFT JOIN mc_fo ON mc_fo.id = a.mceasy_job_id
@@ -1766,12 +1808,19 @@ namespace TMSBilling.Controllers
                  pod.pod_send_pic,
                  pod.pod_status,
                  pod.spd_no,
-                 pod.pod_remark
+                 pod.pod_remark,
+                 pod.failure_id,
+                 pod.failure_type_id,
+                 epod_date = pod.epod_date == null
+                     ? null
+                     : pod.epod_date.Value.ToString("yyyy-MM-dd")
              }).ToList();
 
 
             ViewBag.Headers = headers;
             ViewBag.Details = details;
+            ViewBag.Failures = _context.Failures.OrderBy(f => f.failure_code).ToList();
+            ViewBag.FailureTypes = _context.FailureTypes.OrderBy(ft => ft.failure_type_code).ToList();
 
             return View("JobPod");
         }
@@ -1923,6 +1972,9 @@ namespace TMSBilling.Controllers
                     existing.pod_status = item.pod_status;
                     existing.spd_no = item.spd_no;
                     existing.pod_remark = item.pod_remark;
+                    existing.failure_id = item.failure_id;
+                    existing.failure_type_id = item.failure_type_id;
+                    existing.epod_date = item.epod_date;
 
                     existing.update_user = username;
                     existing.update_date = DateTime.Now;
@@ -1951,6 +2003,9 @@ namespace TMSBilling.Controllers
                         pod_status = item.pod_status,
                         spd_no = item.spd_no,
                         pod_remark = item.pod_remark,
+                        failure_id = item.failure_id,
+                        failure_type_id = item.failure_type_id,
+                        epod_date = item.epod_date,
                         entry_user = username,
                         entry_date = DateTime.Now,
                         input_method = "BY_ORDER"
@@ -2744,6 +2799,9 @@ namespace TMSBilling.Controllers
         public int TotalDo { get; set; }
 
         public int? IsIntegration { get; set; }
+
+        public string? PodSummary { get; set; }
+        public string? PodTooltip { get; set; }
     }
     public class VendorViewModel
     {

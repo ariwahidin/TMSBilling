@@ -19,6 +19,8 @@ namespace TMSBilling.Data
         public DbSet<TruckSize> TruckSizes { get; set; }
         public DbSet<Origin> Origins { get; set; }
         public DbSet<Destination> Destinations { get; set; }
+        public DbSet<FailureType> FailureTypes { get; set; }
+        public DbSet<Failure> Failures { get; set; }
         public DbSet<Warehouse> Warehouses { get; set; }
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<VendorTruck> VendorTrucks { get; set; }
@@ -147,6 +149,12 @@ namespace TMSBilling.Data
             base.OnModelCreating(modelBuilder);
 
             // ── Existing configs (tidak diubah) ──────────────────────────────
+            modelBuilder.Entity<Failure>()
+                .HasOne(f => f.FailureType)
+                .WithMany()
+                .HasForeignKey(f => f.failure_type_id)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<Role>()
                 .HasOne(r => r.ParentRole)
                 .WithMany(r => r.ChildRoles)

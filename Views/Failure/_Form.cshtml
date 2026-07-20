@@ -1,0 +1,46 @@
+@model TMSBilling.Models.Failure
+@{
+    var failureTypes = ViewBag.FailureTypes as List<TMSBilling.Models.FailureType> ?? new List<TMSBilling.Models.FailureType>();
+}
+
+<form id="failureForm">
+    <input type="hidden" asp-for="id" />
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Failure Code</label>
+        <div class="col-sm-8">
+            <input asp-for="failure_code" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Failure Name</label>
+        <div class="col-sm-8">
+            <input asp-for="failure_name" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Failure Type</label>
+        <div class="col-sm-8">
+            <select asp-for="failure_type_id" class="form-select">
+                <option value="">-- Select Failure Type --</option>
+                @foreach (var ft in failureTypes)
+                {
+                    <option value="@ft.id" selected="@(Model.failure_type_id == ft.id)">@ft.failure_type_code</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-sm-3 col-form-label text-end">Description</label>
+        <div class="col-sm-8">
+            <input asp-for="failure_description" class="form-control" />
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+    </div>
+</form>

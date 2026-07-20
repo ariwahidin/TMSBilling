@@ -69,6 +69,11 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? pod_remark { get; set; }
 
+        public int? failure_id { get; set; }
+        public int? failure_type_id { get; set; }
+
+        public DateTime? epod_date { get; set; }
+
         [StringLength(10)]
         public string? input_method { get; set; }
 

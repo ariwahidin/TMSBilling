@@ -56,6 +56,7 @@
             <th>Destination</th>
             <th>Vendor ID</th>
             <th>Total DO</th>
+            <th>POD</th>
             <th class="text-center" style="width: 80px;">Action</th>
         </tr>
         <tr>
@@ -69,6 +70,7 @@
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Origin"></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Destination"></th>
             <th><input type="text" class="form-control form-control-sm" placeholder="Search Vendor"></th>
+            <th></th>
             <th></th>
             <th></th>
         </tr>
@@ -92,6 +94,15 @@
                     <td>@item.Dest</td>
                     <td>@item.VendorPlan</td>
                     <td>@item.TotalDo</td>
+                    <td>
+                        <span class="badge bg-info"
+                              style="cursor: help;"
+                              title="@item.PodTooltip"
+                              data-bs-toggle="tooltip"
+                              data-bs-placement="left">
+                            @item.PodSummary
+                        </span>
+                    </td>
                     <td class="text-center">
                         <div class="dropdown">
                             <button class="btn btn-sm btn-link text-dark p-0" type="button"
