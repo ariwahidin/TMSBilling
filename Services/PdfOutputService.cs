@@ -86,7 +86,8 @@ namespace TMSBilling.Services
                         var gInfo = new GroupRenderInfo
                         {
                             SideBySide = group.Count > 1 && group[0].layout == "side_by_side",
-                            SideGapPt = (int)((group.Max(g => g.side_gap > 0 ? g.side_gap : 1)) * SideGapUnitPt),
+                            //SideGapPt = (int)((group.Max(g => g.side_gap > 0 ? g.side_gap : 1)) * SideGapUnitPt),
+                            SideGapPt = (int)((group.Max(g => Math.Max(g.side_gap, 0))) * SideGapUnitPt),
                             BottomGap = group[0].bottom_gap > 0 ? group[0].bottom_gap : 2
                         };
 

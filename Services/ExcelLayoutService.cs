@@ -176,26 +176,43 @@ namespace TMSBilling.Services
         // ──────────────────────────────────────────────
         // BuildAsync
         // ──────────────────────────────────────────────
+
         public async Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams, string ownerType = "mailreport")
         {
             var vm = await LoadForFormAsync(reportId, ownerType);
 
-            // DEBUG
-            Console.WriteLine($"[BuildAsync] reportId={reportId}, ownerType={ownerType}");
-            Console.WriteLine($"[BuildAsync] layout.ID={vm.Layout.ID}, use_custom={vm.Layout.use_custom_layout}");
-            Console.WriteLine($"[BuildAsync] sheets count={vm.Sheets.Count}");
-
-
             var resolvedTitle = Resolve(vm.Layout.report_title ?? "", eventParams);
             var resolvedSubtitle = Resolve(vm.Layout.report_subtitle ?? "", eventParams);
 
+            // ── Load logo (kalau ada) ──
+            byte[]? logoBytes = null;
+            if (!string.IsNullOrWhiteSpace(vm.Layout.logo_path))
+            {
+                try
+                {
+                    var relative = vm.Layout.logo_path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                    var physicalPath = Path.Combine(_env.WebRootPath, relative);
+                    if (File.Exists(physicalPath))
+                        logoBytes = await File.ReadAllBytesAsync(physicalPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "ExcelLayout: gagal load logo dari {Path}", vm.Layout.logo_path);
+                }
+            }
+
             using var wb = new XLWorkbook();
 
-            foreach (var sheetVM in vm.Sheets.OrderBy(s => s.Sheet.sort_order))
+            var sheetList = vm.Sheets.OrderBy(s => s.Sheet.sort_order).ToList();
+            for (int si = 0; si < sheetList.Count; si++)
             {
+                var sheetVM = sheetList[si];
+                bool isLastSheet = si == sheetList.Count - 1;
+
                 var sheetName = SanitizeSheetName(Resolve(sheetVM.Sheet.sheet_name, eventParams));
                 var ws = wb.Worksheets.Add(sheetName);
-                await BuildSheetAsync(ws, sheetVM, vm.Layout, resolvedTitle, resolvedSubtitle, eventParams);
+                await BuildSheetAsync(ws, sheetVM, vm.Layout, resolvedTitle, resolvedSubtitle, eventParams,
+                    logoBytes, isLastSheet, vm.Signatures);
             }
 
             if (!wb.Worksheets.Any())
@@ -206,6 +223,36 @@ namespace TMSBilling.Services
             return ms.ToArray();
         }
 
+        //public async Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams, string ownerType = "mailreport")
+        //{
+        //    var vm = await LoadForFormAsync(reportId, ownerType);
+
+        //    // DEBUG
+        //    Console.WriteLine($"[BuildAsync] reportId={reportId}, ownerType={ownerType}");
+        //    Console.WriteLine($"[BuildAsync] layout.ID={vm.Layout.ID}, use_custom={vm.Layout.use_custom_layout}");
+        //    Console.WriteLine($"[BuildAsync] sheets count={vm.Sheets.Count}");
+
+
+        //    var resolvedTitle = Resolve(vm.Layout.report_title ?? "", eventParams);
+        //    var resolvedSubtitle = Resolve(vm.Layout.report_subtitle ?? "", eventParams);
+
+        //    using var wb = new XLWorkbook();
+
+        //    foreach (var sheetVM in vm.Sheets.OrderBy(s => s.Sheet.sort_order))
+        //    {
+        //        var sheetName = SanitizeSheetName(Resolve(sheetVM.Sheet.sheet_name, eventParams));
+        //        var ws = wb.Worksheets.Add(sheetName);
+        //        await BuildSheetAsync(ws, sheetVM, vm.Layout, resolvedTitle, resolvedSubtitle, eventParams);
+        //    }
+
+        //    if (!wb.Worksheets.Any())
+        //        wb.Worksheets.Add("Sheet1");
+
+        //    using var ms = new MemoryStream();
+        //    wb.SaveAs(ms);
+        //    return ms.ToArray();
+        //}
+
         // ──────────────────────────────────────────────
         // BuildSheetAsync
         // ──────────────────────────────────────────────
@@ -215,13 +262,21 @@ namespace TMSBilling.Services
             MailReportExcelLayout layout,
             string resolvedTitle,
             string resolvedSubtitle,
-            Dictionary<string, string> eventParams)
+            Dictionary<string, string> eventParams,
+            byte[]? logoBytes,                        // ← baru
+            bool isLastSheet,                         // ← baru
+            List<MailReportSignature> signatures    // ← baru
+            )
         {
             int currentRow = 1;
             int totalCols = sheetVM.Sections
                 .SelectMany(s => (s.visible_columns ?? "").Split(',').Where(c => !string.IsNullOrWhiteSpace(c)))
                 .Count();
             totalCols = Math.Max(totalCols, 5); // minimal 5 kolom untuk merge
+
+            // ── Embed logo (kalau ada) ──
+            if (logoBytes != null)
+                EmbedLogo(ws, logoBytes, totalCols);
 
             // ── Report Title ──────────────────────────────
             if (!string.IsNullOrWhiteSpace(resolvedTitle))
@@ -285,6 +340,12 @@ namespace TMSBilling.Services
                 }
             }
 
+            // ── Signature block (hanya di sheet terakhir) ──
+            if (isLastSheet && layout.signature_placement != "none" && signatures.Any())
+            {
+                RenderSignatureBlock(ws, signatures, currentRow, totalCols);
+            }
+
             // ── Auto column width dengan max cap ──────────
             foreach (var col in ws.ColumnsUsed())
             {
@@ -303,6 +364,55 @@ namespace TMSBilling.Services
                 var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 1;
                 if (lastCol > 1)
                     ws.Range(headerRowNum, 1, headerRowNum, lastCol).SetAutoFilter();
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        // EmbedLogo
+        // ──────────────────────────────────────────────
+        private void EmbedLogo(IXLWorksheet ws, byte[] logoBytes, int totalCols)
+        {
+            try
+            {
+                using var ms = new MemoryStream(logoBytes);
+                ws.AddPicture(ms)
+                    .MoveTo(ws.Cell(1, totalCols + 2))
+                    .WithSize(90, 50);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ExcelLayout: gagal embed logo ke worksheet");
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        // RenderSignatureBlock — hanya dipanggil di sheet terakhir
+        // ──────────────────────────────────────────────
+        private void RenderSignatureBlock(IXLWorksheet ws, List<MailReportSignature> signatures, int startRow, int totalCols)
+        {
+            if (signatures == null || !signatures.Any()) return;
+
+            int n = signatures.Count;
+            int colsPerSig = Math.Max(2, totalCols / n);
+            int gap = 1;
+
+            int lineRow = startRow + 3;   // beri jarak dari data terakhir
+            int labelRow = lineRow + 1;
+
+            int col = 1;
+            foreach (var sig in signatures.OrderBy(s => s.sort_order))
+            {
+                var lineRange = ws.Range(lineRow, col, lineRow, col + colsPerSig - 1);
+                lineRange.Merge();
+                lineRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+
+                var labelRange = ws.Range(labelRow, col, labelRow, col + colsPerSig - 1);
+                labelRange.Merge();
+                labelRange.FirstCell().Value = sig.label;
+                labelRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                labelRange.Style.Font.FontSize = 9;
+
+                col += colsPerSig + gap;
             }
         }
 
@@ -354,7 +464,8 @@ namespace TMSBilling.Services
                 var endRow = RenderSection(ws, sec, dt, startRow, currentCol, eventParams);
                 maxRow = Math.Max(maxRow, endRow);
                 var colCount = Math.Max(GetVisibleColumns(sec, dt).Count, 1);
-                currentCol += colCount + (sec.side_gap > 0 ? sec.side_gap : 1);
+                //currentCol += colCount + (sec.side_gap > 0 ? sec.side_gap : 1);
+                currentCol += colCount + Math.Max(sec.side_gap, 0);
             }
 
             return maxRow;

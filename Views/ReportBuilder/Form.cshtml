@@ -822,7 +822,8 @@ function elCollect() {
                 visible_columns:   $(this).find('.el-sec-cols').val(),
                 layout:            $(this).find('.el-sec-layout').val(),
                 group_id:          parseInt($(this).find('.el-sec-group').val())||0,
-                side_gap:          parseInt($(this).find('.el-sec-sidegap').val())||1,
+                // side_gap:          parseInt($(this).find('.el-sec-sidegap').val())||1,
+                side_gap: intVal($(this).find('.el-sec-sidegap'), 1),
                 bottom_gap:        parseInt($(this).find('.el-sec-botgap').val())||2,
                 display_mode:      $(this).find('.el-sec-display').val(),
                 section_title:     $(this).find('.el-sec-title').val(),
@@ -857,6 +858,11 @@ $('#btnSaveExcelLayout').on('click', async function () {
         Swal.fire('Error', res.message, 'error');
     }
 });
+
+function intVal(selector, def) {
+    const v = parseInt(selector.val(), 10);
+    return Number.isNaN(v) ? def : v;
+}
 
 function elEsc(v) {
     if (!v) return '';
