@@ -66,7 +66,7 @@ namespace TMSBilling.Models
         [StringLength(10)]
         public string? spd_no { get; set; }
 
-        [StringLength(50)]
+        [StringLength(255)]
         public string? pod_remark { get; set; }
 
         public int? failure_id { get; set; }
