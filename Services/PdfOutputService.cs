@@ -25,7 +25,8 @@ namespace TMSBilling.Services
         private const float CharWidthPt = 5.3f;
         private const float MinColWidth = 50f;
         private const float MaxColWidth = 220f;
-        private const float HeaderPad = 16f;
+        //private const float HeaderPad = 16f;
+        private const float HeaderPad = 22f; // lebih lega, antisipasi border/padding cell
         private const float PageMargin = 25f;
         private const float SideGapUnitPt = 14f;
 
@@ -128,8 +129,12 @@ namespace TMSBilling.Services
                             gInfo.Items.Add(secInfo);
                         }
 
+                        //gInfo.TotalWidth = gInfo.SideBySide
+                        //    ? gInfo.Items.Sum(i => i.TotalWidth) + gInfo.SideGapPt * Math.Max(gInfo.Items.Count - 1, 0)
+                        //    : gInfo.Items.Max(i => i.TotalWidth);
+
                         gInfo.TotalWidth = gInfo.SideBySide
-                            ? gInfo.Items.Sum(i => i.TotalWidth) + gInfo.SideGapPt * Math.Max(gInfo.Items.Count - 1, 0)
+                            ? gInfo.Items.Sum(i => i.TotalWidth) + gInfo.SideGapPt * Math.Max(gInfo.Items.Count - 1, 0) + (gInfo.Items.Count * 5f)
                             : gInfo.Items.Max(i => i.TotalWidth);
 
                         sheetInfo.Groups.Add(gInfo);
@@ -169,8 +174,13 @@ namespace TMSBilling.Services
             // ── Hitung ukuran halaman dinamis ──────────────────
             var baseLandscape = PageSizes.A4.Landscape();
             float pageHeight = baseLandscape.Height;
+            //float contentWidth = sheetsData.Any() ? sheetsData.Max(s => s.MaxWidth) : baseLandscape.Width - PageMargin * 2;
+            //float pageWidth = Math.Max(baseLandscape.Width, contentWidth + PageMargin * 2);
+            //float pageWidth = Math.Max(baseLandscape.Width, contentWidth + PageMargin * 2 + 20f); // +20pt buffer
             float contentWidth = sheetsData.Any() ? sheetsData.Max(s => s.MaxWidth) : baseLandscape.Width - PageMargin * 2;
-            float pageWidth = Math.Max(baseLandscape.Width, contentWidth + PageMargin * 2);
+            // Buffer proporsional (8%) + flat 20pt — makin banyak kolom, makin besar toleransinya,
+            // supaya nutupin overhead internal Table (border/spacing/pembulatan) yang terakumulasi.
+            float pageWidth = Math.Max(baseLandscape.Width, contentWidth * 1.08f + PageMargin * 2 + 20f);
 
             var document = QuestPDF.Fluent.Document.Create(container =>
             {
@@ -350,11 +360,16 @@ namespace TMSBilling.Services
                     return;
                 }
 
-                var numericTypes = new[] { typeof(int), typeof(long), typeof(short), typeof(byte),
-                                           typeof(decimal), typeof(double), typeof(float) };
+                //var numericTypes = new[] { typeof(int), typeof(long), typeof(short), typeof(byte),
+                //                           typeof(decimal), typeof(double), typeof(float) };
+
                 var numericCols = visibleCols
-                    .Where(c => dt.Columns.Contains(c) && numericTypes.Contains(dt.Columns[c]!.DataType))
-                    .ToHashSet();
+                .Where(c => dt.Columns.Contains(c) && _numericTypes.Contains(dt.Columns[c]!.DataType))
+                .ToHashSet();
+
+                //var numericCols = visibleCols
+                //    .Where(c => dt.Columns.Contains(c) && numericTypes.Contains(dt.Columns[c]!.DataType))
+                //    .ToHashSet();
 
                 var totals = new Dictionary<string, decimal>();
 
@@ -433,18 +448,31 @@ namespace TMSBilling.Services
             });
         }
 
+        private readonly Type[] _numericTypes = new[]
+        {
+            typeof(int), typeof(long), typeof(short), typeof(byte),
+            typeof(decimal), typeof(double), typeof(float)
+        };
+
         private Dictionary<string, float> ComputeColumnWidths(List<string> cols, DataTable dt)
         {
             var widths = new Dictionary<string, float>();
             foreach (var col in cols)
             {
                 int maxLen = col.Length;
+                bool isNumeric = dt.Columns.Contains(col) && _numericTypes.Contains(dt.Columns[col]!.DataType);
+
                 if (dt.Columns.Contains(col))
                 {
                     foreach (DataRow row in dt.Rows)
                     {
                         var val = row[col];
-                        var text = val == DBNull.Value || val == null ? "" : FormatCell(val, dt.Columns[col]!);
+                        if (val == DBNull.Value || val == null) continue;
+
+                        var text = isNumeric
+                            ? Convert.ToDecimal(val).ToString("N2")   // ← sama persis dengan ComposeSection
+                            : FormatCell(val, dt.Columns[col]!);
+
                         if (text.Length > maxLen) maxLen = text.Length;
                     }
                 }
@@ -452,6 +480,26 @@ namespace TMSBilling.Services
             }
             return widths;
         }
+
+        //private Dictionary<string, float> ComputeColumnWidths(List<string> cols, DataTable dt)
+        //{
+        //    var widths = new Dictionary<string, float>();
+        //    foreach (var col in cols)
+        //    {
+        //        int maxLen = col.Length;
+        //        if (dt.Columns.Contains(col))
+        //        {
+        //            foreach (DataRow row in dt.Rows)
+        //            {
+        //                var val = row[col];
+        //                var text = val == DBNull.Value || val == null ? "" : FormatCell(val, dt.Columns[col]!);
+        //                if (text.Length > maxLen) maxLen = text.Length;
+        //            }
+        //        }
+        //        widths[col] = Clamp(maxLen * CharWidthPt + HeaderPad);
+        //    }
+        //    return widths;
+        //}
 
         private static float Clamp(float w) => Math.Clamp(w, MinColWidth, MaxColWidth);
 

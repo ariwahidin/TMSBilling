@@ -13,6 +13,7 @@ using TMSBilling.Services.Integration;
 using TMSBilling.Services.Reports;
 
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+QuestPDF.Settings.EnableDebugging = true;
 
 var builder = WebApplication.CreateBuilder(args);
 
