@@ -17,6 +17,7 @@ namespace TMSBilling.Controllers
     /// Route: /ReportBuilder
     /// </summary>
     [SessionAuthorize]
+    [SuperAdminOnly]
     public class ReportBuilderController : Controller
     {
         private readonly AppDbContext _db;

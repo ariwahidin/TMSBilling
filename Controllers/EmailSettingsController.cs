@@ -9,6 +9,7 @@ using TMSBilling.Services;
 namespace TMSBilling.Controllers
 {
     [SessionAuthorize]
+    [SuperAdminOnly]
     public class EmailSettingsController : Controller
     {
         private readonly AppDbContext _context;
