@@ -61,6 +61,9 @@ namespace TMSBilling.Models
         [StringLength(50)]
         public string? pod_send_pic { get; set; }
 
+        [StringLength(50)]
+        public string? no_cn { get; set; }
+
         public byte? pod_status { get; set; }
 
         [StringLength(10)]

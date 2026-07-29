@@ -1798,7 +1798,7 @@ namespace TMSBilling.Controllers
                  pod_send_date = pod.pod_send_date == null
                      ? null
                      : pod.pod_send_date.Value.ToString("yyyy-MM-dd"),
-
+                 pod.no_cn,
                  pod.outorigin_time,
                  pod.arriv_time,
                  pod.arriv_pic,
@@ -1957,6 +1957,7 @@ namespace TMSBilling.Controllers
                 if (existing != null)
                 {
                     // ===== UPDATE =====
+                    existing.no_cn = item.no_cn;
                     existing.outorigin_date = item.outorigin_date;
                     existing.outorigin_time = item.outorigin_time;
                     existing.arriv_date = item.arriv_date;
@@ -1987,6 +1988,7 @@ namespace TMSBilling.Controllers
                     {
                         jobid = item.jobid,
                         inv_no = item.inv_no,
+                        no_cn = item.no_cn,
                         outorigin_date = item.outorigin_date,
                         outorigin_time = item.outorigin_time,
                         unloading_date = item.unloading_date,
