@@ -1291,12 +1291,37 @@
                 driverList.unshift({ id: currentDriver, text: currentDriver });
             }
 
+            // $truck.empty().select2({
+            //     theme: 'bootstrap-5',
+            //     width: '100%',
+            //     tags: true, 
+            //     placeholder: 'Pilih atau ketik Truck ID',
+            //     data: truckList
+            // }).val(currentTruck).trigger('change');
+
             $truck.empty().select2({
                 theme: 'bootstrap-5',
                 width: '100%',
-                tags: true, // <-- ini yang bikin bisa free text
+                tags: true,
                 placeholder: 'Pilih atau ketik Truck ID',
-                data: truckList
+                data: truckList,
+                maximumInputLength: 15, // batasin karakter yg bisa diketik di search box
+                createTag: function (params) {
+                    const term = $.trim(params.term);
+
+                    if (term === '') {
+                        return null;
+                    }
+                    if (term.length > 15) {
+                        // gak return apa-apa = opsi "create" gak muncul
+                        return null;
+                    }
+                    return {
+                        id: term,
+                        text: term,
+                        newTag: true
+                    };
+                }
             }).val(currentTruck).trigger('change');
 
             $driver.empty().select2({
