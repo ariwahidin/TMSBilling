@@ -16,7 +16,7 @@ namespace TMSBilling.Models
         [StringLength(30)]
         public string? vendorid { get; set; }
 
-        [StringLength(11)]
+        [StringLength(30)]
         public string? truckid { get; set; }
 
         [StringLength(30)]
@@ -216,7 +216,7 @@ namespace TMSBilling.Models
         [StringLength(30)]
         public string? vendor_act { get; set; }
 
-        [StringLength(11)]
+        [StringLength(30)]
         public string? truck_no { get; set; }
 
         [StringLength(30)]
