@@ -418,16 +418,6 @@ namespace TMSBilling.Controllers
                 isIntercity = true;
             }
 
-            //// check order is b2c
-            //var isB2C = false;
-            //foreach (var ord in Details) {
-            //    var order = _context.Orders.First(o => o.inv_no == ord.inv_no);
-            //    if (order == null) { continue; }
-            //    if (order.is_b2c == "1") {
-            //        isB2C = true;
-            //        continue;
-            //    }
-            //}
 
             var invNos = Details.Select(d => d.inv_no).ToList();
 
@@ -441,7 +431,8 @@ namespace TMSBilling.Controllers
                 var run = await RunSaveWithApi(Header, Details, jobid);
                 if (!run.ok) return BadRequest(new { success = false, message = run.message });
 
-                if (customerGroup.MAIN_CUST == "BOSCH" && isIntercity)
+                //if (customerGroup.MAIN_CUST == "BOSCH" && isIntercity)
+                if (customerGroup.MAIN_CUST == "BOSCH")
                 {
                     Console.WriteLine("MASUK INTEGRASI " + jobid);
                     var hasActiveIntegration = await _context.Integrations
