@@ -114,7 +114,7 @@
         // Build lookup for dropdowns
         var failuresLookup = {};
         failures.forEach(f => {
-            failuresLookup[f.id] = f.failure_code + (f.failure_name ? ' - ' + f.failure_name : '');
+            failuresLookup[f.id] = f.failure_code + (f.failure_name ? : '');
         });
 
         var failureTypesLookup = {};
@@ -494,7 +494,7 @@
                     width: 320
                 },
                 {
-                    title: "Failure Type",
+                    title: "POD Failure Type",
                     field: "failure_type_id",
                     editor: "list",
                     editorParams: {
@@ -505,10 +505,10 @@
                         var value = cell.getValue();
                         return value ? (failureTypesLookup[value] || value) : "";
                     },
-                    width: 150
+                    width: 180
                 },
                 {
-                    title: "Failure",
+                    title: "Deliv Failure",
                     field: "failure_id",
                     editor: "list",
                     editorParams: {

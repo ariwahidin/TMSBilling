@@ -285,16 +285,15 @@
         const PodFieldLabels = [
             "Out Date", "Arriv Date", "Unloading Date", "Rcv By", "POD Return Date",
             "POD Rcv By", "POD Send Date", "POD Send By", "SPD No", "Pallet Deliv",
-            "Failure", "Failure Type", "E-Pod Date", "Remark"
+            "Deliv Failure", "POD Failure Type", "E-Pod Date", "Remark"
         ];
 
-        function recomputeDashboard(table) {
+                function recomputeDashboard(table) {
             const rows = table.rows({ search: 'applied' }).nodes();
             let totalJob = rows.length;
             let customers = new Set();
             let totalDo = 0;
             let fieldFilled = new Array(PodFieldLabels.length).fill(0);
-            let fieldTotalDo = 0;
 
             $(rows).each(function () {
                 const $row = $(this);
@@ -304,7 +303,6 @@
                 let pods = [];
                 try { pods = JSON.parse($row.attr('data-pod-details') || '[]'); } catch (e) {}
                 pods.forEach(flags => {
-                    fieldTotalDo++;
                     flags.forEach((v, i) => { if (v) fieldFilled[i]++; });
                 });
             });
@@ -316,7 +314,7 @@
             let html = '';
             PodFieldLabels.forEach((label, i) => {
                 const filled = fieldFilled[i];
-                const pct = fieldTotalDo > 0 ? Math.round((filled / fieldTotalDo) * 100) : 0;
+                const pct = totalDo > 0 ? Math.round((filled / totalDo) * 100) : 0; // pake totalDo, bukan fieldTotalDo
                 html += `
                     <div class="d-flex align-items-center mb-1" style="font-size:12px;">
                         <div style="width:110px;" class="text-muted">${label}</div>
@@ -325,7 +323,7 @@
                                 <div class="progress-bar" style="width:${pct}%"></div>
                             </div>
                         </div>
-                        <div style="width:70px;" class="text-end text-muted">${filled}/${fieldTotalDo}</div>
+                        <div style="width:70px;" class="text-end text-muted">${filled}/${totalDo}</div>
                     </div>`;
             });
             $('#podBreakdown').html(html);
