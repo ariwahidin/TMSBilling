@@ -30,11 +30,16 @@
                        value="@ViewBag.StartDate" style="width: 130px;" required>
                 <span class="text-muted">to</span>
                 <input type="date" name="endDate" class="form-control form-control-sm"
-                       value="@ViewBag.EndDate" style="width: 130px; font-size: 12px;" required>
+                       value="@ViewBag.EndDate" style="width: 130px;" required>
+
+                <label class="form-label mb-0 text-muted ms-2">DO No:</label>
+                <input type="text" name="doNo" class="form-control form-control-sm"
+                       value="@ViewBag.DoNo" placeholder="Cari No DO" style="width: 150px;">
+
                 <button type="submit" class="btn btn-secondary btn-sm" style="padding: 2px 10px;">
                     <i class="bi bi-funnel"></i> Filter
                 </button>
-                <a href="/Job/Index" class="btn btn-outline-secondary btn-sm" style="padding: 2px 10px;">
+                <a href="/Job/Index?reset=true" class="btn btn-outline-secondary btn-sm" style="padding: 2px 10px;">
                     <i class="bi bi-arrow-clockwise"></i> Reset
                 </a>
             </form>

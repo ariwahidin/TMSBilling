@@ -95,19 +95,72 @@ namespace TMSBilling.Controllers
         /// Menampilkan ringkasan job berdasarkan rentang tanggal (default: 7 hari terakhir s/d 2 hari ke depan).
         /// Data difilter berdasarkan user yang login (melalui UserXCustomers).
         /// </summary>
-        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
-        {
-            // Default: 7 hari terakhir
-            if (!startDate.HasValue)
-                startDate = DateTime.Now.AddDays(-7).Date;
+        /// 
 
-            if (!endDate.HasValue)
-                endDate = DateTime.Now.AddDays(+2).Date;
+
+
+        private const string CookieDateFilter = "JobList_DateFilter";
+
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? doNo, bool reset = false)
+        {
+            if (reset)
+            {
+                Response.Cookies.Delete(CookieDateFilter, new CookieOptions { Path = "/Job" });
+                startDate = null;
+                endDate = null;
+            }
+
+            if (!startDate.HasValue || !endDate.HasValue)
+            {
+                // Coba ambil dari cookie
+                var cookieVal = Request.Cookies[CookieDateFilter];
+                if (!reset && !string.IsNullOrEmpty(cookieVal))
+                {
+                    var parts = cookieVal.Split('|');
+                    if (parts.Length == 2
+                        && DateTime.TryParse(parts[0], out var savedStart)
+                        && DateTime.TryParse(parts[1], out var savedEnd))
+                    {
+                        startDate ??= savedStart;
+                        endDate ??= savedEnd;
+                    }
+                }
+            }
+
+            // Fallback default kalau masih kosong (first visit / reset)
+            if (!startDate.HasValue) startDate = DateTime.Now.AddDays(-7).Date;
+            if (!endDate.HasValue) endDate = DateTime.Now.AddDays(2).Date;
+
+            // Simpan/update cookie tiap kali ada value valid (kecuali lagi reset)
+            if (!reset)
+            {
+                Response.Cookies.Append(CookieDateFilter,
+                    $"{startDate.Value:yyyy-MM-dd}|{endDate.Value:yyyy-MM-dd}",
+                    new CookieOptions
+                    {
+                        Path = "/Job",
+                        Expires = DateTimeOffset.Now.AddDays(30),
+                        HttpOnly = true
+                    });
+            }
 
             ViewBag.StartDate = startDate.Value.ToString("yyyy-MM-dd");
             ViewBag.EndDate = endDate.Value.ToString("yyyy-MM-dd");
+            ViewBag.DoNo = doNo;
 
             var data = await GetJobSummaryQuery(startDate.Value, endDate.Value).ToListAsync();
+
+            // Filter by DO No (inv_no ada di TRC_JOB, join by jobid)
+            if (!string.IsNullOrWhiteSpace(doNo))
+            {
+                var matchingJobIds = await _context.Jobs // DbSet<Job> -> TRC_JOB
+                    .Where(j => j.inv_no != null && j.inv_no.Contains(doNo))
+                    .Select(j => j.jobid)
+                    .Distinct()
+                    .ToListAsync();
+
+                data = data.Where(d => matchingJobIds.Contains(d.JobId)).ToList();
+            }
 
             // Build POD summary for each job
             var jobIds = data.Select(d => d.JobId).ToList();
@@ -150,6 +203,64 @@ namespace TMSBilling.Controllers
 
             return View(data);
         }
+
+
+        //private const string CookieDateFilter = "JobList_DateFilter";
+        //public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
+        //{
+        //    // Default: 7 hari terakhir
+        //    if (!startDate.HasValue)
+        //        startDate = DateTime.Now.AddDays(-7).Date;
+
+        //    if (!endDate.HasValue)
+        //        endDate = DateTime.Now.AddDays(+2).Date;
+
+        //    ViewBag.StartDate = startDate.Value.ToString("yyyy-MM-dd");
+        //    ViewBag.EndDate = endDate.Value.ToString("yyyy-MM-dd");
+
+        //    var data = await GetJobSummaryQuery(startDate.Value, endDate.Value).ToListAsync();
+
+        //    // Build POD summary for each job
+        //    var jobIds = data.Select(d => d.JobId).ToList();
+        //    var podData = await _context.JobPODs
+        //        .Where(p => jobIds.Contains(p.jobid))
+        //        .ToListAsync();
+
+        //    foreach (var job in data)
+        //    {
+        //        var pod = podData.FirstOrDefault(p => p.jobid == job.JobId);
+        //        if (pod != null)
+        //        {
+        //            var filledFields = new List<string>();
+        //            if (pod.outorigin_date.HasValue) filledFields.Add("Out Date");
+        //            if (pod.arriv_date.HasValue) filledFields.Add("Arriv Date");
+        //            if (pod.unloading_date.HasValue) filledFields.Add("Unloading Date");
+        //            if (!string.IsNullOrEmpty(pod.arriv_pic)) filledFields.Add("Rcv By");
+        //            if (pod.pod_ret_date.HasValue) filledFields.Add("Return Date");
+        //            if (!string.IsNullOrEmpty(pod.pod_ret_pic)) filledFields.Add("POD Rcv By");
+        //            if (pod.pod_send_date.HasValue) filledFields.Add("POD Send Date");
+        //            if (!string.IsNullOrEmpty(pod.pod_send_pic)) filledFields.Add("POD Send By");
+        //            if (!string.IsNullOrEmpty(pod.spd_no)) filledFields.Add("SPD No");
+        //            if (pod.pod_status.HasValue) filledFields.Add("Pallet Deliv");
+        //            if (pod.failure_id.HasValue) filledFields.Add("Failure");
+        //            if (pod.failure_type_id.HasValue) filledFields.Add("Failure Type");
+        //            if (pod.epod_date.HasValue) filledFields.Add("E-Pod Date");
+        //            if (!string.IsNullOrEmpty(pod.pod_remark)) filledFields.Add("Remark");
+
+        //            job.PodSummary = $"{filledFields.Count}/14";
+        //            job.PodTooltip = filledFields.Any()
+        //                ? "Filled: " + string.Join(", ", filledFields)
+        //                : "No POD data";
+        //        }
+        //        else
+        //        {
+        //            job.PodSummary = "0/14";
+        //            job.PodTooltip = "No POD data";
+        //        }
+        //    }
+
+        //    return View(data);
+        //}
 
         /// <summary>
         /// Query untuk mengambil data ringkasan Job berdasarkan rentang tanggal.
