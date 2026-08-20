@@ -288,7 +288,7 @@
             "Deliv Failure", "POD Failure Type", "E-Pod Date", "Remark"
         ];
 
-                function recomputeDashboard(table) {
+        function recomputeDashboard(table) {
             const rows = table.rows({ search: 'applied' }).nodes();
             let totalJob = rows.length;
             let customers = new Set();

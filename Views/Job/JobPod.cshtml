@@ -114,7 +114,7 @@
         // Build lookup for dropdowns
         var failuresLookup = {};
         failures.forEach(f => {
-            failuresLookup[f.id] = f.failure_code + (f.failure_name ? : '');
+            failuresLookup[f.id] = f.failure_name;
         });
 
         var failureTypesLookup = {};
