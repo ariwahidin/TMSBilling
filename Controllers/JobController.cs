@@ -162,8 +162,25 @@ namespace TMSBilling.Controllers
                 data = data.Where(d => matchingJobIds.Contains(d.JobId)).ToList();
             }
 
-            // Build POD summary for each job
             var jobIds = data.Select(d => d.JobId).ToList();
+
+
+            // Total DO per job (distinct inv_no dari TRC_JOB)
+            var jobDetails = await _context.Jobs
+                .Where(j => jobIds.Contains(j.jobid))
+                .Select(j => new { j.jobid, j.inv_no })
+                .ToListAsync();
+            var doCountByJob = jobDetails.GroupBy(j => j.jobid)
+                .ToDictionary(g => g.Key!, g => g.Select(x => x.inv_no).Distinct().Count());
+
+            // SEMUA JobPOD (bukan FirstOrDefault) - buat breakdown per DO
+            var allPods = await _context.JobPODs
+                .Where(p => jobIds.Contains(p.jobid))
+                .ToListAsync();
+            var podsByJob = allPods.GroupBy(p => p.jobid).ToDictionary(g => g.Key!, g => g.ToList());
+
+            // Build POD summary for each job
+            //var jobIds = data.Select(d => d.JobId).ToList();
             var podData = await _context.JobPODs
                 .Where(p => jobIds.Contains(p.jobid))
                 .ToListAsync();
@@ -199,7 +216,33 @@ namespace TMSBilling.Controllers
                     job.PodSummary = "0/14";
                     job.PodTooltip = "No POD data";
                 }
+
+                job.DoCount = doCountByJob.TryGetValue(job.JobId, out var dc) ? dc : 0;
+
+                var jobPods = podsByJob.TryGetValue(job.JobId, out var pl) ? pl : new List<JobPOD>();
+                var flagsList = jobPods.Select(p => new[]
+                {
+                    p.outorigin_date.HasValue ? 1 : 0,
+                    p.arriv_date.HasValue ? 1 : 0,
+                    p.unloading_date.HasValue ? 1 : 0,
+                    !string.IsNullOrEmpty(p.arriv_pic) ? 1 : 0,
+                    p.pod_ret_date.HasValue ? 1 : 0,
+                    !string.IsNullOrEmpty(p.pod_ret_pic) ? 1 : 0,
+                    p.pod_send_date.HasValue ? 1 : 0,
+                    !string.IsNullOrEmpty(p.pod_send_pic) ? 1 : 0,
+                    !string.IsNullOrEmpty(p.spd_no) ? 1 : 0,
+                    p.pod_status.HasValue ? 1 : 0,
+                    p.failure_id.HasValue ? 1 : 0,
+                    p.failure_type_id.HasValue ? 1 : 0,
+                    p.epod_date.HasValue ? 1 : 0,
+                    !string.IsNullOrEmpty(p.pod_remark) ? 1 : 0,
+                });
+                job.PodDetailsJson = System.Text.Json.JsonSerializer.Serialize(flagsList);
             }
+
+            //ViewBag.DashboardMinimized = Request.Cookies["JobList_DashboardMin"] == "1";
+
+            ViewBag.DashboardMinimized = Request.Cookies["JobList_DashboardMin"] != "0";
 
             return View(data);
         }
@@ -2904,8 +2947,15 @@ namespace TMSBilling.Controllers
 
         public int? IsIntegration { get; set; }
 
+        [NotMapped]
         public string? PodSummary { get; set; }
+        [NotMapped]
         public string? PodTooltip { get; set; }
+
+        [NotMapped]
+        public int DoCount { get; set; }
+        [NotMapped]
+        public string PodDetailsJson { get; set; } = "[]";
     }
     public class VendorViewModel
     {
@@ -2995,4 +3045,6 @@ namespace TMSBilling.Controllers
         public string? ShipToCity { get; set; }
         public string? DelivDate { get; set; }
     }
+
+    
 }

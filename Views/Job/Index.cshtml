@@ -47,6 +47,32 @@
     </div>
 </div>
 
+<div class="card mb-3">
+    <div class="card-header py-2 d-flex justify-content-between align-items-center" style="cursor:pointer;" id="dashboardHeader">
+        <strong style="font-size:13px;"><i class="bi bi-bar-chart-line"></i> Filter Summary</strong>
+        <button type="button" class="btn btn-sm btn-link p-0" id="btnToggleDashboard">
+            <i class="bi bi-chevron-up" id="dashboardChevron"></i>
+        </button>
+    </div>
+    <div class="card-body py-2" id="dashboardBody">
+        <div class="row text-center mb-3">
+            <div class="col-4">
+                <div class="fs-5 fw-bold" id="statTotalJob">0</div>
+                <div class="text-muted" style="font-size:12px;">Total Job</div>
+            </div>
+            <div class="col-4">
+                <div class="fs-5 fw-bold" id="statTotalCustomer">0</div>
+                <div class="text-muted" style="font-size:12px;">Total Customer</div>
+            </div>
+            <div class="col-4">
+                <div class="fs-5 fw-bold" id="statTotalDo">0</div>
+                <div class="text-muted" style="font-size:12px;">Total DO</div>
+            </div>
+        </div>
+        <div id="podBreakdown"></div>
+    </div>
+</div>
+
 <table class="table table-sm table-bordered table-hover table-striped align-middle" id="tableJob">
     <thead class="table-light">
         <tr>
@@ -85,7 +111,7 @@
             var i = 1;
             foreach (var item in Model)
             {
-                <tr>
+                <tr data-customer="@item.CustomerMain" data-do-count="@item.DoCount" data-pod-details='@item.PodDetailsJson'>
                     <td>
                         <input type="checkbox" class="order-checkbox" data-order-id="@item.IdSeq">
                     </td>
@@ -255,6 +281,58 @@
 
 @section Scripts {
     <script>
+
+        const PodFieldLabels = [
+            "Out Date", "Arriv Date", "Unloading Date", "Rcv By", "POD Return Date",
+            "POD Rcv By", "POD Send Date", "POD Send By", "SPD No", "Pallet Deliv",
+            "Failure", "Failure Type", "E-Pod Date", "Remark"
+        ];
+
+        function recomputeDashboard(table) {
+            const rows = table.rows({ search: 'applied' }).nodes();
+            let totalJob = rows.length;
+            let customers = new Set();
+            let totalDo = 0;
+            let fieldFilled = new Array(PodFieldLabels.length).fill(0);
+            let fieldTotalDo = 0;
+
+            $(rows).each(function () {
+                const $row = $(this);
+                customers.add($row.data('customer'));
+                totalDo += parseInt($row.data('do-count')) || 0;
+
+                let pods = [];
+                try { pods = JSON.parse($row.attr('data-pod-details') || '[]'); } catch (e) {}
+                pods.forEach(flags => {
+                    fieldTotalDo++;
+                    flags.forEach((v, i) => { if (v) fieldFilled[i]++; });
+                });
+            });
+
+            $('#statTotalJob').text(totalJob);
+            $('#statTotalCustomer').text(customers.size);
+            $('#statTotalDo').text(totalDo);
+
+            let html = '';
+            PodFieldLabels.forEach((label, i) => {
+                const filled = fieldFilled[i];
+                const pct = fieldTotalDo > 0 ? Math.round((filled / fieldTotalDo) * 100) : 0;
+                html += `
+                    <div class="d-flex align-items-center mb-1" style="font-size:12px;">
+                        <div style="width:110px;" class="text-muted">${label}</div>
+                        <div class="flex-grow-1 mx-2">
+                            <div class="progress" style="height:8px;">
+                                <div class="progress-bar" style="width:${pct}%"></div>
+                            </div>
+                        </div>
+                        <div style="width:70px;" class="text-end text-muted">${filled}/${fieldTotalDo}</div>
+                    </div>`;
+            });
+            $('#podBreakdown').html(html);
+        }
+
+
+
         // Delete confirmation
         function confirmDelete(id) {
             Swal.fire({
@@ -289,6 +367,8 @@
                 pageLength: 25,
                 language: { emptyTable: "No jobs available" }
             });
+
+
 
             // Filter per kolom
             $('#tableJob thead tr:eq(1) th').each(function (i) {
@@ -330,6 +410,23 @@
                         Swal.fire('Error', xhr.responseText || 'Server not responding.', 'error');
                     }
                 });
+            });
+
+
+            table.on('draw', function () { recomputeDashboard(table); });
+            recomputeDashboard(table); // initial
+
+            // Minimize/maximize + cookie
+            const isMin = @(ViewBag.DashboardMinimized == true ? "true" : "false");
+            if (isMin) {
+                $('#dashboardBody').hide();
+                $('#dashboardChevron').removeClass('bi-chevron-up').addClass('bi-chevron-down');
+            }
+            $('#dashboardHeader').on('click', function (e) {
+                const nowHidden = $('#dashboardBody').is(':visible');
+                $('#dashboardBody').slideToggle(150);
+                $('#dashboardChevron').toggleClass('bi-chevron-up bi-chevron-down');
+                document.cookie = `JobList_DashboardMin=${nowHidden ? '1' : '0'}; path=/Job; max-age=${60*60*24*30}`;
             });
         });
     </script>
