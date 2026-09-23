@@ -397,6 +397,20 @@
                     <div class="placeholder-hint">Extension (.pdf/.xlsx) added automatically.</div>
                 </div>
             </div>
+
+            <div class="mb-3">
+                <label class="form-label">Attachment Filename Query (SQL)</label>
+                <textarea id="f_filename_query" class="form-control query-area" rows="4"
+                          placeholder="SELECT 'Report_' + CONVERT(varchar, GETDATE(), 112) as file_date">@Html.Raw(Model.Template.attach_filename_query)</textarea>
+                <div class="placeholder-hint">
+                    Query untuk resolve placeholder di attachment filename. Contoh: <code>SELECT GETDATE() as file_date</code>
+                    → bisa pakai <code>{{file_date}}</code> di filename. Only SELECT allowed.
+                </div>
+                <button class="btn btn-xs btn-outline-info mt-1" id="btnTestFilenameQuery" style="font-size:.72rem;padding:2px 8px;">
+                    <i class="bi bi-play-circle me-1"></i> Test Query
+                </button>
+                <div id="filenameQueryResult" class="test-result mt-2" style="display:none;"></div>
+            </div>
         </div>
     </div>
 
@@ -501,6 +515,21 @@
                         <label class="form-label">Font Size</label>
                         <input type="number" id="el_title_size" class="form-control form-control-sm" min="8" max="36" value="14" />
                     </div>
+                </div>
+
+                <!-- Report Title Query -->
+                <div class="mb-3" style="max-width:900px;">
+                    <label class="form-label">Report Title Query (SQL)</label>
+                    <textarea id="el_title_query" class="form-control query-area" rows="4"
+                              placeholder="SELECT 'Report - ' + CONVERT(varchar, GETDATE(), 23) as report_date"></textarea>
+                    <div class="placeholder-hint">
+                        Query untuk resolve placeholder di report title. Contoh: <code>SELECT GETDATE() as report_date</code>
+                        → bisa pakai <code>{{report_date}}</code> di title. Only SELECT allowed.
+                    </div>
+                    <button class="btn btn-xs btn-outline-info mt-1" id="btnTestTitleQuery" style="font-size:.72rem;padding:2px 8px;">
+                        <i class="bi bi-play-circle me-1"></i> Test Query
+                    </button>
+                    <div id="titleQueryResult" class="test-result mt-2" style="display:none;"></div>
                 </div>
 
                 <!-- Sheet List -->
@@ -938,6 +967,100 @@
         });
 
         // ══════════════════════════════════════════════
+        // Attachment Filename Query Test
+        // ══════════════════════════════════════════════
+        $('#btnTestFilenameQuery').click(async function () {
+            const sql = $('#f_filename_query').val();
+            const res = $('#filenameQueryResult');
+
+            if (!sql.trim()) {
+                res.show().html('<span class="text-danger">Query is empty.</span>');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            const data = await $.ajax({
+                url: '/MailReport/TestQuery',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Sql: sql })
+            });
+
+            $(this).prop('disabled', false).html('<i class="bi bi-play-circle me-1"></i> Test Query');
+
+            if (!data.ok) {
+                res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.72rem;">${data.message}</div>`);
+                return;
+            }
+
+            // Show result
+            let tbl = `<div style="overflow-x:auto;max-height:120px;margin-top:8px;">
+                <table class="table table-bordered table-sm mb-0" style="font-size:.71rem;white-space:nowrap;">
+                <thead><tr>`;
+            data.columns.forEach(c => tbl += `<th>${c}</th>`);
+            tbl += `</tr></thead><tbody>`;
+            data.rows.forEach(r => {
+                tbl += '<tr>';
+                data.columns.forEach(c => tbl += `<td>${r[c] ?? ''}</td>`);
+                tbl += '</tr>';
+            });
+            tbl += `</tbody></table></div>`;
+            tbl += `<div class="mt-1 text-success" style="font-size:.72rem;">
+                <i class="bi bi-check-circle me-1"></i>
+                Kolom yang tersedia: ${data.columns.map(c => '<code>{{'+c+'}}</code>').join(', ')}
+            </div>`;
+            res.show().html(tbl);
+        });
+
+        // ══════════════════════════════════════════════
+        // Excel Layout Title Query Test
+        // ══════════════════════════════════════════════
+        $('#btnTestTitleQuery').click(async function () {
+            const sql = $('#el_title_query').val();
+            const res = $('#titleQueryResult');
+
+            if (!sql.trim()) {
+                res.show().html('<span class="text-danger">Query is empty.</span>');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            const data = await $.ajax({
+                url: '/MailReport/TestQuery',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Sql: sql })
+            });
+
+            $(this).prop('disabled', false).html('<i class="bi bi-play-circle me-1"></i> Test Query');
+
+            if (!data.ok) {
+                res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.72rem;">${data.message}</div>`);
+                return;
+            }
+
+            // Show result
+            let tbl = `<div style="overflow-x:auto;max-height:120px;margin-top:8px;">
+                <table class="table table-bordered table-sm mb-0" style="font-size:.71rem;white-space:nowrap;">
+                <thead><tr>`;
+            data.columns.forEach(c => tbl += `<th>${c}</th>`);
+            tbl += `</tr></thead><tbody>`;
+            data.rows.forEach(r => {
+                tbl += '<tr>';
+                data.columns.forEach(c => tbl += `<td>${r[c] ?? ''}</td>`);
+                tbl += '</tr>';
+            });
+            tbl += `</tbody></table></div>`;
+            tbl += `<div class="mt-1 text-success" style="font-size:.72rem;">
+                <i class="bi bi-check-circle me-1"></i>
+                Kolom yang tersedia: ${data.columns.map(c => '<code>{{'+c+'}}</code>').join(', ')}
+            </div>`;
+            res.show().html(tbl);
+        });
+
+        // ══════════════════════════════════════════════
         // Recipients
         // ══════════════════════════════════════════════
         async function loadTruckEmails() {
@@ -1040,7 +1163,8 @@
                     body_footer:     footer,
                     attach_pdf:      $('#f_pdf').is(':checked') ? 1 : 0,
                     attach_excel:    $('#f_excel').is(':checked') ? 1 : 0,
-                    attach_filename: $('#f_filename').val().trim()
+                    attach_filename: $('#f_filename').val().trim(),
+                    attach_filename_query: $('#f_filename_query').val().trim()
                 },
                 Sections: sections,
                 Recipients: recipients
@@ -1098,6 +1222,7 @@
             const L = elData.layout || {};
             $('#el_use_custom').prop('checked', L.use_custom_layout === 1);
             $('#el_title').val(L.report_title || '');
+            $('#el_title_query').val(L.report_title_query || '');
             $('#el_title_bg').val('#' + (L.title_bg_color || 'FFFFFF'));
             $('#el_title_fg').val('#' + (L.title_font_color || '000000'));
             $('#el_title_size').val(L.title_font_size || 14);
@@ -1417,6 +1542,7 @@
             elData.layout = {
                 use_custom_layout: $('#el_use_custom').is(':checked') ? 1 : 0,
                 report_title:      $('#el_title').val(),
+                report_title_query: $('#el_title_query').val(),
                 title_bg_color:    ($('#el_title_bg').val()||'#FFFFFF').replace('#',''),
                 title_font_color:  ($('#el_title_fg').val()||'#000000').replace('#',''),
                 title_font_size:   parseInt($('#el_title_size').val()) || 14

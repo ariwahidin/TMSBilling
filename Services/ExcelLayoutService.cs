@@ -181,8 +181,55 @@ namespace TMSBilling.Services
         {
             var vm = await LoadForFormAsync(reportId, ownerType);
 
-            var resolvedTitle = Resolve(vm.Layout.report_title ?? "", eventParams);
-            var resolvedSubtitle = Resolve(vm.Layout.report_subtitle ?? "", eventParams);
+            // ── Execute report_title_query: resolve placeholder untuk report title ──
+            var mergedParams = new Dictionary<string, string>(eventParams, StringComparer.OrdinalIgnoreCase);
+
+            if (!string.IsNullOrWhiteSpace(vm.Layout.report_title_query))
+            {
+                try
+                {
+                    var titleQuerySql = vm.Layout.report_title_query.Trim().TrimEnd(';', ' ');
+
+                    if (IsSafe(titleQuerySql))
+                    {
+                        await using var conn = new SqlConnection(_connStr);
+                        await conn.OpenAsync();
+                        await using var cmd = new SqlCommand(titleQuerySql, conn) { CommandTimeout = 15 };
+
+                        // Bind @param dari eventParams yang sudah ada
+                        foreach (var kv in eventParams)
+                        {
+                            var pname = "@" + kv.Key;
+                            if (titleQuerySql.Contains(pname))
+                                cmd.Parameters.AddWithValue(pname, kv.Value);
+                        }
+
+                        using var reader = await cmd.ExecuteReaderAsync();
+                        if (await reader.ReadAsync())
+                        {
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                var colName = reader.GetName(i);
+                                var colValue = reader[i]?.ToString() ?? "";
+                                mergedParams[colName] = colValue;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("report_title_query blocked by safety check for reportId {id}: {sql}",
+                            reportId, titleQuerySql);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error executing report_title_query for reportId {id}", reportId);
+                    // Lanjut — title tetap pakai placeholder yang ada
+                }
+            }
+
+            var resolvedTitle = Resolve(vm.Layout.report_title ?? "", mergedParams);
+            var resolvedSubtitle = Resolve(vm.Layout.report_subtitle ?? "", mergedParams);
 
             // ── Load logo (kalau ada) ──
             byte[]? logoBytes = null;
@@ -916,6 +963,7 @@ namespace TMSBilling.Services
 
             layout.use_custom_layout = vm.Layout.use_custom_layout;
             layout.report_title = vm.Layout.report_title;
+            layout.report_title_query = vm.Layout.report_title_query;
             layout.report_subtitle = vm.Layout.report_subtitle;
             layout.title_bg_color = vm.Layout.title_bg_color ?? "FFFFFF";
             layout.title_font_color = vm.Layout.title_font_color ?? "000000";

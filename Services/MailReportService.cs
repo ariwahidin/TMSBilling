@@ -131,7 +131,52 @@ namespace TMSBilling.Services
 
             try
             {
-                var (subject, bodyHtml, _) = await RenderAsync(report, template, sections, request.EventParams);
+                var (subject, bodyHtml, placeholders) = await RenderAsync(report, template, sections, request.EventParams);
+
+                // ── Execute attach_filename_query: resolve placeholder untuk attachment filename ──
+                if (!string.IsNullOrWhiteSpace(template.attach_filename_query))
+                {
+                    try
+                    {
+                        var filenameSql = template.attach_filename_query.Trim().TrimEnd(';', ' ');
+
+                        if (IsSafeSelectQuery(filenameSql))
+                        {
+                            await using var conn = new SqlConnection(_connStr);
+                            await conn.OpenAsync();
+                            await using var cmd = new SqlCommand(filenameSql, conn) { CommandTimeout = 15 };
+
+                            // Bind @param dari placeholders yang sudah ada
+                            foreach (var kv in placeholders)
+                            {
+                                var pname = "@" + kv.Key;
+                                if (filenameSql.Contains(pname))
+                                    cmd.Parameters.AddWithValue(pname, kv.Value);
+                            }
+
+                            using var reader = await cmd.ExecuteReaderAsync();
+                            if (await reader.ReadAsync())
+                            {
+                                for (int i = 0; i < reader.FieldCount; i++)
+                                {
+                                    var colName = reader.GetName(i);
+                                    var colValue = reader[i]?.ToString() ?? "";
+                                    placeholders[colName] = colValue;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("attach_filename_query blocked by safety check for report {id}: {sql}",
+                                report.ID, filenameSql);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error executing attach_filename_query for report {id}", report.ID);
+                        // Lanjut — filename tetap pakai placeholder yang ada
+                    }
+                }
 
                 var toList = recipients
                     .Where(r => r.email_type == "TO" && r.is_active == 1)
@@ -195,7 +240,7 @@ namespace TMSBilling.Services
 
                     var fname = ResolvePlaceholders(
                         template.attach_filename ?? "Report_{{date}}",
-                        request.EventParams)
+                        placeholders)
                         .Replace("{{date}}", DateTime.Now.ToString("yyyyMMdd"));
 
                     attachments.Add(new EmailAttachment
@@ -773,33 +818,239 @@ namespace TMSBilling.Services
         //        values.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value);
         //}
 
-        private string ResolvePlaceholders(string template, Dictionary<string, string> values)
+        //private string ResolvePlaceholders(string template, Dictionary<string, string> values)
+        //{
+        //    if (string.IsNullOrEmpty(template)) return template;
+
+        //    var merged = new Dictionary<string, string>(
+        //        values ?? new Dictionary<string, string>(),
+        //        StringComparer.OrdinalIgnoreCase
+        //    )
+        //    {
+        //        ["date"] = DateTime.Now.ToString("yyyy-MM-dd"),
+        //        ["date_label"] = DateTime.Now.ToString("dd MMMM yyyy"),
+        //        ["datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+        //        ["year"] = DateTime.Now.ToString("yyyy"),
+        //        ["month"] = DateTime.Now.ToString("MM"),
+        //        ["month_name"] = DateTime.Now.ToString("MMMM"),
+        //        ["today"] = DateTime.Now.ToString("yyyy-MM-dd"),
+        //        ["month_start"] = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"),
+        //        ["month_end"] = new DateTime(
+        //            DateTime.Now.Year,
+        //            DateTime.Now.Month,
+        //            DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month)
+        //        ).ToString("yyyy-MM-dd")
+        //    };
+
+        //    return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
+        //        merged.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value
+        //    );
+        //}
+
+        private string ResolvePlaceholders(
+    string template,
+    Dictionary<string, string> values)
         {
-            if (string.IsNullOrEmpty(template)) return template;
+            if (string.IsNullOrEmpty(template))
+                return template;
+
+            var now = DateTime.Now;
+            var today = now.Date;
+
+            var monthStart = new DateTime(
+                now.Year,
+                now.Month,
+                1
+            );
+
+            var monthEnd = new DateTime(
+                now.Year,
+                now.Month,
+                DateTime.DaysInMonth(now.Year, now.Month)
+            );
+
+            var previousMonth = now.AddMonths(-1);
+
+            var previousMonthStart = new DateTime(
+                previousMonth.Year,
+                previousMonth.Month,
+                1
+            );
+
+            var previousMonthEnd = new DateTime(
+                previousMonth.Year,
+                previousMonth.Month,
+                DateTime.DaysInMonth(
+                    previousMonth.Year,
+                    previousMonth.Month
+                )
+            );
+
+            var nextMonth = now.AddMonths(1);
+
+            var nextMonthStart = new DateTime(
+                nextMonth.Year,
+                nextMonth.Month,
+                1
+            );
+
+            var nextMonthEnd = new DateTime(
+                nextMonth.Year,
+                nextMonth.Month,
+                DateTime.DaysInMonth(
+                    nextMonth.Year,
+                    nextMonth.Month
+                )
+            );
 
             var merged = new Dictionary<string, string>(
                 values ?? new Dictionary<string, string>(),
                 StringComparer.OrdinalIgnoreCase
             )
             {
-                ["date"] = DateTime.Now.ToString("yyyy-MM-dd"),
-                ["date_label"] = DateTime.Now.ToString("dd MMMM yyyy"),
-                ["datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                ["year"] = DateTime.Now.ToString("yyyy"),
-                ["month"] = DateTime.Now.ToString("MM"),
-                ["month_name"] = DateTime.Now.ToString("MMMM"),
-                ["today"] = DateTime.Now.ToString("yyyy-MM-dd"),
-                ["month_start"] = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"),
-                ["month_end"] = new DateTime(
-                    DateTime.Now.Year,
-                    DateTime.Now.Month,
-                    DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month)
-                ).ToString("yyyy-MM-dd")
+                // ==========================
+                // BASIC DATE
+                // ==========================
+
+                ["date"] = today.ToString("yyyy-MM-dd"),
+
+                ["today"] = today.ToString("yyyy-MM-dd"),
+
+                ["yesterday"] = today
+                    .AddDays(-1)
+                    .ToString("yyyy-MM-dd"),
+
+                ["tomorrow"] = today
+                    .AddDays(1)
+                    .ToString("yyyy-MM-dd"),
+
+                ["date_label"] = now.ToString("dd MMMM yyyy"),
+
+                ["datetime"] = now.ToString(
+                    "yyyy-MM-dd HH:mm:ss"
+                ),
+
+                ["time"] = now.ToString("HH:mm:ss"),
+
+                ["year"] = now.ToString("yyyy"),
+
+                ["month"] = now.ToString("MM"),
+
+                ["month_name"] = now.ToString("MMMM"),
+
+                ["day"] = now.ToString("dd"),
+
+                ["day_name"] = now.ToString("dddd"),
+
+                // ==========================
+                // MONTH
+                // ==========================
+
+                ["month_start"] = monthStart
+                    .ToString("yyyy-MM-dd"),
+
+                ["month_end"] = monthEnd
+                    .ToString("yyyy-MM-dd"),
+
+                ["previous_month"] = previousMonth
+                    .ToString("MM"),
+
+                ["previous_month_name"] = previousMonth
+                    .ToString("MMMM"),
+
+                ["previous_month_start"] = previousMonthStart
+                    .ToString("yyyy-MM-dd"),
+
+                ["previous_month_end"] = previousMonthEnd
+                    .ToString("yyyy-MM-dd"),
+
+                ["next_month_start"] = nextMonthStart
+                    .ToString("yyyy-MM-dd"),
+
+                ["next_month_end"] = nextMonthEnd
+                    .ToString("yyyy-MM-dd"),
+
+                // ==========================
+                // YEAR
+                // ==========================
+
+                ["year_start"] = new DateTime(
+                    now.Year,
+                    1,
+                    1
+                ).ToString("yyyy-MM-dd"),
+
+                ["year_end"] = new DateTime(
+                    now.Year,
+                    12,
+                    31
+                ).ToString("yyyy-MM-dd"),
+
+                ["previous_year"] = (now.Year - 1)
+                    .ToString(),
+
+                ["next_year"] = (now.Year + 1)
+                    .ToString(),
+
+                // ==========================
+                // WEEK
+                // ==========================
+
+                ["week_start"] = StartOfWeek(
+                    today,
+                    DayOfWeek.Monday
+                ).ToString("yyyy-MM-dd"),
+
+                ["week_end"] = StartOfWeek(
+                    today,
+                    DayOfWeek.Monday
+                )
+                .AddDays(6)
+                .ToString("yyyy-MM-dd"),
+
+                // ==========================
+                // QUARTER
+                // ==========================
+
+                ["quarter"] = $"Q{((now.Month - 1) / 3) + 1}",
+
+                ["quarter_start"] = new DateTime(
+                    now.Year,
+                    ((now.Month - 1) / 3) * 3 + 1,
+                    1
+                ).ToString("yyyy-MM-dd"),
+
+                // ==========================
+                // TIMESTAMP
+                // ==========================
+
+                ["unix_timestamp"] = new DateTimeOffset(now)
+                    .ToUnixTimeSeconds()
+                    .ToString()
             };
 
-            return Regex.Replace(template, @"\{\{(\w+)\}\}", m =>
-                merged.TryGetValue(m.Groups[1].Value, out var v) ? v : m.Value
+            return Regex.Replace(
+                template,
+                @"\{\{(\w+)\}\}",
+                m =>
+                    merged.TryGetValue(
+                        m.Groups[1].Value,
+                        out var v
+                    )
+                        ? v
+                        : m.Value
             );
+        }
+
+        private static DateTime StartOfWeek(
+            DateTime date,
+            DayOfWeek startOfWeek)
+        {
+            int diff = (
+                7 + (date.DayOfWeek - startOfWeek)
+            ) % 7;
+
+            return date.AddDays(-diff).Date;
         }
 
         private bool IsSafeSelectQuery(string sql)

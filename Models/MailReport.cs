@@ -84,6 +84,11 @@ namespace TMSBilling.Models
         [StringLength(200)]
         public string? attach_filename { get; set; }           // support placeholder
 
+        // SQL query untuk resolve placeholder di attach_filename
+        // e.g. SELECT 'Report_' + CONVERT(varchar, GETDATE(), 112) as filename
+        [Column(TypeName = "nvarchar(max)")]
+        public string? attach_filename_query { get; set; }
+
         // SQL query untuk resolve placeholder di subject (MANUAL/SCHEDULED)
         // e.g. SELECT GETDATE() as report_date, 'Monthly' as period_label
         [Column(TypeName = "nvarchar(max)")]

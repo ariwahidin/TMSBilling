@@ -133,6 +133,7 @@ namespace TMSBilling.Controllers
                 tmpl.attach_pdf = vm.Template.attach_pdf;
                 tmpl.attach_excel = vm.Template.attach_excel;
                 tmpl.attach_filename = vm.Template.attach_filename;
+                tmpl.attach_filename_query = vm.Template.attach_filename_query;
 
                 // Sections (replace all)
                 _db.MailReportSections.RemoveRange(

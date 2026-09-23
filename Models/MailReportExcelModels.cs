@@ -180,6 +180,11 @@ namespace TMSBilling.Models
         [StringLength(300)]
         public string? report_title { get; set; }
 
+        // SQL query untuk resolve placeholder di report_title
+        // e.g. SELECT 'Daily Report - ' + CONVERT(varchar, GETDATE(), 23) as title_date
+        [Column(TypeName = "nvarchar(max)")]
+        public string? report_title_query { get; set; }
+
         [StringLength(10)]
         public string? title_bg_color { get; set; } = "FFFFFF";
 
