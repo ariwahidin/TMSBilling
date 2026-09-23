@@ -376,6 +376,52 @@ namespace TMSBilling.Services
             bodySb.AppendLine(EmailBaseHtml.Close());
 
             var finalHtml = ResolvePlaceholders(bodySb.ToString(), placeholders);
+
+            // ── Resolve subject_query: jalankan SQL dan inject kolom sebagai placeholder ──
+            if (!string.IsNullOrWhiteSpace(template.subject_query))
+            {
+                try
+                {
+                    var subjectSql = template.subject_query.Trim().TrimEnd(';', ' ');
+
+                    if (IsSafeSelectQuery(subjectSql))
+                    {
+                        await using var conn = new SqlConnection(_connStr);
+                        await conn.OpenAsync();
+                        await using var cmd = new SqlCommand(subjectSql, conn) { CommandTimeout = 15 };
+
+                        // Bind @param dari placeholders yang sudah ada
+                        foreach (var kv in placeholders)
+                        {
+                            var pname = "@" + kv.Key;
+                            if (subjectSql.Contains(pname))
+                                cmd.Parameters.AddWithValue(pname, kv.Value);
+                        }
+
+                        using var reader = await cmd.ExecuteReaderAsync();
+                        if (await reader.ReadAsync())
+                        {
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                var colName = reader.GetName(i);
+                                var colValue = reader[i]?.ToString() ?? "";
+                                placeholders[colName] = colValue;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("subject_query blocked by safety check for report {id}: {sql}",
+                            report.ID, subjectSql);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error executing subject_query for report {id}", report.ID);
+                    // Lanjut — subject tetap pakai placeholder yang ada, tidak gagalkan proses kirim
+                }
+            }
+
             var finalSubject = ResolvePlaceholders(template.subject, placeholders);
 
             return (finalSubject, finalHtml, placeholders);

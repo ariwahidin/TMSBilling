@@ -84,6 +84,11 @@ namespace TMSBilling.Models
         [StringLength(200)]
         public string? attach_filename { get; set; }           // support placeholder
 
+        // SQL query untuk resolve placeholder di subject (MANUAL/SCHEDULED)
+        // e.g. SELECT GETDATE() as report_date, 'Monthly' as period_label
+        [Column(TypeName = "nvarchar(max)")]
+        public string? subject_query { get; set; }
+
         [JsonIgnore]
         [ForeignKey("report_id")]
         public MailReport? Report { get; set; }

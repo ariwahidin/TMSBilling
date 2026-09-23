@@ -343,6 +343,20 @@
                 <div class="placeholder-hint">Use <code>{{field_name}}</code> for dynamic values from query or event params.</div>
             </div>
 
+            <div class="mb-3" id="subjectQueryBlock" style="display:none;">
+                <label class="form-label">Subject Query (SQL)</label>
+                <textarea id="f_subject_query" class="form-control query-area" rows="4"
+                          placeholder="SELECT GETDATE() as report_date, 'Daily' as period_label">@Html.Raw(Model.Template.subject_query)</textarea>
+                <div class="placeholder-hint">
+                    Query untuk resolve placeholder di subject. Contoh: <code>SELECT GETDATE() as report_date</code>
+                    → bisa pakai <code>{{report_date}}</code> di subject. Only SELECT allowed.
+                </div>
+                <button class="btn btn-xs btn-outline-info mt-1" id="btnTestSubjectQuery" style="font-size:.72rem;padding:2px 8px;">
+                    <i class="bi bi-play-circle me-1"></i> Test Query
+                </button>
+                <div id="subjectQueryResult" class="test-result mt-2" style="display:none;"></div>
+            </div>
+
             <div class="mb-3">
                 <label class="form-label">Body Header (HTML)</label>
                 <div class="placeholder-hint mb-1">Content above the data tables. Supports <code>{{placeholder}}</code>.</div>
@@ -685,6 +699,8 @@
             const v = $('#f_trigger').val();
             $('#eventFields').toggle(v === 'EVENT');
             $('#schedFields').toggle(v === 'SCHEDULED');
+            // Subject Query hanya untuk MANUAL dan SCHEDULED
+            $('#subjectQueryBlock').toggle(v === 'MANUAL' || v === 'SCHEDULED');
         }
         $('#f_trigger').on('change', onTriggerChange).trigger('change');
 
@@ -875,6 +891,53 @@
         renderSections();
 
         // ══════════════════════════════════════════════
+        // Subject Query Test
+        // ══════════════════════════════════════════════
+        $('#btnTestSubjectQuery').click(async function () {
+            const sql = $('#f_subject_query').val();
+            const res = $('#subjectQueryResult');
+
+            if (!sql.trim()) {
+                res.show().html('<span class="text-danger">Query is empty.</span>');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            const data = await $.ajax({
+                url: '/MailReport/TestQuery',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Sql: sql })
+            });
+
+            $(this).prop('disabled', false).html('<i class="bi bi-play-circle me-1"></i> Test Query');
+
+            if (!data.ok) {
+                res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.72rem;">${data.message}</div>`);
+                return;
+            }
+
+            // Show result
+            let tbl = `<div style="overflow-x:auto;max-height:120px;margin-top:8px;">
+                <table class="table table-bordered table-sm mb-0" style="font-size:.71rem;white-space:nowrap;">
+                <thead><tr>`;
+            data.columns.forEach(c => tbl += `<th>${c}</th>`);
+            tbl += `</tr></thead><tbody>`;
+            data.rows.forEach(r => {
+                tbl += '<tr>';
+                data.columns.forEach(c => tbl += `<td>${r[c] ?? ''}</td>`);
+                tbl += '</tr>';
+            });
+            tbl += `</tbody></table></div>`;
+            tbl += `<div class="mt-1 text-success" style="font-size:.72rem;">
+                <i class="bi bi-check-circle me-1"></i>
+                Kolom yang tersedia: ${data.columns.map(c => '<code>{{'+c+'}}</code>').join(', ')}
+            </div>`;
+            res.show().html(tbl);
+        });
+
+        // ══════════════════════════════════════════════
         // Recipients
         // ══════════════════════════════════════════════
         async function loadTruckEmails() {
@@ -972,6 +1035,7 @@
                 },
                 Template: {
                     subject:         $('#f_subject').val().trim(),
+                    subject_query:   $('#f_subject_query').val().trim(),
                     body_header:     header,
                     body_footer:     footer,
                     attach_pdf:      $('#f_pdf').is(':checked') ? 1 : 0,

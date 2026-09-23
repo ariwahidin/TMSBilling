@@ -127,6 +127,7 @@ namespace TMSBilling.Controllers
                     _db.MailReportTemplates.Add(tmpl);
                 }
                 tmpl.subject = vm.Template.subject;
+                tmpl.subject_query = vm.Template.subject_query;
                 tmpl.body_header = vm.Template.body_header;
                 tmpl.body_footer = vm.Template.body_footer;
                 tmpl.attach_pdf = vm.Template.attach_pdf;
