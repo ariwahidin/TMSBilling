@@ -6,29 +6,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="~/css/login.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @RenderSection("Styles", required: false)
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <img src="img/yusen-logistics.png" alt="Yusen Logistics" width="215" class="login-logo" />
-                @* <div class="login-icon">
-                    <i class="bi bi-shield-lock"></i>
-                </div> *@
-                <h2 class="login-title mt-2">TMS Billing</h2>
-                <p class="login-subtitle">Please sign in to your account</p>
+    <div class="login-page">
+
+        <!-- LEFT: HERO -->
+        <section class="login-hero">
+            <div class="hero-brand">
+                <img src="~/img/yusen-logistics.png" alt="Yusen Logistics" />
+                <span class="divider"></span>
+                <div>
+                    <div class="brand-title">TMS Billing</div>
+                    <div class="brand-sub">Transportation Management System</div>
+                </div>
             </div>
-            @RenderBody()
-        </div>
+
+            <h1 class="hero-headline">
+                Move Smarter<span class="accent">.</span><br />
+                Deliver <span class="accent">Further.</span>
+            </h1>
+
+            <p class="hero-desc">
+                Integrated <strong>transportation</strong> management for better visibility, efficiency, and control across your supply chain.
+            </p>
+
+            <div class="hero-features">
+                <div class="hero-feature">
+                    <div class="icon-box"><i class="bi bi-truck"></i></div>
+                    Shipment<br />Management
+                </div>
+                <div class="hero-feature">
+                    <div class="icon-box"><i class="bi bi-geo-alt-fill"></i></div>
+                    Real-time<br />Tracking
+                </div>
+                <div class="hero-feature">
+                    <div class="icon-box"><i class="bi bi-file-earmark-text-fill"></i></div>
+                    Billing &amp;<br />Settlement
+                </div>
+                <div class="hero-feature">
+                    <div class="icon-box"><i class="bi bi-bar-chart-fill"></i></div>
+                    Reports &amp;<br />Analytics
+                </div>
+            </div>
+
+            <div class="hero-footer">&copy; @DateTime.Now.Year TMS Billing. All rights reserved.</div>
+        </section>
+
+        <!-- RIGHT: LOGIN -->
+        <section class="login-panel">
+            <div class="login-card">
+                <h2 class="login-title">Welcome Back</h2>
+                <p class="login-subtitle">Sign in to your TMS Billing account</p>
+                @RenderBody()
+            </div>
+
+            <div class="panel-footer">
+                <a href="#">Help</a><span class="sep">|</span><a href="#">Privacy</a><span class="sep">|</span><a href="#">Terms</a>
+            </div>
+        </section>
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Optional Scripts from View -->
     @RenderSection("Scripts", required: false)
 </body>
 </html>
