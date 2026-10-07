@@ -11,6 +11,7 @@ using TMSBilling.Repositories;
 using TMSBilling.Services;
 using TMSBilling.Services.Integration;
 using TMSBilling.Services.Reports;
+using TMSBilling.Services.Reporting;
 
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 QuestPDF.Settings.EnableDebugging = true;
@@ -137,6 +138,7 @@ builder.Services.AddSingleton<IIntegrationScheduler>(sp =>
     sp.GetRequiredService<IntegrationSchedulerService>());
 
 builder.Services.AddScoped<IAttachmentBuilder, AttachmentBuilder>();
+builder.Services.AddScoped<IReportingTokenService, ReportingTokenService>();
 
 
 
