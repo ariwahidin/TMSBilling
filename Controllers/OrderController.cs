@@ -876,27 +876,27 @@ namespace TMSBilling.Controllers
                     string? isB2C = headerSheet.Cell(row, 22).GetString();
 
 
-                    if (pickupDate == null || pickupDate <= DateTime.Now)
-                    {
-                        errors.Add(new
-                        {
-                            row,
-                            section = "header",
-                            field = "Target Diambil",
-                            message = "Target Diambil harus lebih besar dari waktu sekarang"
-                        });
-                    }
+                    //if (pickupDate == null || pickupDate <= DateTime.Now)
+                    //{
+                    //    errors.Add(new
+                    //    {
+                    //        row,
+                    //        section = "header",
+                    //        field = "Target Diambil",
+                    //        message = "Target Diambil harus lebih besar dari waktu sekarang"
+                    //    });
+                    //}
 
-                    if (expectedDelivery == null || expectedDelivery <= DateTime.Now)
-                    {
-                        errors.Add(new
-                        {
-                            row,
-                            section = "header",
-                            field = "Target Dikirim",
-                            message = "Target Dikirim harus lebih besar dari waktu sekarang"
-                        });
-                    }
+                    //if (expectedDelivery == null || expectedDelivery <= DateTime.Now)
+                    //{
+                    //    errors.Add(new
+                    //    {
+                    //        row,
+                    //        section = "header",
+                    //        field = "Target Dikirim",
+                    //        message = "Target Dikirim harus lebih besar dari waktu sekarang"
+                    //    });
+                    //}
 
 
                     if (!_context.Warehouses.Any(w => w.wh_code == whCode))
@@ -926,59 +926,176 @@ namespace TMSBilling.Controllers
                         }
                     }
 
-                   
 
-                    var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == customer);
+                    var customerGroup = _context.CustomerGroups
+    .FirstOrDefault(cg => cg.SUB_CODE == customer);
 
-                    if (customerGroup == null) {
-                        errors.Add(new { row, section = "header", field = "Nama Pelanggan", message = $"'{customer}' tidak ditemukan" });
-                    }
-
-                    if (customerGroup != null && originMaster != null && destArea != null && originArea != null)
+                    if (customerGroup == null)
                     {
-                        var priceSell = _context.PriceSells.FirstOrDefault(ps =>
-                        ps.cust_code == customerGroup.MAIN_CUST &&
-                        ps.origin == originArea &&
-                        ps.dest == destArea &&
-                        ps.serv_type == serviceHeader &&
-                        ps.serv_moda == modaHeader &&
-                        ps.truck_size == truckSizeHeader &&
-                        ps.charge_uom == uomHeader
-                    );
-
-                        if (priceSell == null)
+                        errors.Add(new
                         {
-                            // Buat pesan lebih detail tanpa ubah struktur
-                            var detailMsg = $"Price sell tidak ditemukan untuk kombinasi berikut: " +
-                                            $"Customer={customerGroup.MAIN_CUST}, Origin={originArea}, " +
-                                            $"Destination={destArea}, Service={serviceHeader}, " +
-                                            $"Moda={modaHeader}, Truck={truckSizeHeader}, UOM={uomHeader}";
+                            row,
+                            section = "header",
+                            field = "Nama Pelanggan",
+                            message = $"'{customer}' tidak ditemukan"
+                        });
+                    }
+                    else
+                    {
+                        // ============================================================
+                        // VALIDASI TANGGAL BERDASARKAN API_FLAG
+                        // ============================================================
 
+                        if (customerGroup.API_FLAG == 1)
+                        {
+                            if (pickupDate == null || pickupDate <= DateTime.Now)
+                            {
+                                errors.Add(new
+                                {
+                                    row,
+                                    section = "header",
+                                    field = "Target Diambil",
+                                    message = "Target Diambil harus lebih besar dari waktu sekarang untuk customer API."
+                                });
+                            }
+
+                            if (expectedDelivery == null || expectedDelivery <= DateTime.Now)
+                            {
+                                errors.Add(new
+                                {
+                                    row,
+                                    section = "header",
+                                    field = "Target Dikirim",
+                                    message = "Target Dikirim harus lebih besar dari waktu sekarang untuk customer API."
+                                });
+                            }
+                        }
+
+                        // ============================================================
+                        // VALIDASI LAIN
+                        // ============================================================
+
+                        if (originMaster != null && destArea != null && originArea != null)
+                        {
+                            var priceSell = _context.PriceSells.FirstOrDefault(ps =>
+                                ps.cust_code == customerGroup.MAIN_CUST &&
+                                ps.origin == originArea &&
+                                ps.dest == destArea &&
+                                ps.serv_type == serviceHeader &&
+                                ps.serv_moda == modaHeader &&
+                                ps.truck_size == truckSizeHeader &&
+                                ps.charge_uom == uomHeader
+                            );
+
+                            if (priceSell == null)
+                            {
+                                var detailMsg =
+                                    $"Price sell tidak ditemukan untuk kombinasi berikut: " +
+                                    $"Customer={customerGroup.MAIN_CUST}, " +
+                                    $"Origin={originArea}, " +
+                                    $"Destination={destArea}, " +
+                                    $"Service={serviceHeader}, " +
+                                    $"Moda={modaHeader}, " +
+                                    $"Truck={truckSizeHeader}, " +
+                                    $"UOM={uomHeader}";
+
+                                errors.Add(new
+                                {
+                                    row,
+                                    section = "Header",
+                                    field = $"No DO {invoiceNo}",
+                                    message = detailMsg
+                                });
+                            }
+
+                            var orderExist = _context.Orders
+                                .FirstOrDefault(or => or.inv_no == invoiceNo);
+
+                            if (orderExist != null && operationType == "add")
+                            {
+                                errors.Add(new
+                                {
+                                    row,
+                                    section = "Header",
+                                    field = $"No DO {invoiceNo}",
+                                    message = "Already exists"
+                                });
+                            }
+                            else if (orderExist == null && operationType == "edit")
+                            {
+                                errors.Add(new
+                                {
+                                    row,
+                                    section = "Header",
+                                    field = $"No DO {invoiceNo}",
+                                    message = "Not found for edit"
+                                });
+                            }
+                        }
+                        else
+                        {
                             errors.Add(new
                             {
                                 row,
                                 section = "Header",
-                                field = $"No DO {invoiceNo}",
-                                message = detailMsg
+                                field = "Your data invalid!"
                             });
                         }
-
-
-                        var orderExist = _context.Orders.FirstOrDefault(or => or.inv_no == invoiceNo);
-                        if (orderExist != null && operationType == "add")
-                        {
-                            errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $" Already exists" });
-                        }
-                        else if (orderExist == null && operationType == "edit") {
-                            errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Not found for edit" });
-                        }
                     }
-                    else
-                    {
 
-                        errors.Add(new { row, section = "Header", field = "Your data invalid!" });
 
-                    }
+
+                    //var customerGroup = _context.CustomerGroups.FirstOrDefault(cg => cg.SUB_CODE == customer);
+
+                    //if (customerGroup == null) {
+                    //    errors.Add(new { row, section = "header", field = "Nama Pelanggan", message = $"'{customer}' tidak ditemukan" });
+                    //}
+
+                    //if (customerGroup != null && originMaster != null && destArea != null && originArea != null)
+                    //{
+                    //    var priceSell = _context.PriceSells.FirstOrDefault(ps =>
+                    //    ps.cust_code == customerGroup.MAIN_CUST &&
+                    //    ps.origin == originArea &&
+                    //    ps.dest == destArea &&
+                    //    ps.serv_type == serviceHeader &&
+                    //    ps.serv_moda == modaHeader &&
+                    //    ps.truck_size == truckSizeHeader &&
+                    //    ps.charge_uom == uomHeader
+                    //);
+
+                    //    if (priceSell == null)
+                    //    {
+                    //        // Buat pesan lebih detail tanpa ubah struktur
+                    //        var detailMsg = $"Price sell tidak ditemukan untuk kombinasi berikut: " +
+                    //                        $"Customer={customerGroup.MAIN_CUST}, Origin={originArea}, " +
+                    //                        $"Destination={destArea}, Service={serviceHeader}, " +
+                    //                        $"Moda={modaHeader}, Truck={truckSizeHeader}, UOM={uomHeader}";
+
+                    //        errors.Add(new
+                    //        {
+                    //            row,
+                    //            section = "Header",
+                    //            field = $"No DO {invoiceNo}",
+                    //            message = detailMsg
+                    //        });
+                    //    }
+
+
+                    //    var orderExist = _context.Orders.FirstOrDefault(or => or.inv_no == invoiceNo);
+                    //    if (orderExist != null && operationType == "add")
+                    //    {
+                    //        errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $" Already exists" });
+                    //    }
+                    //    else if (orderExist == null && operationType == "edit") {
+                    //        errors.Add(new { row, section = "Header", field = $"No DO {invoiceNo}", message = $"Not found for edit" });
+                    //    }
+                    //}
+                    //else
+                    //{
+
+                    //    errors.Add(new { row, section = "Header", field = "Your data invalid!" });
+
+                    //}
 
 
                     var ship_to_name = "";
