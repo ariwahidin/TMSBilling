@@ -491,6 +491,7 @@ namespace TMSBilling.Controllers
                     existingHeader.tot_pkgs = header.tot_pkgs;
                     existingHeader.pallet_delivery = header.pallet_delivery;
                     existingHeader.pallet_consume = header.pallet_consume;
+                    existingHeader.do_rcv_date = header.do_rcv_date;
                     existingHeader.do_rcv_time = header.do_rcv_time;
                     existingHeader.remark = header.remark;
                     existingHeader.order_status = header.order_status ?? 0;
@@ -1999,8 +2000,8 @@ namespace TMSBilling.Controllers
         public string? SubCustId { get; set; }
         public string? CneeCode { get; set; }
         public string? InvNo { get; set; }
-        public DateTime PickupDate { get; set; }
-        public DateTime DeliveryDate { get; set; }
+        public DateTime? PickupDate { get; set; }
+        public DateTime? DeliveryDate { get; set; }
         public string? OriginId { get; set; }
         public string? DestArea { get; set; }
         public byte? OrderStatus { get; set; }
