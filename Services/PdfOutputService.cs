@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -45,6 +46,25 @@ namespace TMSBilling.Services
             public float LabelColWidth;
             public float ValueColWidth;
             public float TotalWidth;
+        }
+
+        // Format column_groups: [{ "title": "Shipment Info", "columns": ["ORIGIN", "AREA"] }]
+        private sealed class ColumnGroupDefinition
+        {
+            public string Title { get; set; } = "";
+            public List<string> Columns { get; set; } = new();
+            public string? group_header_bg_color { get; set; }
+            public string? group_header_font_color { get; set; }
+            public string? column_header_bg_color { get; set; }
+            public string? column_header_font_color { get; set; }
+        }
+
+        private sealed class ColumnHeaderRun
+        {
+            public ColumnGroupDefinition? Group { get; set; }
+            public string? Title => Group?.Title;
+            public int StartIndex { get; set; }
+            public int Count { get; set; }
         }
 
         private class GroupRenderInfo
@@ -381,10 +401,66 @@ namespace TMSBilling.Services
                             c.ConstantColumn(info.ColWidths.TryGetValue(colName, out var w) ? w : MinColWidth);
                     });
 
+                    var headerRuns = GetColumnHeaderRuns(sec.column_groups, visibleCols);
+                    bool hasColumnGroups = headerRuns.Any(run => !string.IsNullOrWhiteSpace(run.Title));
+
                     table.Header(h =>
                     {
-                        foreach (var colName in visibleCols)
-                            h.Cell().Background(headerBg).Padding(4).Text(colName).Bold().FontColor(headerFg);
+                        // Tidak ada grouping: pertahankan header satu baris seperti sebelumnya.
+                        if (!hasColumnGroups)
+                        {
+                            foreach (var colName in visibleCols)
+                            {
+                                h.Cell()
+                                    .Background(headerBg)
+                                    .Border(0.5f).BorderColor(Colors.Grey.Lighten2)
+                                    .Padding(4)
+                                    .Text(colName).Bold().FontColor(headerFg);
+                            }
+                            return;
+                        }
+
+                        // Baris pertama: satu cell per grup. Kolom tanpa grup memakai RowSpan(2).
+                        foreach (var run in headerRuns)
+                        {
+                            if (run.Group == null)
+                            {
+                                var colName = visibleCols[run.StartIndex];
+                                h.Cell().RowSpan(2)
+                                    .Background(headerBg)
+                                    .Border(0.5f).BorderColor(Colors.Grey.Lighten2)
+                                    .Padding(4)
+                                    .AlignCenter()
+                                    .Text(colName).Bold().FontColor(headerFg);
+                            }
+                            else
+                            {
+                                var groupBg = NormalizePdfColor(run.Group.group_header_bg_color, headerBg);
+                                var groupFg = NormalizePdfColor(run.Group.group_header_font_color, headerFg);
+                                h.Cell().ColumnSpan((uint)run.Count)
+                                    .Background(groupBg)
+                                    .Border(0.5f).BorderColor(Colors.Grey.Lighten2)
+                                    .Padding(4)
+                                    .AlignCenter()
+                                    .Text(run.Title ?? string.Empty).Bold().FontColor(groupFg);
+                            }
+                        }
+
+                        // Baris kedua: warna nama kolom mengikuti grup masing-masing.
+                        foreach (var run in headerRuns.Where(r => r.Group != null))
+                        {
+                            var columnBg = NormalizePdfColor(run.Group!.column_header_bg_color, headerBg);
+                            var columnFg = NormalizePdfColor(run.Group.column_header_font_color, headerFg);
+                            for (int i = run.StartIndex; i < run.StartIndex + run.Count; i++)
+                            {
+                                h.Cell()
+                                    .Background(columnBg)
+                                    .Border(0.5f).BorderColor(Colors.Grey.Lighten2)
+                                    .Padding(4)
+                                    .AlignCenter()
+                                    .Text(visibleCols[i]).Bold().FontColor(columnFg);
+                            }
+                        }
                     });
 
                     int rIdx = 0;
@@ -453,6 +529,81 @@ namespace TMSBilling.Services
             typeof(int), typeof(long), typeof(short), typeof(byte),
             typeof(decimal), typeof(double), typeof(float)
         };
+
+        private List<ColumnHeaderRun> GetColumnHeaderRuns(string? columnGroupsJson, List<string> visibleCols)
+        {
+            var noGrouping = new List<ColumnHeaderRun>();
+            if (visibleCols == null || visibleCols.Count == 0 || string.IsNullOrWhiteSpace(columnGroupsJson))
+                return noGrouping;
+
+            List<ColumnGroupDefinition>? groups;
+            try
+            {
+                groups = JsonSerializer.Deserialize<List<ColumnGroupDefinition>>(
+                    columnGroupsJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "PdfOutputService: column_groups JSON tidak valid; memakai header standar.");
+                return noGrouping;
+            }
+
+            if (groups == null || groups.Count == 0)
+                return noGrouping;
+
+            // Simpan definisi grup lengkap agar konfigurasi warna ikut terbawa sampai renderer.
+            // Kolom hanya dimiliki satu grup; grup pertama yang valid dipakai bila ada duplikasi.
+            var groupByColumn = new Dictionary<string, ColumnGroupDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var group in groups)
+            {
+                if (string.IsNullOrWhiteSpace(group.Title) || group.Columns == null) continue;
+                foreach (var rawColumn in group.Columns)
+                {
+                    var column = (rawColumn ?? string.Empty).Trim();
+                    if (column.Length == 0 || !visibleCols.Contains(column, StringComparer.OrdinalIgnoreCase))
+                        continue;
+                    if (!groupByColumn.ContainsKey(column))
+                        groupByColumn[column] = group;
+                }
+            }
+
+            if (groupByColumn.Count == 0)
+                return noGrouping;
+
+            // Kolom tak tergabung dibuat sebagai run masing-masing agar setiap nama kolom tetap tampil.
+            // Run grup digabung hanya saat kolomnya berurutan dan berasal dari definisi grup yang sama.
+            var runs = new List<ColumnHeaderRun>();
+            int i = 0;
+            while (i < visibleCols.Count)
+            {
+                if (!groupByColumn.TryGetValue(visibleCols[i], out var group))
+                {
+                    runs.Add(new ColumnHeaderRun { Group = null, StartIndex = i, Count = 1 });
+                    i++;
+                    continue;
+                }
+
+                int end = i + 1;
+                while (end < visibleCols.Count &&
+                       groupByColumn.TryGetValue(visibleCols[end], out var nextGroup) &&
+                       ReferenceEquals(group, nextGroup))
+                {
+                    end++;
+                }
+
+                runs.Add(new ColumnHeaderRun { Group = group, StartIndex = i, Count = end - i });
+                i = end;
+            }
+
+            return runs;
+        }
+
+        private static string NormalizePdfColor(string? value, string fallback)
+        {
+            var color = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+            return color.StartsWith("#", StringComparison.Ordinal) ? color : "#" + color;
+        }
 
         private Dictionary<string, float> ComputeColumnWidths(List<string> cols, DataTable dt)
         {

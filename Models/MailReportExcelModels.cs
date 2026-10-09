@@ -267,6 +267,9 @@ namespace TMSBilling.Models
         [StringLength(1000)]
         public string? visible_columns { get; set; }
 
+        [Column(TypeName = "nvarchar(max)")]
+        public string? column_groups { get; set; }
+
         // "vertical" | "side_by_side"
         [StringLength(20)]
         public string? layout { get; set; } = "vertical";

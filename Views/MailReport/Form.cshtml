@@ -366,7 +366,7 @@
             <div class="mb-3">
                 <label class="form-label">Body Footer (HTML)</label>
                 <div class="placeholder-hint mb-1">Content below the data tables (signature, notes, etc.).</div>
-                <textarea id="f_footer" class="form-control query-area sec-query" rows="8" >@Html.Raw(Model.Template.body_footer)</textarea>
+                <textarea id="f_footer" class="form-control query-area sec-query" rows="8">@Html.Raw(Model.Template.body_footer)</textarea>
             </div>
 
             <div class="row g-3 mt-1">
@@ -1390,6 +1390,18 @@
                         </div>
                     </div>
 
+                    <div class="mb-2 el-column-groups-wrap">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0" style="font-size:.7rem;">Column Header Groups <span class="text-muted" style="font-size:.65rem;">— opsional, untuk Excel/PDF attachment</span></label>
+                            <button type="button" class="btn btn-sm btn-outline-primary el-add-colgroup" style="font-size:.68rem;padding:2px 8px;">
+                                <i class="bi bi-plus-lg me-1"></i>Add Header Group
+                            </button>
+                        </div>
+                        <input type="hidden" class="el-sec-colgroups" value="" />
+                        <div class="el-column-groups"></div>
+                        <div class="placeholder-hint">Buat grup, tentukan judul dan kolom, lalu atur warna judul grup serta nama kolom. Kolom di luar grup tetap memakai header biasa. SQL query tidak dipecah atau diubah.</div>
+                    </div>
+
                     <div>
                         <button class="btn btn-outline-info el-test" style="font-size:.7rem;padding:2px 8px;">
                             <i class="bi bi-play-circle me-1"></i>Test Query
@@ -1399,7 +1411,7 @@
                 </div>
             `);
 
-            // Restore saved columns
+            // Restore saved visible columns and header groups
             if (sec.visible_columns) {
                 const tags = card.find('.el-tags');
                 card.find('.col-picker-hint').addClass('hidden');
@@ -1408,6 +1420,10 @@
                 });
             }
 
+            const initialGroups = elParseColumnGroups(sec.column_groups);
+            card.find('.el-sec-colgroups').val(JSON.stringify(initialGroups));
+            elRenderColumnGroups(card, initialGroups);
+
             return card;
         }
 
@@ -1415,7 +1431,12 @@
         function elMakeTag(col, active, card) {
             const tag = $(`<div class="col-tag ${active?'active':''}" draggable="true" data-col="${col}">
                 <span class="col-tag-drag">⠿</span><span>${col}</span></div>`);
-            tag.on('click', () => { tag.toggleClass('active'); elSyncCols(card); });
+            tag.on('click', () => {
+                tag.toggleClass('active');
+                elSyncCols(card);
+                elRenderColumnGroups(card, elReadColumnGroups(card));
+                elMarkGroupDirty();
+            });
             tag[0].addEventListener('dragstart', e => { e.dataTransfer.setData('text', col); tag.addClass('dragging'); });
             tag[0].addEventListener('dragend', () => { tag.removeClass('dragging'); elSyncCols(card); });
             tag[0].addEventListener('dragover', e => {
@@ -1434,6 +1455,167 @@
             card.find('.el-sec-cols').val(sel.join(', '));
         }
 
+        // ── Column Header Groups (tersimpan sebagai JSON di column_groups) ──
+        const EL_COLUMN_GROUP_PALETTE = [
+            { groupBg:'D9EAF7', groupFg:'17365D', columnBg:'EAF3F8', columnFg:'17365D' },
+            { groupBg:'DDEFE1', groupFg:'375623', columnBg:'EEF6EF', columnFg:'375623' },
+            { groupBg:'FCE8D5', groupFg:'833C0B', columnBg:'FFF5EB', columnFg:'833C0B' },
+            { groupBg:'E8DDF5', groupFg:'674A87', columnBg:'F5F0FA', columnFg:'674A87' },
+            { groupBg:'F8DDE4', groupFg:'8A2345', columnBg:'FDF0F3', columnFg:'8A2345' },
+            { groupBg:'FFF2CC', groupFg:'7F6000', columnBg:'FFF9E6', columnFg:'7F6000' }
+        ];
+
+        function elGroupColor(value, fallback) {
+            const color = String(value || fallback || '').replace('#', '').trim();
+            return /^[0-9a-fA-F]{6}$/.test(color) ? color.toUpperCase() : fallback;
+        }
+
+        function elParseColumnGroups(value) {
+            if (!value) return [];
+            let parsed = value;
+            if (typeof value === 'string') {
+                try { parsed = JSON.parse(value); } catch (_) { return []; }
+            }
+            if (!Array.isArray(parsed)) return [];
+
+            return parsed.map((g, index) => {
+                const palette = EL_COLUMN_GROUP_PALETTE[index % EL_COLUMN_GROUP_PALETTE.length];
+                return {
+                    title: String(g?.title || ''),
+                    columns: Array.isArray(g?.columns) ? g.columns.map(String) : [],
+                    group_header_bg_color: elGroupColor(g?.group_header_bg_color, palette.groupBg),
+                    group_header_font_color: elGroupColor(g?.group_header_font_color, palette.groupFg),
+                    column_header_bg_color: elGroupColor(g?.column_header_bg_color, palette.columnBg),
+                    column_header_font_color: elGroupColor(g?.column_header_font_color, palette.columnFg)
+                };
+            });
+        }
+
+        function elReadColumnGroups(card) {
+            const groups = [];
+            card.find('.el-column-group').each(function () {
+                const group = $(this);
+                const columns = group.find('.el-colgroup-column:checked').map((_, el) => $(el).val()).get();
+                groups.push({
+                    title: group.find('.el-colgroup-title').val() || '',
+                    columns,
+                    group_header_bg_color: elGroupColor(group.find('.el-colgroup-group-bg').val(), 'D9EAF7'),
+                    group_header_font_color: elGroupColor(group.find('.el-colgroup-group-fg').val(), '17365D'),
+                    column_header_bg_color: elGroupColor(group.find('.el-colgroup-column-bg').val(), 'EAF3F8'),
+                    column_header_font_color: elGroupColor(group.find('.el-colgroup-column-fg').val(), '17365D')
+                });
+            });
+            return groups;
+        }
+
+        function elRenderColumnGroups(card, groups) {
+            const host = card.find('.el-column-groups');
+            if (!host.length) return;
+            host.empty();
+            const available = card.find('.el-tags .col-tag.active').map((_, el) => String($(el).data('col'))).get();
+            const safeGroups = elParseColumnGroups(groups);
+
+            if (!safeGroups.length) {
+                host.html('<div class="text-muted border rounded p-2 mb-1" style="font-size:.7rem;">Belum ada header group. Fitur ini opsional.</div>');
+            }
+
+            safeGroups.forEach((group, index) => {
+                const selected = new Set((group.columns || []).map(String));
+                const palette = EL_COLUMN_GROUP_PALETTE[index % EL_COLUMN_GROUP_PALETTE.length];
+                const groupCard = $(`
+                    <div class="el-column-group border rounded p-2 mb-2" data-colgroup-index="${index}" style="background:#fbfcff;">
+                        <div class="row g-2 align-items-end mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label mb-1" style="font-size:.66rem;">Group Title</label>
+                                <input class="form-control form-control-sm el-colgroup-title" value="${elEsc(group.title)}" placeholder="e.g. Shipment Info" />
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label mb-1" style="font-size:.66rem;">Group Header BG</label>
+                                <input type="color" class="form-control form-control-sm form-control-color el-colgroup-group-bg" value="#${elGroupColor(group.group_header_bg_color, palette.groupBg)}" />
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label mb-1" style="font-size:.66rem;">Group Header Font</label>
+                                <input type="color" class="form-control form-control-sm form-control-color el-colgroup-group-fg" value="#${elGroupColor(group.group_header_font_color, palette.groupFg)}" />
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label mb-1" style="font-size:.66rem;">Column Header BG</label>
+                                <input type="color" class="form-control form-control-sm form-control-color el-colgroup-column-bg" value="#${elGroupColor(group.column_header_bg_color, palette.columnBg)}" />
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <label class="form-label mb-1" style="font-size:.66rem;">Column Header Font</label>
+                                <input type="color" class="form-control form-control-sm form-control-color el-colgroup-column-fg" value="#${elGroupColor(group.column_header_font_color, palette.columnFg)}" />
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted" style="font-size:.68rem;">Columns included in this group</span>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary el-colgroup-up" title="Move group up" style="font-size:.62rem;padding:1px 5px;">↑</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary el-colgroup-down" title="Move group down" style="font-size:.62rem;padding:1px 5px;">↓</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger el-colgroup-del" title="Delete group" style="font-size:.62rem;padding:1px 6px;">✕</button>
+                            </div>
+                        </div>
+                        <div class="el-colgroup-options d-flex flex-wrap gap-2"></div>
+                    </div>
+                `);
+                const options = groupCard.find('.el-colgroup-options');
+                if (!available.length) {
+                    options.html('<span class="text-muted" style="font-size:.68rem;">Jalankan Test Query dan aktifkan kolom terlebih dahulu.</span>');
+                } else {
+                    available.forEach((col, optionIndex) => {
+                        const id = `mail_el_cg_${Date.now()}_${index}_${optionIndex}`;
+                        const checked = selected.has(col) ? 'checked' : '';
+                        options.append(`<label class="form-check form-check-inline mb-0" style="font-size:.7rem;"><input class="form-check-input el-colgroup-column" type="checkbox" id="${id}" value="${elEsc(col)}" ${checked} /> <span class="form-check-label" for="${id}">${elEsc(col)}</span></label>`);
+                    });
+                }
+                host.append(groupCard);
+            });
+            card.find('.el-sec-colgroups').val(JSON.stringify(elReadColumnGroups(card)));
+        }
+
+        function elMarkGroupDirty() {
+            $('#elSaveStatus').html('<span class="text-warning">Ada perubahan belum disimpan</span>');
+        }
+
+        $(document).on('click', '.el-add-colgroup', function () {
+            const card = $(this).closest('[data-secidx]');
+            const groups = elReadColumnGroups(card);
+            const palette = EL_COLUMN_GROUP_PALETTE[groups.length % EL_COLUMN_GROUP_PALETTE.length];
+            groups.push({
+                title: `Group ${groups.length + 1}`,
+                columns: [],
+                group_header_bg_color: palette.groupBg,
+                group_header_font_color: palette.groupFg,
+                column_header_bg_color: palette.columnBg,
+                column_header_font_color: palette.columnFg
+            });
+            elRenderColumnGroups(card, groups);
+            elMarkGroupDirty();
+        });
+
+        $(document).on('change input', '.el-colgroup-title, .el-colgroup-column, .el-colgroup-group-bg, .el-colgroup-group-fg, .el-colgroup-column-bg, .el-colgroup-column-fg', function () {
+            const card = $(this).closest('[data-secidx]');
+            card.find('.el-sec-colgroups').val(JSON.stringify(elReadColumnGroups(card)));
+            elMarkGroupDirty();
+        });
+
+        $(document).on('click', '.el-colgroup-del', function () {
+            const card = $(this).closest('[data-secidx]');
+            const groups = elReadColumnGroups(card);
+            groups.splice($(this).closest('.el-column-group').index(), 1);
+            elRenderColumnGroups(card, groups);
+            elMarkGroupDirty();
+        });
+
+        $(document).on('click', '.el-colgroup-up, .el-colgroup-down', function () {
+            const card = $(this).closest('[data-secidx]');
+            const groups = elReadColumnGroups(card);
+            const index = $(this).closest('.el-column-group').index();
+            const next = $(this).hasClass('el-colgroup-up') ? index - 1 : index + 1;
+            if (next >= 0 && next < groups.length) [groups[index], groups[next]] = [groups[next], groups[index]];
+            elRenderColumnGroups(card, groups);
+            elMarkGroupDirty();
+        });
+
         // ── Test Query ──
         $(document).on('click', '.el-test', async function () {
             const card = $(this).closest('[data-secidx]');
@@ -1448,6 +1630,7 @@
 
             if (!data.ok) { res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.7rem;">${data.message}</div>`); return; }
 
+            const existingGroups = elReadColumnGroups(card);
             const tags = card.find('.el-tags').empty();
             card.find('.col-picker-hint').addClass('hidden');
             const existing = (card.find('.el-sec-cols').val() || '').split(',').map(s=>s.trim()).filter(Boolean);
@@ -1455,6 +1638,7 @@
                 tags.append(elMakeTag(col, !existing.length || existing.includes(col), card));
             });
             elSyncCols(card);
+            elRenderColumnGroups(card, existingGroups);
 
             let tbl = `<div style="overflow-x:auto;max-height:150px;">
                 <table class="table table-bordered table-sm mb-0" style="font-size:.68rem;white-space:nowrap;"><thead><tr>`;
@@ -1501,7 +1685,7 @@
             const si = $(this).closest('[data-si]').data('si');
             elCollect();
             elData.sheets[si].sections.push({
-                section_label: 'New Section', sql_query:'', sql_where:'', visible_columns:'',
+                section_label: 'New Section', sql_query:'', sql_where:'', visible_columns:'', column_groups:'[]',
                 layout:'vertical', group_id:0, side_gap:1, bottom_gap:2, display_mode:'TABLE',
                 section_title:'', title_bg_color:'FFD700', title_font_color:'000000',
                 header_bg_color:'FFD700', header_font_color:'000000',
@@ -1557,6 +1741,7 @@
                         sql_query:         $(this).find('.el-sec-query').val(),
                         sql_where:         $(this).find('.el-sec-where').val(),
                         visible_columns:   $(this).find('.el-sec-cols').val(),
+                        column_groups:     JSON.stringify(elReadColumnGroups($(this))),
                         layout:            $(this).find('.el-sec-layout').val(),
                         group_id:          parseInt($(this).find('.el-sec-group').val())||0,
                         side_gap:          parseInt($(this).find('.el-sec-sidegap').val())||1,

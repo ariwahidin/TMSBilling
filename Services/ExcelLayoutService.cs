@@ -5,6 +5,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
 using Microsoft.Data.SqlClient;
@@ -374,7 +375,12 @@ namespace TMSBilling.Services
                         {
                             int headerRow = currentRow;
                             if (!string.IsNullOrWhiteSpace(sec.section_title)) headerRow++;
-                            freezeRow = headerRow + 1; // freeze setelah header
+
+                            // Header biasa memakai 1 baris; grouped header memakai 2 baris.
+                            // freezeRow disimpan dengan konvensi lama agar AutoFilter tetap
+                            // diarahkan ke baris header kolom paling bawah.
+                            bool hasGroupedHeader = HasEffectiveColumnGroups(sec, GetVisibleColumns(sec, dt));
+                            freezeRow = headerRow + (hasGroupedHeader ? 2 : 1);
                         }
                         currentRow = RenderSection(ws, sec, dt, currentRow, 1, eventParams);
                         currentRow += sec.bottom_gap > 0 ? sec.bottom_gap : 2;
@@ -586,18 +592,9 @@ namespace TMSBilling.Services
                 .Where(c => dt.Columns.Contains(c) && numericTypes.Contains(dt.Columns[c]!.DataType))
                 .ToHashSet();
 
-            // Header
-            for (int c = 0; c < visibleCols.Count; c++)
-            {
-                var hCell = ws.Cell(row, startCol + c);
-                hCell.Value = visibleCols[c];
-                hCell.Style.Font.Bold = true;
-                SetFill(hCell.Style.Fill, sec.header_bg_color ?? "FFD700");
-                SetFontColor(hCell.Style.Font, sec.header_font_color ?? "000000");
-                hCell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-                hCell.Style.Alignment.WrapText = false;
-            }
-            row++;
+            // Header kolom. Bila column_groups tidak diisi/valid, renderer memakai
+            // header satu baris lama agar section existing tidak berubah.
+            row += RenderTableHeader(ws, sec, visibleCols, row, startCol);
 
             // Data rows
             var totals = new Dictionary<string, decimal>();
@@ -674,6 +671,218 @@ namespace TMSBilling.Services
             }
 
             return row;
+        }
+
+        // ──────────────────────────────────────────────
+        // Column Header Groups
+        // ──────────────────────────────────────────────
+        // JSON shape: [{ "title": "Shipment Info", "columns": ["ORIGIN", "AREA"] }]
+        // Grouping hanya mengatur tampilan Excel; SQL dan hasil DataTable tidak diubah.
+        private sealed class ColumnHeaderGroupDefinition
+        {
+            public ColumnHeaderGroupDefinition() { }
+
+            public string? title { get; set; }
+            public List<string>? columns { get; set; }
+            public string? group_header_bg_color { get; set; }
+            public string? group_header_font_color { get; set; }
+            public string? column_header_bg_color { get; set; }
+            public string? column_header_font_color { get; set; }
+        }
+
+        private List<ColumnHeaderGroupDefinition> GetEffectiveColumnGroups(
+            MailReportExcelSection sec,
+            List<string> visibleCols)
+        {
+            if (string.IsNullOrWhiteSpace(sec.column_groups) || visibleCols.Count == 0)
+                return new List<ColumnHeaderGroupDefinition>();
+
+            List<ColumnHeaderGroupDefinition>? configured;
+            try
+            {
+                configured = JsonSerializer.Deserialize<List<ColumnHeaderGroupDefinition>>(
+                    sec.column_groups,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex,
+                    "ExcelLayout: column_groups JSON tidak valid pada section [{Label}]",
+                    sec.section_label);
+                return new List<ColumnHeaderGroupDefinition>();
+            }
+
+            if (configured == null || configured.Count == 0)
+                return new List<ColumnHeaderGroupDefinition>();
+
+            var actualColumns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var col in visibleCols)
+            {
+                if (!actualColumns.ContainsKey(col))
+                    actualColumns[col] = col;
+            }
+
+            var result = new List<ColumnHeaderGroupDefinition>();
+            foreach (var item in configured)
+            {
+                if (item == null) continue;
+
+                var title = item.title?.Trim();
+                if (string.IsNullOrWhiteSpace(title)) continue;
+
+                var columns = (item.columns ?? new List<string>())
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Select(c => c.Trim())
+                    .Where(c => actualColumns.ContainsKey(c))
+                    .Select(c => actualColumns[c])
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (columns.Count == 0) continue;
+
+                result.Add(new ColumnHeaderGroupDefinition
+                {
+                    title = title,
+                    columns = columns,
+                    group_header_bg_color = item.group_header_bg_color,
+                    group_header_font_color = item.group_header_font_color,
+                    column_header_bg_color = item.column_header_bg_color,
+                    column_header_font_color = item.column_header_font_color
+                });
+            }
+
+            return result;
+        }
+
+        private List<int?> BuildColumnGroupIndexes(
+            MailReportExcelSection sec,
+            List<string> visibleCols,
+            out List<ColumnHeaderGroupDefinition> groups)
+        {
+            groups = GetEffectiveColumnGroups(sec, visibleCols);
+            var columnToGroup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            // Jika kolom terpilih di lebih dari satu grup, grup pertama yang dipakai.
+            // Ini membuat render tetap konsisten meskipun konfigurasi berisi overlap.
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                foreach (var col in groups[groupIndex].columns ?? new List<string>())
+                {
+                    if (!columnToGroup.ContainsKey(col))
+                        columnToGroup[col] = groupIndex;
+                }
+            }
+
+            return visibleCols
+                .Select(col => columnToGroup.TryGetValue(col, out var groupIndex)
+                    ? (int?)groupIndex
+                    : null)
+                .ToList();
+        }
+
+        private bool HasEffectiveColumnGroups(MailReportExcelSection sec, List<string> visibleCols)
+        {
+            var indexes = BuildColumnGroupIndexes(sec, visibleCols, out _);
+            return indexes.Any(index => index.HasValue);
+        }
+
+        private int RenderTableHeader(
+            IXLWorksheet ws,
+            MailReportExcelSection sec,
+            List<string> visibleCols,
+            int row,
+            int startCol)
+        {
+            var groupIndexes = BuildColumnGroupIndexes(sec, visibleCols, out var groups);
+            bool useGroups = groupIndexes.Any(index => index.HasValue);
+            string headerBg = sec.header_bg_color ?? "FFD700";
+            string headerFg = sec.header_font_color ?? "000000";
+
+            if (!useGroups)
+            {
+                // Perilaku lama: satu baris header biasa.
+                for (int c = 0; c < visibleCols.Count; c++)
+                {
+                    var hCell = ws.Cell(row, startCol + c);
+                    hCell.Value = visibleCols[c];
+                    hCell.Style.Font.Bold = true;
+                    SetFill(hCell.Style.Fill, headerBg);
+                    SetFontColor(hCell.Style.Font, headerFg);
+                    hCell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    hCell.Style.Alignment.WrapText = false;
+                }
+
+                return 1;
+            }
+
+            // Dua baris header:
+            // - kolom yang tergabung: judul grup di baris atas, nama kolom di baris bawah;
+            // - kolom tanpa grup: header kolom di-merge vertikal sehingga tidak kosong.
+            int cIndex = 0;
+            while (cIndex < visibleCols.Count)
+            {
+                var groupIndex = groupIndexes[cIndex];
+                int absoluteCol = startCol + cIndex;
+
+                if (!groupIndex.HasValue)
+                {
+                    var mergedCellRange = ws.Range(row, absoluteCol, row + 1, absoluteCol);
+                    mergedCellRange.Merge();
+                    mergedCellRange.FirstCell().Value = visibleCols[cIndex];
+                    mergedCellRange.Style.Font.Bold = true;
+                    SetFill(mergedCellRange.Style.Fill, headerBg);
+                    SetFontColor(mergedCellRange.Style.Font, headerFg);
+                    mergedCellRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    mergedCellRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    mergedCellRange.Style.Alignment.WrapText = false;
+                    cIndex++;
+                    continue;
+                }
+
+                // Merge kontigu hanya; apabila grup memiliki kolom tidak bersebelahan,
+                // judul grup akan tampil pada setiap rentang kontigu yang terpisah.
+                int groupStart = cIndex;
+                int groupEnd = cIndex;
+                while (groupEnd + 1 < visibleCols.Count &&
+                       groupIndexes[groupEnd + 1] == groupIndex)
+                {
+                    groupEnd++;
+                }
+
+                var groupRange = ws.Range(
+                    row,
+                    startCol + groupStart,
+                    row,
+                    startCol + groupEnd);
+
+                if (groupEnd > groupStart)
+                    groupRange.Merge();
+
+                groupRange.FirstCell().Value = groups[groupIndex.Value].title ?? "";
+                groupRange.Style.Font.Bold = true;
+                var groupDefinition = groups[groupIndex.Value];
+                SetFill(groupRange.Style.Fill, groupDefinition.group_header_bg_color ?? headerBg);
+                SetFontColor(groupRange.Style.Font, groupDefinition.group_header_font_color ?? headerFg);
+                groupRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                groupRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                groupRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                groupRange.Style.Alignment.WrapText = true;
+
+                for (int columnIndex = groupStart; columnIndex <= groupEnd; columnIndex++)
+                {
+                    var hCell = ws.Cell(row + 1, startCol + columnIndex);
+                    hCell.Value = visibleCols[columnIndex];
+                    hCell.Style.Font.Bold = true;
+                    SetFill(hCell.Style.Fill, groupDefinition.column_header_bg_color ?? headerBg);
+                    SetFontColor(hCell.Style.Font, groupDefinition.column_header_font_color ?? headerFg);
+                    hCell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    hCell.Style.Alignment.WrapText = false;
+                }
+
+                cIndex = groupEnd + 1;
+            }
+
+            return 2;
         }
 
         // ──────────────────────────────────────────────
