@@ -316,46 +316,97 @@ namespace TMSBilling.Services
             List<MailReportSignature> signatures    // ← baru
             )
         {
+
             int currentRow = 1;
+
             int totalCols = sheetVM.Sections
-                .SelectMany(s => (s.visible_columns ?? "").Split(',').Where(c => !string.IsNullOrWhiteSpace(c)))
+                .SelectMany(s => (s.visible_columns ?? "")
+                    .Split(',')
+                    .Where(c => !string.IsNullOrWhiteSpace(c)))
                 .Count();
-            totalCols = Math.Max(totalCols, 5); // minimal 5 kolom untuk merge
 
-            // ── Embed logo (kalau ada) ──
+            totalCols = Math.Max(totalCols, 5);
+
+            // Logo dan teks menggunakan area header yang sama.
+            // Jika tidak ada logo, layout lama tetap dipertahankan.
+            int headerStartCol = logoBytes != null ? 3 : 1;
+
+            // ── Logo di kiri header ───────────────────────────
             if (logoBytes != null)
-                EmbedLogo(ws, logoBytes, totalCols);
+            {
+                EmbedLogo(ws, logoBytes);
 
-            // ── Report Title ──────────────────────────────
+                // Berikan ruang vertikal untuk logo.
+                ws.Row(1).Height = 28;
+                ws.Row(2).Height = 22;
+            }
+
+            // ── Report Title ──────────────────────────────────
             if (!string.IsNullOrWhiteSpace(resolvedTitle))
             {
-                var titleRange = ws.Range(currentRow, 1, currentRow, totalCols);
+                var titleRange = ws.Range(
+                    currentRow,
+                    headerStartCol,
+                    currentRow,
+                    totalCols);
+
                 titleRange.Merge();
                 titleRange.FirstCell().Value = resolvedTitle;
+
                 titleRange.Style.Font.Bold = true;
                 titleRange.Style.Font.FontSize = layout.title_font_size;
-                titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                SetFontColor(titleRange.Style.Font, layout.title_font_color ?? "000000");
-                if (!string.IsNullOrWhiteSpace(layout.title_bg_color) && layout.title_bg_color != "FFFFFF")
+                titleRange.Style.Alignment.Horizontal =
+                    XLAlignmentHorizontalValues.Left;
+                titleRange.Style.Alignment.Vertical =
+                    XLAlignmentVerticalValues.Center;
+
+                SetFontColor(
+                    titleRange.Style.Font,
+                    layout.title_font_color ?? "000000");
+
+                if (!string.IsNullOrWhiteSpace(layout.title_bg_color)
+                    && layout.title_bg_color != "FFFFFF")
+                {
                     SetFill(titleRange.Style.Fill, layout.title_bg_color);
+                }
+
                 currentRow++;
             }
 
-            // ── Sub Title ─────────────────────────────────
+            // ── Report Subtitle ───────────────────────────────
             if (!string.IsNullOrWhiteSpace(resolvedSubtitle))
             {
-                var subRange = ws.Range(currentRow, 1, currentRow, totalCols);
+                var subRange = ws.Range(
+                    currentRow,
+                    headerStartCol,
+                    currentRow,
+                    totalCols);
+
                 subRange.Merge();
                 subRange.FirstCell().Value = resolvedSubtitle;
+
                 subRange.Style.Font.Italic = true;
-                subRange.Style.Font.FontSize = Math.Max(layout.title_font_size - 2, 9);
-                subRange.Style.Font.FontColor = XLColor.FromHtml("#555555");
-                subRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                subRange.Style.Font.FontSize =
+                    Math.Max(layout.title_font_size - 2, 9);
+
+                subRange.Style.Font.FontColor =
+                    XLColor.FromHtml("#555555");
+
+                subRange.Style.Alignment.Horizontal =
+                    XLAlignmentHorizontalValues.Left;
+                subRange.Style.Alignment.Vertical =
+                    XLAlignmentVerticalValues.Center;
+
                 currentRow++;
             }
 
-            if (!string.IsNullOrWhiteSpace(resolvedTitle) || !string.IsNullOrWhiteSpace(resolvedSubtitle))
-                currentRow++; // 1 baris kosong setelah header
+            // ── Spacing setelah header ────────────────────────
+            if (!string.IsNullOrWhiteSpace(resolvedTitle)
+                || !string.IsNullOrWhiteSpace(resolvedSubtitle))
+            {
+                currentRow++;
+            }
+
 
             var groups = GroupSections(sheetVM.Sections.OrderBy(s => s.sort_order).ToList());
 
@@ -423,20 +474,26 @@ namespace TMSBilling.Services
         // ──────────────────────────────────────────────
         // EmbedLogo
         // ──────────────────────────────────────────────
-        private void EmbedLogo(IXLWorksheet ws, byte[] logoBytes, int totalCols)
+
+
+        private void EmbedLogo(IXLWorksheet ws, byte[] logoBytes)
         {
             try
             {
                 using var ms = new MemoryStream(logoBytes);
+
                 ws.AddPicture(ms)
-                    .MoveTo(ws.Cell(1, totalCols + 2))
-                    .WithSize(90, 50);
+                    .MoveTo(ws.Cell(1, 1))
+                    .WithSize(100, 48);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "ExcelLayout: gagal embed logo ke worksheet");
+                _logger.LogWarning(
+                    ex,
+                    "ExcelLayout: gagal embed logo ke worksheet");
             }
         }
+
 
         // ──────────────────────────────────────────────
         // RenderSignatureBlock — hanya dipanggil di sheet terakhir
