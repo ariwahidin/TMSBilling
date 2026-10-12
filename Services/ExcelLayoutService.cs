@@ -56,128 +56,6 @@ namespace TMSBilling.Services
             return layout != null && layout.use_custom_layout == 1;
         }
 
-        // ──────────────────────────────────────────────
-        // LoadForFormAsync
-        // ──────────────────────────────────────────────
-        //public async Task<MailReportExcelLayoutVM> LoadForFormAsync(int reportId, string ownerType = "mailreport")
-        //{
-        //    //var layout = await _db.MailReportExcelLayouts
-        //    //    .AsNoTracking()
-        //    //    .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
-
-        //    // DEBUG — hapus setelah selesai
-        //    var query = _db.MailReportExcelLayouts
-        //        .Where(l => l.report_id == reportId && l.owner_type == ownerType);
-
-        //    Console.WriteLine($"[DEBUG LoadForFormAsync] reportId={reportId}, ownerType={ownerType}");
-        //    Console.WriteLine($"[DEBUG SQL] {query.ToQueryString()}");
-
-        //    var layout = await query.AsNoTracking().FirstOrDefaultAsync();
-        //    Console.WriteLine($"[DEBUG] reportId={reportId} ownerType={ownerType} layoutID={layout?.ID ?? -1}");
-
-        //    Console.WriteLine($"[DEBUG] layout found: {layout?.ID.ToString() ?? "NULL"}");
-        //    // ─────────────────────────────────────────
-
-        //    if (layout == null)
-        //        return new MailReportExcelLayoutVM
-        //        {
-        //            Layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType },
-        //            Sheets = new List<MailReportExcelSheetVM>()
-        //        };
-
-        //    var sheets = await _db.MailReportExcelSheets
-        //        .AsNoTracking()
-        //        .Where(s => s.layout_id == layout.ID)
-        //        .OrderBy(s => s.sort_order)
-        //        .ToListAsync();
-
-        //    Console.WriteLine($"[DEBUG] sheets={sheets.Count}");
-
-        //    var sheetIds = sheets.Select(s => s.ID).ToList();
-        //    var allSections = await _db.MailReportExcelSections
-        //        .AsNoTracking()
-        //        .Where(s => sheetIds.Contains(s.sheet_id))
-        //        .OrderBy(s => s.sort_order)
-        //        .ToListAsync();
-
-        //    return new MailReportExcelLayoutVM
-        //    {
-        //        Layout = layout,
-        //        Sheets = sheets.Select(s => new MailReportExcelSheetVM
-        //        {
-        //            Sheet = s,
-        //            Sections = allSections.Where(sec => sec.sheet_id == s.ID).ToList()
-        //        }).ToList()
-        //    };
-        //}
-
-        // ──────────────────────────────────────────────
-        // SaveFromFormAsync
-        // ──────────────────────────────────────────────
-        //public async Task SaveFromFormAsync(int reportId, MailReportExcelLayoutVM vm, string ownerType = "mailreport")
-        //{
-        //    // Upsert layout header — filter by owner_type supaya tidak nabrak
-        //    var layout = await _db.MailReportExcelLayouts
-        //        .FirstOrDefaultAsync(l => l.report_id == reportId && l.owner_type == ownerType);
-
-        //    if (layout == null)
-        //    {
-        //        layout = new MailReportExcelLayout { report_id = reportId, owner_type = ownerType };
-        //        _db.MailReportExcelLayouts.Add(layout);
-        //    }
-
-        //    layout.use_custom_layout = vm.Layout.use_custom_layout;
-        //    layout.report_title = vm.Layout.report_title;
-        //    layout.report_subtitle = vm.Layout.report_subtitle;
-        //    layout.title_bg_color = vm.Layout.title_bg_color ?? "FFFFFF";
-        //    layout.title_font_color = vm.Layout.title_font_color ?? "000000";
-        //    layout.title_font_size = vm.Layout.title_font_size > 0 ? vm.Layout.title_font_size : 14;
-
-        //    await _db.SaveChangesAsync();
-
-        //    // Update excel_layout_id di ReportDefinition supaya BuildAsync bisa load layout
-        //    if (ownerType == "reportbuilder")
-        //    {
-        //        var report = await _db.ReportDefinitions.FindAsync(reportId);
-        //        if (report != null && report.excel_layout_id != layout.ID)
-        //        {
-        //            report.excel_layout_id = layout.ID;
-        //            await _db.SaveChangesAsync();
-        //        }
-        //    }
-
-        //    // Replace sheets + sections
-        //    var oldSheets = _db.MailReportExcelSheets.Where(s => s.layout_id == layout.ID);
-        //    _db.MailReportExcelSheets.RemoveRange(oldSheets);
-        //    await _db.SaveChangesAsync();
-
-        //    foreach (var (sheetVM, si) in vm.Sheets.Select((s, i) => (s, i)))
-        //    {
-        //        var sheet = new MailReportExcelSheet
-        //        {
-        //            layout_id = layout.ID,
-        //            sheet_name = sheetVM.Sheet.sheet_name,
-        //            sort_order = si
-        //        };
-        //        _db.MailReportExcelSheets.Add(sheet);
-        //        await _db.SaveChangesAsync();
-
-        //        foreach (var (sec, secIdx) in sheetVM.Sections.Select((s, i) => (s, i)))
-        //        {
-        //            sec.ID = 0;
-        //            sec.sheet_id = sheet.ID;
-        //            sec.sort_order = secIdx;
-        //            _db.MailReportExcelSections.Add(sec);
-        //        }
-        //    }
-
-        //    await _db.SaveChangesAsync();
-        //}
-
-        // ──────────────────────────────────────────────
-        // BuildAsync
-        // ──────────────────────────────────────────────
-
         public async Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams, string ownerType = "mailreport")
         {
             var vm = await LoadForFormAsync(reportId, ownerType);
@@ -271,35 +149,6 @@ namespace TMSBilling.Services
             return ms.ToArray();
         }
 
-        //public async Task<byte[]> BuildAsync(int reportId, Dictionary<string, string> eventParams, string ownerType = "mailreport")
-        //{
-        //    var vm = await LoadForFormAsync(reportId, ownerType);
-
-        //    // DEBUG
-        //    Console.WriteLine($"[BuildAsync] reportId={reportId}, ownerType={ownerType}");
-        //    Console.WriteLine($"[BuildAsync] layout.ID={vm.Layout.ID}, use_custom={vm.Layout.use_custom_layout}");
-        //    Console.WriteLine($"[BuildAsync] sheets count={vm.Sheets.Count}");
-
-
-        //    var resolvedTitle = Resolve(vm.Layout.report_title ?? "", eventParams);
-        //    var resolvedSubtitle = Resolve(vm.Layout.report_subtitle ?? "", eventParams);
-
-        //    using var wb = new XLWorkbook();
-
-        //    foreach (var sheetVM in vm.Sheets.OrderBy(s => s.Sheet.sort_order))
-        //    {
-        //        var sheetName = SanitizeSheetName(Resolve(sheetVM.Sheet.sheet_name, eventParams));
-        //        var ws = wb.Worksheets.Add(sheetName);
-        //        await BuildSheetAsync(ws, sheetVM, vm.Layout, resolvedTitle, resolvedSubtitle, eventParams);
-        //    }
-
-        //    if (!wb.Worksheets.Any())
-        //        wb.Worksheets.Add("Sheet1");
-
-        //    using var ms = new MemoryStream();
-        //    wb.SaveAs(ms);
-        //    return ms.ToArray();
-        //}
 
         // ──────────────────────────────────────────────
         // BuildSheetAsync
@@ -410,7 +259,7 @@ namespace TMSBilling.Services
 
             var groups = GroupSections(sheetVM.Sections.OrderBy(s => s.sort_order).ToList());
 
-            int? freezeRow = null; // baris yang akan di-freeze
+            // int? freezeRow = null; // baris yang akan di-freeze
 
             foreach (var group in groups)
             {
@@ -422,17 +271,17 @@ namespace TMSBilling.Services
                     {
                         var dt = await RunQueryAsync(sec, eventParams);
                         // Catat posisi header row pertama untuk freeze
-                        if (freezeRow == null && sec.display_mode != "KEY_VALUE" && dt.Rows.Count > 0)
-                        {
-                            int headerRow = currentRow;
-                            if (!string.IsNullOrWhiteSpace(sec.section_title)) headerRow++;
+                        //if (freezeRow == null && sec.display_mode != "KEY_VALUE" && dt.Rows.Count > 0)
+                        //{
+                        //    int headerRow = currentRow;
+                        //    if (!string.IsNullOrWhiteSpace(sec.section_title)) headerRow++;
 
-                            // Header biasa memakai 1 baris; grouped header memakai 2 baris.
-                            // freezeRow disimpan dengan konvensi lama agar AutoFilter tetap
-                            // diarahkan ke baris header kolom paling bawah.
-                            bool hasGroupedHeader = HasEffectiveColumnGroups(sec, GetVisibleColumns(sec, dt));
-                            freezeRow = headerRow + (hasGroupedHeader ? 2 : 1);
-                        }
+                        //    // Header biasa memakai 1 baris; grouped header memakai 2 baris.
+                        //    // freezeRow disimpan dengan konvensi lama agar AutoFilter tetap
+                        //    // diarahkan ke baris header kolom paling bawah.
+                        //    bool hasGroupedHeader = HasEffectiveColumnGroups(sec, GetVisibleColumns(sec, dt));
+                        //    freezeRow = headerRow + (hasGroupedHeader ? 2 : 1);
+                        //}
                         currentRow = RenderSection(ws, sec, dt, currentRow, 1, eventParams);
                         currentRow += sec.bottom_gap > 0 ? sec.bottom_gap : 2;
                     }
@@ -458,17 +307,17 @@ namespace TMSBilling.Services
             }
 
             // ── Freeze panes — beku di bawah header row ──
-            if (freezeRow.HasValue && freezeRow.Value > 1)
-                ws.SheetView.FreezeRows(freezeRow.Value - 1);
+            //if (freezeRow.HasValue && freezeRow.Value > 1)
+            //    ws.SheetView.FreezeRows(freezeRow.Value - 1);
 
             // ── Auto filter pada header row pertama ───────
-            if (freezeRow.HasValue)
-            {
-                var headerRowNum = freezeRow.Value - 1;
-                var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 1;
-                if (lastCol > 1)
-                    ws.Range(headerRowNum, 1, headerRowNum, lastCol).SetAutoFilter();
-            }
+            //if (freezeRow.HasValue)
+            //{
+            //    var headerRowNum = freezeRow.Value - 1;
+            //    var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 1;
+            //    if (lastCol > 1)
+            //        ws.Range(headerRowNum, 1, headerRowNum, lastCol).SetAutoFilter();
+            //}
         }
 
         // ──────────────────────────────────────────────
