@@ -547,11 +547,21 @@ namespace TMSBilling.Services
                              formatType == "percentage" ||
                              formatType == "general"))
                         {
-                            valCell.Value = Convert.ToDouble(rawValue);
+                            //valCell.Value = Convert.ToDouble(rawValue);
+                            //ApplyColumnFormat(
+                            //    valCell,
+                            //    columnFormats,
+                            //    col.ColumnName);
+
+                            double numericValue = Convert.ToDouble(rawValue);
+
+                            valCell.Value = numericValue;
+
                             ApplyColumnFormat(
                                 valCell,
                                 columnFormats,
-                                col.ColumnName);
+                                col.ColumnName,
+                                numericValue);
                         }
                         // Tanggal tetap menjadi nilai tanggal Excel
                         // jika preset date/datetime dipilih.
@@ -646,15 +656,25 @@ namespace TMSBilling.Services
                     // Numeric columns
                     if (numericCols.Contains(colName))
                     {
-                        cell.Value = Convert.ToDouble(rawVal);
+                        //cell.Value = Convert.ToDouble(rawVal);
+
+                        double numericValue = Convert.ToDouble(rawVal);
+
+                        cell.Value = numericValue;
 
                         cell.Style.Alignment.Horizontal =
                             XLAlignmentHorizontalValues.Right;
 
                         ApplyColumnFormat(
-                            cell,
-                            columnFormats,
-                            colName);
+                        cell,
+                        columnFormats,
+                        colName,
+                        numericValue);
+
+                        //ApplyColumnFormat(
+                        //    cell,
+                        //    columnFormats,
+                        //    colName);
 
                         // Accumulate grand total
                         if (sec.show_grand_total == 1)
@@ -766,16 +786,26 @@ namespace TMSBilling.Services
                         }
                         else if (totals.TryGetValue(colName, out var total))
                         {
-                            cell.Value = (double)total;
+                            //cell.Value = (double)total;
+
+                            double totalValue = (double)total;
+
+                            cell.Value = totalValue;
 
                             cell.Style.Alignment.Horizontal =
                                 XLAlignmentHorizontalValues.Right;
 
                             // Samakan format total dengan format kolom.
+                            //ApplyColumnFormat(
+                            //    cell,
+                            //    columnFormats,
+                            //    colName);
+
                             ApplyColumnFormat(
-                                cell,
-                                columnFormats,
-                                colName);
+                            cell,
+                            columnFormats,
+                            colName,
+                            totalValue);
                         }
                     }
                 }
@@ -1481,12 +1511,35 @@ namespace TMSBilling.Services
         private void ApplyColumnFormat(
             IXLCell cell,
             Dictionary<string, ColumnFormatDefinition> formats,
-            string columnName)
+            string columnName,
+            double? numericValue = null)
         {
             if (!formats.TryGetValue(columnName, out var config))
                 return;
 
-            var numberFormat = GetExcelNumberFormat(config);
+            string? numberFormat;
+
+            if (string.Equals(
+                    config.format?.Trim(),
+                    "number_auto",
+                    StringComparison.OrdinalIgnoreCase)
+                && numericValue.HasValue)
+            {
+                double value = numericValue.Value;
+
+                // Bilangan bulat: tanpa pemisah desimal.
+                // Bilangan pecahan: tampilkan hingga 4 desimal.
+                bool isInteger =
+                    Math.Abs(value - Math.Round(value)) < 0.0000001;
+
+                numberFormat = isInteger
+                    ? "#,##0"
+                    : "#,##0.####";
+            }
+            else
+            {
+                numberFormat = GetExcelNumberFormat(config);
+            }
 
             if (!string.IsNullOrWhiteSpace(numberFormat))
                 cell.Style.NumberFormat.Format = numberFormat;
