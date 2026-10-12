@@ -443,67 +443,179 @@ namespace TMSBilling.Services
         {
             int row = startRow;
             var visibleCols = GetVisibleColumns(sec, dt);
+            var columnFormats = GetColumnFormats(sec);
             int colCount = Math.Max(visibleCols.Count, 1);
+
+            var numericTypes = new[]
+            {
+        typeof(int),
+        typeof(long),
+        typeof(short),
+        typeof(byte),
+        typeof(decimal),
+        typeof(double),
+        typeof(float)
+    };
 
             // Section title
             if (!string.IsNullOrWhiteSpace(sec.section_title))
             {
-                //var titleText = Resolve(sec.section_title, eventParams);
-                var titleText = ResolveWithDataTable(sec.section_title, dt, eventParams);
-                var titleRange = ws.Range(row, startCol, row, startCol + colCount - 1);
+                var titleText = ResolveWithDataTable(
+                    sec.section_title,
+                    dt,
+                    eventParams);
+
+                var titleRange = ws.Range(
+                    row,
+                    startCol,
+                    row,
+                    startCol + colCount - 1);
+
                 titleRange.Merge();
                 titleRange.FirstCell().Value = titleText;
                 titleRange.Style.Font.Bold = true;
-                titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                SetFill(titleRange.Style.Fill, sec.title_bg_color ?? "FFD700");
-                SetFontColor(titleRange.Style.Font, sec.title_font_color ?? "000000");
-                titleRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                titleRange.Style.Alignment.Horizontal =
+                    XLAlignmentHorizontalValues.Center;
+
+                SetFill(
+                    titleRange.Style.Fill,
+                    sec.title_bg_color ?? "FFD700");
+
+                SetFontColor(
+                    titleRange.Style.Font,
+                    sec.title_font_color ?? "000000");
+
+                titleRange.Style.Border.OutsideBorder =
+                    XLBorderStyleValues.Thin;
+
                 row++;
             }
 
+            // Empty data
             if (dt.Rows.Count == 0)
             {
                 ws.Cell(row, startCol).Value = "Tidak ada data.";
                 ws.Cell(row, startCol).Style.Font.Italic = true;
                 ws.Cell(row, startCol).Style.Font.FontColor = XLColor.Gray;
+
                 return row + 1;
             }
 
+            // ──────────────────────────────────────────
             // KEY_VALUE mode
+            // ──────────────────────────────────────────
             if (sec.display_mode == "KEY_VALUE")
             {
                 foreach (DataColumn col in dt.Columns)
                 {
-                    if (!visibleCols.Contains(col.ColumnName)) continue;
+                    if (!visibleCols.Contains(col.ColumnName))
+                        continue;
+
                     var keyCell = ws.Cell(row, startCol);
+
                     keyCell.Value = col.ColumnName;
                     keyCell.Style.Font.Bold = true;
-                    keyCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F9FC");
-                    keyCell.Style.Border.OutsideBorder = XLBorderStyleValues.Hair;
+                    keyCell.Style.Fill.BackgroundColor =
+                        XLColor.FromHtml("#F7F9FC");
+                    keyCell.Style.Border.OutsideBorder =
+                        XLBorderStyleValues.Hair;
+
                     var valCell = ws.Cell(row, startCol + 1);
-                    valCell.Value = FormatCell(dt.Rows[0][col.ColumnName], col);
-                    valCell.Style.Border.OutsideBorder = XLBorderStyleValues.Hair;
+                    var rawValue = dt.Rows[0][col.ColumnName];
+
+                    valCell.Style.Border.OutsideBorder =
+                        XLBorderStyleValues.Hair;
+
+                    if (rawValue == DBNull.Value || rawValue == null)
+                    {
+                        valCell.Value = "";
+                    }
+                    else if (columnFormats.TryGetValue(
+                                 col.ColumnName,
+                                 out var formatConfig))
+                    {
+                        var formatType = formatConfig.format?
+                            .Trim()
+                            .ToLowerInvariant();
+
+                        // Angka tetap berupa nilai numerik di Excel
+                        // jika preset numerik dipilih.
+                        if (numericTypes.Contains(col.DataType) &&
+                            (formatType == "number" ||
+                             formatType == "number_auto" ||
+                             formatType == "currency" ||
+                             formatType == "percentage" ||
+                             formatType == "general"))
+                        {
+                            valCell.Value = Convert.ToDouble(rawValue);
+                            ApplyColumnFormat(
+                                valCell,
+                                columnFormats,
+                                col.ColumnName);
+                        }
+                        // Tanggal tetap menjadi nilai tanggal Excel
+                        // jika preset date/datetime dipilih.
+                        else if (rawValue is DateTime dateValue &&
+                                 (formatType == "date" ||
+                                  formatType == "datetime"))
+                        {
+                            valCell.Value = dateValue;
+                            ApplyColumnFormat(
+                                valCell,
+                                columnFormats,
+                                col.ColumnName);
+                        }
+                        // TimeSpan disimpan sebagai pecahan satu hari
+                        // agar Excel dapat menampilkannya sebagai waktu.
+                        else if (rawValue is TimeSpan timeValue &&
+                                 formatType == "time")
+                        {
+                            valCell.Value = timeValue.TotalDays;
+                            ApplyColumnFormat(
+                                valCell,
+                                columnFormats,
+                                col.ColumnName);
+                        }
+                        else
+                        {
+                            // Perilaku default tetap dipertahankan.
+                            valCell.Value = FormatCell(rawValue, col);
+                        }
+                    }
+                    else
+                    {
+                        // Section lama tanpa konfigurasi tetap sama.
+                        valCell.Value = FormatCell(rawValue, col);
+                    }
+
                     row++;
                 }
+
                 return row;
             }
 
+            // ──────────────────────────────────────────
             // TABLE mode
-            var numericTypes = new[]
-            {
-                typeof(int), typeof(long), typeof(short), typeof(byte),
-                typeof(decimal), typeof(double), typeof(float)
-            };
-            var numericCols = visibleCols
-                .Where(c => dt.Columns.Contains(c) && numericTypes.Contains(dt.Columns[c]!.DataType))
-                .ToHashSet();
+            // ──────────────────────────────────────────
 
-            // Header kolom. Bila column_groups tidak diisi/valid, renderer memakai
-            // header satu baris lama agar section existing tidak berubah.
-            row += RenderTableHeader(ws, sec, visibleCols, row, startCol);
+            var numericCols = visibleCols
+                .Where(c =>
+                    dt.Columns.Contains(c) &&
+                    numericTypes.Contains(dt.Columns[c]!.DataType))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Header kolom
+            row += RenderTableHeader(
+                ws,
+                sec,
+                visibleCols,
+                row,
+                startCol);
 
             // Data rows
-            var totals = new Dictionary<string, decimal>();
+            var totals = new Dictionary<string, decimal>(
+                StringComparer.OrdinalIgnoreCase);
+
             int dataRowStart = row;
 
             foreach (DataRow dataRow in dt.Rows)
@@ -512,38 +624,112 @@ namespace TMSBilling.Services
                 {
                     var colName = visibleCols[c];
                     var cell = ws.Cell(row, startCol + c);
-                    cell.Style.Border.BottomBorder = XLBorderStyleValues.Hair;
 
-                    if (!dt.Columns.Contains(colName)) { cell.Value = ""; continue; }
+                    cell.Style.Border.BottomBorder =
+                        XLBorderStyleValues.Hair;
+
+                    if (!dt.Columns.Contains(colName))
+                    {
+                        cell.Value = "";
+                        continue;
+                    }
 
                     var rawVal = dataRow[colName];
                     var colDef = dt.Columns[colName]!;
 
-                    if (numericCols.Contains(colName) && rawVal != DBNull.Value)
+                    if (rawVal == DBNull.Value || rawVal == null)
+                    {
+                        cell.Value = "";
+                        continue;
+                    }
+
+                    // Numeric columns
+                    if (numericCols.Contains(colName))
                     {
                         cell.Value = Convert.ToDouble(rawVal);
-                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+                        cell.Style.Alignment.Horizontal =
+                            XLAlignmentHorizontalValues.Right;
+
+                        ApplyColumnFormat(
+                            cell,
+                            columnFormats,
+                            colName);
+
+                        // Accumulate grand total
                         if (sec.show_grand_total == 1)
                         {
-                            if (!totals.ContainsKey(colName)) totals[colName] = 0;
+                            if (!totals.ContainsKey(colName))
+                                totals[colName] = 0;
+
                             totals[colName] += Convert.ToDecimal(rawVal);
                         }
                     }
                     else
                     {
+                        // Default formatting for existing columns
                         cell.Value = FormatCell(rawVal, colDef);
+
+                        // Apply native Excel date format when configured
+                        if (rawVal is DateTime dateValue &&
+                            columnFormats.TryGetValue(
+                                colName,
+                                out var formatConfig))
+                        {
+                            var formatType = formatConfig.format?
+                                .Trim()
+                                .ToLowerInvariant();
+
+                            if (formatType == "date" ||
+                                formatType == "datetime")
+                            {
+                                cell.Value = dateValue;
+
+                                ApplyColumnFormat(
+                                    cell,
+                                    columnFormats,
+                                    colName);
+                            }
+                        }
+                        // Apply native Excel time formatting when configured
+                        else if (rawVal is TimeSpan timeValue &&
+                                 columnFormats.TryGetValue(
+                                     colName,
+                                     out var timeFormatConfig) &&
+                                 timeFormatConfig.format?
+                                     .Trim()
+                                     .Equals(
+                                         "time",
+                                         StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            cell.Value = timeValue.TotalDays;
+
+                            ApplyColumnFormat(
+                                cell,
+                                columnFormats,
+                                colName);
+                        }
                     }
                 }
 
+                // Alternating row background
                 if ((row - dataRowStart) % 2 == 1)
                 {
-                    ws.Range(row, startCol, row, startCol + visibleCols.Count - 1)
-                      .Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F9FC");
+                    ws.Range(
+                            row,
+                            startCol,
+                            row,
+                            startCol + visibleCols.Count - 1)
+                        .Style.Fill.BackgroundColor =
+                            XLColor.FromHtml("#F7F9FC");
                 }
+
                 row++;
             }
 
+            // ──────────────────────────────────────────
             // Grand Total
+            // ──────────────────────────────────────────
             if (sec.show_grand_total == 1)
             {
                 var label = sec.grand_total_label ?? "TOTAL";
@@ -553,26 +739,47 @@ namespace TMSBilling.Services
                 {
                     var colName = visibleCols[c];
                     var cell = ws.Cell(row, startCol + c);
-                    SetFill(cell.Style.Fill, sec.total_bg_color ?? "FFD700");
+
+                    SetFill(
+                        cell.Style.Fill,
+                        sec.total_bg_color ?? "FFD700");
+
                     cell.Style.Font.Bold = true;
-                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorder =
+                        XLBorderStyleValues.Thin;
 
                     if (!labelPlaced && !numericCols.Contains(colName))
                     {
                         cell.Value = label;
-                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+                        cell.Style.Alignment.Horizontal =
+                            XLAlignmentHorizontalValues.Right;
+
                         labelPlaced = true;
                     }
                     else if (numericCols.Contains(colName))
                     {
-                        if (!labelPlaced) { cell.Value = label; labelPlaced = true; }
-                        else if (totals.TryGetValue(colName, out var t))
+                        if (!labelPlaced)
                         {
-                            cell.Value = (double)t;
-                            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            cell.Value = label;
+                            labelPlaced = true;
+                        }
+                        else if (totals.TryGetValue(colName, out var total))
+                        {
+                            cell.Value = (double)total;
+
+                            cell.Style.Alignment.Horizontal =
+                                XLAlignmentHorizontalValues.Right;
+
+                            // Samakan format total dengan format kolom.
+                            ApplyColumnFormat(
+                                cell,
+                                columnFormats,
+                                colName);
                         }
                     }
                 }
+
                 row++;
             }
 
@@ -1165,5 +1372,126 @@ namespace TMSBilling.Services
                 _logger.LogWarning(ex, "Gagal hapus file logo lama: {Path}", relativePath);
             }
         }
+
+
+
+
+
+    
+        private sealed class ColumnFormatDefinition
+        {
+            public string? format { get; set; }
+            public string? currency { get; set; }
+            public int? decimals { get; set; }
+        }
+
+        private Dictionary<string, ColumnFormatDefinition> GetColumnFormats(
+            MailReportExcelSection sec)
+        {
+            if (string.IsNullOrWhiteSpace(sec.column_formats))
+                return new Dictionary<string, ColumnFormatDefinition>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                return JsonSerializer.Deserialize<
+                    Dictionary<string, ColumnFormatDefinition>>(
+                        sec.column_formats,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        })
+                    ?? new Dictionary<string, ColumnFormatDefinition>(
+                        StringComparer.OrdinalIgnoreCase);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "ExcelLayout: column_formats JSON tidak valid pada section [{Label}]",
+                    sec.section_label);
+
+                return new Dictionary<string, ColumnFormatDefinition>(
+                    StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private string? GetExcelNumberFormat(ColumnFormatDefinition? config)
+        {
+            if (config == null)
+                return null;
+
+            int decimals = Math.Clamp(config.decimals ?? 2, 0, 4);
+
+            string decimalPart = decimals > 0
+                ? "." + new string('0', decimals)
+                : "";
+
+            string numberPattern = "#,##0" + decimalPart;
+
+            return config.format?.Trim().ToLowerInvariant() switch
+            {
+                "general" => "General",
+
+                "number" => numberPattern,
+
+                "number_auto" => "#,##0.####",
+
+                "currency" => GetCurrencyNumberFormat(
+                    config.currency,
+                    numberPattern),
+
+                "percentage" => "0" +
+                    (decimals > 0 ? "." + new string('0', decimals) : "") + "%",
+
+                "date" => "yyyy-mm-dd",
+
+                "datetime" => "yyyy-mm-dd hh:mm",
+
+                "time" => "hh:mm:ss",
+
+                "text" => "@",
+
+                _ => null
+            };
+        }
+
+        private string GetCurrencyNumberFormat(
+            string? currency,
+            string numberPattern)
+        {
+            // Simbol mata uang dibatasi ke daftar yang dikenal.
+            string symbol = currency?.Trim().ToUpperInvariant() switch
+            {
+                "IDR" => "Rp",
+                "USD" => "$",
+                "EUR" => "€",
+                "SGD" => "S$",
+                "JPY" => "¥",
+                _ => ""
+            };
+
+            if (string.IsNullOrEmpty(symbol))
+                return numberPattern;
+
+            // Simbol menjadi bagian dari format tampilan Excel.
+            return "\"" + symbol + "\" " + numberPattern;
+        }
+
+        private void ApplyColumnFormat(
+            IXLCell cell,
+            Dictionary<string, ColumnFormatDefinition> formats,
+            string columnName)
+        {
+            if (!formats.TryGetValue(columnName, out var config))
+                return;
+
+            var numberFormat = GetExcelNumberFormat(config);
+
+            if (!string.IsNullOrWhiteSpace(numberFormat))
+                cell.Style.NumberFormat.Format = numberFormat;
+        }
+
+
     }
 }

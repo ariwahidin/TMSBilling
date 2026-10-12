@@ -309,6 +309,16 @@
         color: #aaa;
         cursor: grab;
     }
+
+    .el-column-format-row {
+        background: #fff;
+    }
+
+        .el-column-format-row .form-label {
+            margin-bottom: .15rem;
+            font-size: .66rem;
+            color: #6c757d;
+        }
 </style>
 
 @section Scripts {
@@ -671,6 +681,17 @@
                             <div class="col-picker-tags el-tags d-flex flex-wrap gap-1"></div>
                         </div>
                     </div>
+                    <div class="mb-2 el-column-formats-wrap">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0" style="font-size:.7rem;">
+                                Excel Column Formatting
+                                <span class="text-muted" style="font-size:.65rem;">— preset format per kolom</span>
+                            </label>
+                        </div>
+                        <input type="hidden" class="el-sec-columnformats" value="{}" />
+                        <div class="el-column-formats"></div>
+                        <div class="placeholder-hint">Format berlaku untuk output Excel. Currency symbol diatur terpisah dari preset Currency. Kolom yang tidak ada lagi di query tetap dipertahankan konfigurasinya.</div>
+                    </div>
                     <div class="mb-2 el-column-groups-wrap">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label mb-0" style="font-size:.7rem;">Column Header Groups <span class="text-muted" style="font-size:.65rem;">— opsional, tampilan header Excel dan PDF</span></label>
@@ -701,6 +722,11 @@
             const initialGroups = elParseColumnGroups(sec.column_groups);
             card.find('.el-sec-colgroups').val(JSON.stringify(initialGroups));
             elRenderColumnGroups(card, initialGroups);
+
+            const initialFormats = elParseColumnFormats(sec.column_formats);
+            card.find('.el-sec-columnformats').val(JSON.stringify(initialFormats));
+            elRenderColumnFormats(card, initialFormats);
+
             return card;
         }
 
@@ -713,9 +739,12 @@
 
             // Toggle aktif/nonaktif
             el.addEventListener('click', () => {
+                const currentFormats = elReadColumnFormats(card);
                 el.classList.toggle('active');
                 elSyncCols(card);
                 elRenderColumnGroups(card, elReadColumnGroups(card));
+                elRenderColumnFormats(card, currentFormats);
+                markElDirty();
             });
 
             // Drag & drop reorder
@@ -747,6 +776,184 @@
                 card.find('.el-tags .col-tag.active').map((_,el) => $(el).data('col')).get().join(', ')
             );
         }
+
+        // ── Excel Column Formatting ──
+        const EL_COLUMN_FORMAT_OPTIONS = [
+            { value:'general',    label:'General' },
+            { value:'number',     label:'Number' },
+            { value: 'number_auto',  label: 'Number (Auto Decimals)' },
+            { value:'currency',   label:'Currency' },
+            { value:'percentage', label:'Percentage' },
+            { value:'date',       label:'Date' },
+            { value:'datetime',   label:'DateTime' },
+            { value:'time',       label:'Time' },
+            { value:'text',       label:'Text' }
+        ];
+
+        const EL_CURRENCY_OPTIONS = [
+            { value:'IDR', label:'IDR — Rp' },
+            { value:'USD', label:'USD — $' },
+            { value:'EUR', label:'EUR — €' },
+            { value:'SGD', label:'SGD — S$' },
+            { value:'JPY', label:'JPY — ¥' }
+        ];
+
+        function elParseColumnFormats(value) {
+            if (!value) return {};
+
+            let parsed = value;
+            if (typeof value === 'string') {
+                try { parsed = JSON.parse(value); }
+                catch (_) { return {}; }
+            }
+
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+                return {};
+
+            const result = {};
+            Object.entries(parsed).forEach(([column, cfg]) => {
+                if (!column || !cfg || typeof cfg !== 'object') return;
+
+                const requestedFormat = String(cfg.format || 'general').toLowerCase();
+                const allowed = EL_COLUMN_FORMAT_OPTIONS.some(x => x.value === requestedFormat);
+                const decimalsValue = Number.parseInt(cfg.decimals, 10);
+                result[column] = {
+                    format: allowed ? requestedFormat : 'general',
+                    currency: EL_CURRENCY_OPTIONS.some(x => x.value === String(cfg.currency || '').toUpperCase())
+                        ? String(cfg.currency).toUpperCase()
+                        : 'IDR',
+                    decimals: Number.isNaN(decimalsValue)
+                        ? 2
+                        : Math.max(0, Math.min(4, decimalsValue))
+                };
+            });
+
+            return result;
+        }
+
+        function elFindColumnFormat(formats, column) {
+            if (Object.prototype.hasOwnProperty.call(formats, column))
+                return formats[column];
+
+            const key = Object.keys(formats).find(
+                x => x.toLowerCase() === String(column).toLowerCase());
+            return key ? formats[key] : null;
+        }
+
+        function elReadColumnFormats(card) {
+            // Mulai dari hidden JSON agar konfigurasi kolom yang sedang tidak
+            // ada dalam query tetap tidak hilang saat Test Query dijalankan ulang.
+            const result = elParseColumnFormats(card.find('.el-sec-columnformats').val());
+
+            card.find('.el-column-format-row').each(function () {
+                const item = $(this);
+                const column = String(item.attr('data-col') || '');
+                if (!column) return;
+
+                const parsedDecimals = Number.parseInt(item.find('.el-colformat-decimals').val(), 10);
+                result[column] = {
+                    format: item.find('.el-colformat-format').val() || 'general',
+                    currency: item.find('.el-colformat-currency').val() || 'IDR',
+                    decimals: Number.isNaN(parsedDecimals)
+                        ? 2
+                        : Math.max(0, Math.min(4, parsedDecimals))
+                };
+            });
+
+            return result;
+        }
+
+        function elRenderColumnFormats(card, formats) {
+            const host = card.find('.el-column-formats').empty();
+            const safeFormats = elParseColumnFormats(formats);
+            const available = card.find('.el-tags .col-tag').map((_, el) => String($(el).data('col'))).get();
+            const columns = [...available];
+
+            // Preserve existing configuration when a column is temporarily
+            // absent from the current query result.
+            Object.keys(safeFormats).forEach(column => {
+                if (!columns.some(x => x.toLowerCase() === column.toLowerCase()))
+                    columns.push(column);
+            });
+
+            card.find('.el-sec-columnformats').val(JSON.stringify(safeFormats));
+
+            if (!columns.length) {
+                host.html('<div class="text-muted border rounded p-2" style="font-size:.7rem;">Jalankan Test Query terlebih dahulu untuk memuat daftar kolom.</div>');
+                return;
+            }
+
+            const currencyOptions = EL_CURRENCY_OPTIONS.map(x =>
+                `<option value="${x.value}">${x.label}</option>`).join('');
+            const formatOptions = EL_COLUMN_FORMAT_OPTIONS.map(x =>
+                `<option value="${x.value}">${x.label}</option>`).join('');
+
+            columns.forEach(column => {
+                const cfg = elFindColumnFormat(safeFormats, column) || {
+                    format: 'general', currency: 'IDR', decimals: 2
+                };
+                const tag = card.find('.el-tags .col-tag').filter((_, el) =>
+                    String($(el).data('col')).toLowerCase() === column.toLowerCase()).first();
+                const isKnown = tag.length > 0;
+                const isActive = isKnown && tag.hasClass('active');
+                const formatType = String(cfg.format || 'general').toLowerCase();
+                const showCurrency = formatType === 'currency';
+                const showDecimals = ['number', 'currency', 'percentage'].includes(formatType);
+                const status = !isKnown
+                    ? '<span class="badge bg-light text-secondary border ms-1">Not in query</span>'
+                    : (isActive
+                        ? '<span class="badge bg-success-subtle text-success border ms-1">Active</span>'
+                        : '<span class="badge bg-secondary-subtle text-secondary border ms-1">Hidden</span>');
+
+                const item = $(`
+                    <div class="el-column-format-row border rounded p-2 mb-1" data-col="${elEsc(column)}">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <div class="small fw-semibold text-break mb-1">${elEsc(column)} ${status}</div>
+                                <label class="form-label">Format preset</label>
+                                <select class="form-select form-select-sm el-colformat-format">${formatOptions}</select>
+                            </div>
+                            <div class="col-md-3 el-colformat-currency-wrap" style="${showCurrency ? '' : 'display:none;'}">
+                                <label class="form-label">Currency symbol</label>
+                                <select class="form-select form-select-sm el-colformat-currency">${currencyOptions}</select>
+                            </div>
+                            <div class="col-md-2 el-colformat-decimals-wrap" style="${showDecimals ? '' : 'display:none;'}">
+                                <label class="form-label">Decimal places</label>
+                                <select class="form-select form-select-sm el-colformat-decimals">
+                                    <option value="0">0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 text-muted" style="font-size:.68rem;">
+                                ${formatType === 'percentage'
+                                    ? 'Persentase ditampilkan dari nilai numerik (contoh 0.25 menjadi 25%).'
+                                    : (formatType === 'currency'
+                                        ? 'Simbol mata uang ditentukan terpisah dari angka dan desimal.'
+                                        : 'Preset hanya mengatur tampilan Excel, bukan mengubah query SQL.')}
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                item.find('.el-colformat-format').val(formatType);
+                item.find('.el-colformat-currency').val(cfg.currency || 'IDR');
+                item.find('.el-colformat-decimals').val(String(cfg.decimals ?? 2));
+                host.append(item);
+            });
+        }
+
+        $(document).on('change', '.el-colformat-format, .el-colformat-currency, .el-colformat-decimals', function () {
+            const card = $(this).closest('[data-secidx]');
+            const row = $(this).closest('.el-column-format-row');
+            const formatType = row.find('.el-colformat-format').val();
+            row.find('.el-colformat-currency-wrap').toggle(formatType === 'currency');
+            row.find('.el-colformat-decimals-wrap').toggle(['number', 'currency', 'percentage'].includes(formatType));
+            card.find('.el-sec-columnformats').val(JSON.stringify(elReadColumnFormats(card)));
+            markElDirty();
+        });
 
         const EL_COLUMN_GROUP_PALETTE = [
             { groupBg:'D9EAF7', groupFg:'17365D', columnBg:'EAF3F8', columnFg:'17365D' },
@@ -904,12 +1111,17 @@
             $(this).prop('disabled',false).html('<i class="bi bi-play-circle me-1"></i>Test Query');
             if (!data.ok) { res.show().html(`<div class="alert alert-danger py-1 mb-0" style="font-size:.7rem;">${data.message}</div>`); return; }
             const existingGroups = elReadColumnGroups(card);
+            const existingFormats = elReadColumnFormats(card);
             const tags = card.find('.el-tags').empty();
             card.find('.col-picker-hint').addClass('hidden');
             const ex = (card.find('.el-sec-cols').val()||'').split(',').map(s=>s.trim()).filter(Boolean);
-            data.columns.forEach(col => tags.append(elMakeTag(col, !ex.length||ex.includes(col), card)));
+            data.columns.forEach(col => {
+                const isSelected = !ex.length || ex.some(x => x.toLowerCase() === String(col).toLowerCase());
+                tags.append(elMakeTag(col, isSelected, card));
+            });
             elSyncCols(card);
             elRenderColumnGroups(card, existingGroups);
+            elRenderColumnFormats(card, existingFormats);
             let tbl = `<div style="overflow-x:auto;max-height:150px;"><table class="table table-bordered table-sm mb-0" style="font-size:.68rem;white-space:nowrap;"><thead><tr>`;
             data.columns.forEach(c => tbl += `<th>${c}</th>`);
             tbl += `</tr></thead><tbody>`;
@@ -943,7 +1155,7 @@
             const si = $(this).closest('[data-si]').data('si');
             elCollect();
             elData.sheets[si].sections.push({
-                section_label:'New Section', sql_query:'', sql_where:'', visible_columns:'', column_groups:'[]',
+                section_label:'New Section', sql_query:'', sql_where:'', visible_columns:'', column_groups:'[]', column_formats:'{}',
                 layout:'vertical', group_id:0, side_gap:1, bottom_gap:2, display_mode:'TABLE',
                 section_title:'', title_bg_color:'FFD700', title_font_color:'000000',
                 header_bg_color:'FFD700', header_font_color:'000000',
@@ -993,6 +1205,7 @@
                         sql_where:         '',
                         visible_columns:   $(this).find('.el-sec-cols').val(),
                         column_groups:     JSON.stringify(elReadColumnGroups($(this))),
+                        column_formats:    JSON.stringify(elReadColumnFormats($(this))),
                         layout:            $(this).find('.el-sec-layout').val(),
                         group_id:          parseInt($(this).find('.el-sec-group').val())||0,
                         // side_gap:          parseInt($(this).find('.el-sec-sidegap').val())||1,

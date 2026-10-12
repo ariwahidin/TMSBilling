@@ -2417,6 +2417,9 @@ namespace TMSBilling.Migrations
                     b.Property<int>("bottom_gap")
                         .HasColumnType("int");
 
+                    b.Property<string>("column_formats")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("column_groups")
                         .HasColumnType("nvarchar(max)");
 
