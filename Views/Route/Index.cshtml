@@ -1,0 +1,607 @@
+﻿@model IEnumerable<TMSBilling.Models.RouteTable>
+
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Master Route";
+
+    var routes = Model?.ToList()
+        ?? new List<TMSBilling.Models.RouteTable>();
+
+    var activeCount = routes.Count(r => r.STATUS == "ACTIVE");
+    var inactiveCount = routes.Count(r => r.STATUS == "INACTIVE");
+}
+
+<style>
+    .route-register {
+        padding: 12px 18px 20px;
+        font-size: 12px;
+        color: #263445;
+    }
+
+        .route-register .page-title {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -.3px;
+            margin: 0;
+        }
+
+        .route-register .page-subtitle {
+            color: #7a8798;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .route-register .btn {
+            font-size: 12px;
+            border-radius: 5px;
+        }
+
+        .route-register .summary-strip {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 22px;
+            padding: 10px 0;
+            margin: 10px 0 14px;
+            border-top: 1px solid #e8edf3;
+            border-bottom: 1px solid #e8edf3;
+        }
+
+        .route-register .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+        }
+
+        .route-register .summary-label {
+            color: #748195;
+        }
+
+        .route-register .summary-value {
+            font-weight: 700;
+            font-size: 13px;
+            color: #27364a;
+        }
+
+        .route-register .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .route-register .search-wrap {
+            position: relative;
+            width: 300px;
+            max-width: 100%;
+        }
+
+            .route-register .search-wrap input {
+                height: 34px;
+                padding-left: 32px;
+                font-size: 12px;
+                border: 1px solid #dce3ec;
+                border-radius: 5px;
+            }
+
+        .route-register .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 9px;
+            color: #8995a5;
+            pointer-events: none;
+        }
+
+        .route-register .table-shell {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .route-register table {
+            margin-bottom: 0;
+            font-size: 12px;
+        }
+
+        .route-register thead th {
+            padding: 10px 12px;
+            background: #f5f7fa;
+            color: #627087;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .45px;
+            border-bottom: 1px solid #dfe6ee;
+            white-space: nowrap;
+        }
+
+        .route-register tbody td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #edf0f4;
+            vertical-align: middle;
+        }
+
+        .route-register tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .route-register tbody tr:hover {
+            background: #f8faff;
+        }
+
+        .route-register .route-code {
+            font-weight: 700;
+            color: #244f8f;
+            white-space: nowrap;
+        }
+
+        .route-register .route-name {
+            color: #68778b;
+            margin-top: 2px;
+            max-width: 230px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .route-register .location-name {
+            font-weight: 600;
+            color: #334155;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .route-register .location-city {
+            font-size: 11px;
+            color: #8a96a6;
+            margin-top: 2px;
+        }
+
+        .route-register .type-label {
+            display: inline-block;
+            background: #f1f5f9;
+            color: #536174;
+            border: 1px solid #e1e7ef;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .route-register .status-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .route-register .status-active {
+            color: #187447;
+            background: #eaf7ef;
+        }
+
+        .route-register .status-inactive {
+            color: #697586;
+            background: #f0f2f5;
+        }
+
+        .route-register .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .route-register .stop-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 25px;
+            height: 23px;
+            border-radius: 4px;
+            background: #f1f5f9;
+            border: 1px solid #e1e7ef;
+            font-weight: 700;
+        }
+
+        .route-register .customer-list {
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #526176;
+        }
+
+        .route-register .actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+            .route-register .actions .btn {
+                padding: 4px 8px;
+            }
+
+        .route-register .table-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 9px 12px;
+            background: #fafbfd;
+            border-top: 1px solid #e5eaf1;
+            color: #7b8797;
+            font-size: 11px;
+        }
+
+        .route-register .empty-state {
+            padding: 36px 12px;
+            text-align: center;
+            color: #758195;
+        }
+
+            .route-register .empty-state strong {
+                display: block;
+                color: #334155;
+                margin-bottom: 4px;
+            }
+
+        .route-register .alert {
+            font-size: 12px;
+            padding: 9px 12px;
+            margin-bottom: 12px;
+        }
+
+    @@media (max-width: 767px) {
+        .route-register {
+            padding: 10px;
+        }
+
+            .route-register .search-wrap {
+                width: 100%;
+            }
+
+            .route-register .toolbar {
+                align-items: stretch;
+            }
+
+                .route-register .toolbar .btn {
+                    align-self: flex-start;
+                }
+    }
+</style>
+
+<div class="container-fluid route-register">
+
+    <!-- Compact page header -->
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="text-secondary mb-1" style="font-size:11px">
+                Transportation Management / Master Data
+            </div>
+
+            <h1 class="page-title">Master Route</h1>
+
+            <div class="page-subtitle">
+                Manage route definitions, stop sequences, and customer assignments.
+            </div>
+        </div>
+
+        <a asp-controller="Route"
+           asp-action="Form"
+           class="btn btn-primary px-3 py-2">
+            <span class="me-1">+</span> Create Route
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3"
+             role="alert">
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Inline summary, no cards -->
+    <div class="summary-strip">
+        <div class="summary-item">
+            <span class="summary-label">Total Routes</span>
+            <span class="summary-value">@routes.Count</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="status-label status-active">
+                <span class="status-dot"></span> Active
+            </span>
+            <span class="summary-value">@activeCount</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="status-label status-inactive">
+                <span class="status-dot"></span> Inactive
+            </span>
+            <span class="summary-value">@inactiveCount</span>
+        </div>
+    </div>
+
+    <!-- Table toolbar -->
+    <div class="toolbar">
+        <div>
+            <div class="fw-bold" style="font-size:13px">Route Register</div>
+            <div class="text-secondary" style="font-size:11px">
+                Registered routes and operating status
+            </div>
+        </div>
+
+        <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+
+            <input type="search"
+                   id="routeSearch"
+                   class="form-control"
+                   placeholder="Search route, location, customer..." />
+        </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="table-shell">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="routeTable">
+                <thead>
+                    <tr>
+                        <th style="min-width:170px">ROUTE</th>
+                        <th>TYPE</th>
+                        <th style="min-width:150px">ORIGIN</th>
+                        <th style="min-width:150px">DESTINATION</th>
+                        <th class="text-center">STOPS</th>
+                        <th style="min-width:140px">CUSTOMERS</th>
+                        <th>STATUS</th>
+                        <th class="text-end" style="min-width:145px">ACTIONS</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (routes.Count == 0)
+                    {
+                        <tr id="emptyRoutesRow">
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <strong>No routes found</strong>
+                                    Create a route to get started.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var route in routes)
+                        {
+                            var stops = route.Stops
+                            .OrderBy(s => s.SEQUENCE_NO)
+                            .ToList();
+
+                            var origin = stops.FirstOrDefault(
+                            s => s.STOP_TYPE == "ORIGIN");
+
+                            var destination = stops.FirstOrDefault(
+                            s => s.STOP_TYPE == "DESTINATION");
+
+                            var lastStop = stops.LastOrDefault();
+
+                            var destinationName =
+                            destination?.Geofence?.FenceName
+                            ?? lastStop?.Geofence?.FenceName
+                            ?? "-";
+
+                            var destinationCity =
+                            destination?.Geofence?.City
+                            ?? lastStop?.Geofence?.City
+                            ?? "";
+
+                            var customerCodes = string.Join(", ",
+                            route.CustomerAssignments
+                            .Select(c => c.CUSTOMER_CODE)
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .Distinct()
+                            .OrderBy(c => c));
+
+                            <tr>
+                                <td>
+                                    <div class="route-code">
+                                        @route.ROUTE_CODE
+                                    </div>
+
+                                    <div class="route-name"
+                                         title="@route.ROUTE_NAME">
+                                        @route.ROUTE_NAME
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="type-label">
+                                        @(route.ROUTE_TYPE == "ROUND_TRIP"
+                                                                        ? "ROUND TRIP"
+                                                                        : "MULTI STOP")
+                            </span>
+                        </td>
+
+                                <td>
+                                    <div class="location-name"
+                                         title="@origin?.Geofence?.FenceName">
+                                        @(origin?.Geofence?.FenceName ?? "-")
+                                    </div>
+
+                            @if (!string.IsNullOrWhiteSpace(origin?.Geofence?.City))
+                                    {
+                                        <div class="location-city">
+                                            @origin.Geofence.City
+                                        </div>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="location-name"
+                                         title="@destinationName">
+                                        @destinationName
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(destinationCity))
+                                    {
+                                        <div class="location-city">
+                                            @destinationCity
+                                        </div>
+                                    }
+                                </td>
+
+                                <td class="text-center">
+                                    <span class="stop-count">@stops.Count</span>
+                                </td>
+
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(customerCodes))
+                                    {
+                                        <span class="text-secondary">—</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="customer-list"
+                                             title="@customerCodes">
+                                            @customerCodes
+                                        </div>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (route.STATUS == "ACTIVE")
+                                    {
+                                        <span class="status-label status-active">
+                                            <span class="status-dot"></span>
+                                            Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-label status-inactive">
+                                            <span class="status-dot"></span>
+                                            Inactive
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="actions">
+                                        <a asp-controller="Route"
+                                           asp-action="Form"
+                                           asp-route-id="@route.ID"
+                                           class="btn btn-sm btn-outline-primary">
+                                            Edit
+                                        </a>
+
+                                        @if (route.STATUS == "ACTIVE")
+                                        {
+                                            <form asp-controller="Route"
+                                                  asp-action="Deactivate"
+                                                  asp-route-id="@route.ID"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to deactivate this route?');">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger">
+                                                    Deactivate
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-footer">
+            <span>
+                Showing <strong id="visibleRouteCount">@routes.Count</strong>
+                of <strong>@routes.Count</strong> routes
+            </span>
+
+            <span>Master Route</span>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const searchInput = document.getElementById('routeSearch');
+            const table = document.getElementById('routeTable');
+            const countLabel = document.getElementById('visibleRouteCount');
+
+            if (!searchInput || !table || !countLabel) return;
+
+            const rows = Array.from(
+                table.querySelectorAll('tbody tr')
+            ).filter(row => row.id !== 'emptyRoutesRow');
+
+            function filterRoutes() {
+                const keyword = searchInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    const matches = row.textContent
+                        .toLowerCase()
+                        .includes(keyword);
+
+                    row.hidden = !matches;
+
+                    if (matches) visibleCount++;
+                });
+
+                countLabel.textContent = visibleCount;
+
+                let emptySearchRow = document.getElementById('emptySearchRow');
+
+                if (visibleCount === 0 && rows.length > 0) {
+                    if (!emptySearchRow) {
+                        emptySearchRow = document.createElement('tr');
+                        emptySearchRow.id = 'emptySearchRow';
+
+                        const cell = document.createElement('td');
+                        cell.colSpan = 8;
+                        cell.className = 'text-center text-secondary py-4';
+                        cell.textContent = 'No routes match your search.';
+
+                        emptySearchRow.appendChild(cell);
+                        table.querySelector('tbody').appendChild(emptySearchRow);
+                    }
+
+                    emptySearchRow.hidden = false;
+                } else if (emptySearchRow) {
+                    emptySearchRow.hidden = true;
+                }
+            }
+
+            searchInput.addEventListener('input', filterRoutes);
+        })();
+    </script>
+}

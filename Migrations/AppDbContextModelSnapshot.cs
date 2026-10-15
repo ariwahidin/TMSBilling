@@ -4282,6 +4282,32 @@ namespace TMSBilling.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TMSBilling.Models.RouteCustomerAssignment", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("CREATED_AT")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CUSTOMER_CODE")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("ROUTE_ID")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("ROUTE_ID");
+
+                    b.ToTable("TRC_ROUTE_CUSTOMERS");
+                });
+
             modelBuilder.Entity("TMSBilling.Models.RouteGroup", b =>
                 {
                     b.Property<int>("id_seq")
@@ -4315,6 +4341,351 @@ namespace TMSBilling.Migrations
                     b.HasKey("id_seq");
 
                     b.ToTable("TRC_ROUTE_GROUP");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanHeader", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("COMPLETED_AT");
+
+                    b.Property<string>("CompletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("COMPLETED_BY");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CONFIRMED_AT");
+
+                    b.Property<string>("ConfirmedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CONFIRMED_BY");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
+
+                    b.Property<string>("CustomerCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("CUSTOMER_CODE");
+
+                    b.Property<string>("DriverName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("DRIVER_NAME");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("NOTES");
+
+                    b.Property<DateTime>("PlanDate")
+                        .HasColumnType("date")
+                        .HasColumnName("PLAN_DATE");
+
+                    b.Property<string>("PlanNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("PLAN_NO");
+
+                    b.Property<DateTime?>("PlannedDeparture")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PLANNED_DEPARTURE");
+
+                    b.Property<string>("RouteCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ROUTE_CODE");
+
+                    b.Property<int>("RouteId")
+                        .HasColumnType("int")
+                        .HasColumnName("ROUTE_ID");
+
+                    b.Property<string>("RouteName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("ROUTE_NAME");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("STARTED_AT");
+
+                    b.Property<string>("StartedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("STARTED_BY");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("STATUS");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("UPDATED_AT");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("UPDATED_BY");
+
+                    b.Property<string>("VehicleNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("VEHICLE_NO");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TRC_ROUTE_PLAN_H");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanStop", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ActualArrivalAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ACTUAL_ARRIVAL_AT");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("ADDRESS");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CITY");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("COMPLETED_AT");
+
+                    b.Property<string>("FenceName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("FENCE_NAME");
+
+                    b.Property<int>("GeofenceTableId")
+                        .HasColumnType("int")
+                        .HasColumnName("GEOFENCE_TABLE_ID");
+
+                    b.Property<int?>("MasterRouteStopId")
+                        .HasColumnType("int")
+                        .HasColumnName("MASTER_ROUTE_STOP_ID");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("NOTES");
+
+                    b.Property<TimeSpan?>("PlannedArrival")
+                        .HasColumnType("time")
+                        .HasColumnName("PLANNED_ARRIVAL");
+
+                    b.Property<int>("RoutePlanId")
+                        .HasColumnType("int")
+                        .HasColumnName("ROUTE_PLAN_ID");
+
+                    b.Property<int>("SequenceNo")
+                        .HasColumnType("int")
+                        .HasColumnName("SEQUENCE_NO");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("STATUS");
+
+                    b.Property<int>("StopDurationMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("STOP_DURATION_MINUTES");
+
+                    b.Property<string>("StopType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("STOP_TYPE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoutePlanId");
+
+                    b.ToTable("TRC_ROUTE_PLAN_STOPS");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanStopHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("ACTION_TYPE");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CHANGED_AT");
+
+                    b.Property<string>("ChangedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CHANGED_BY");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("NEW_STATUS");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("PREVIOUS_STATUS");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("REASON");
+
+                    b.Property<int>("RoutePlanId")
+                        .HasColumnType("int")
+                        .HasColumnName("ROUTE_PLAN_ID");
+
+                    b.Property<int>("RoutePlanStopId")
+                        .HasColumnType("int")
+                        .HasColumnName("ROUTE_PLAN_STOP_ID");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoutePlanStopId");
+
+                    b.ToTable("TRC_ROUTE_PLAN_STOP_HISTORY");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RouteStopTable", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<int>("GEOFENCE_TABLE_ID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NOTES")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<TimeSpan?>("PLANNED_ARRIVAL")
+                        .HasColumnType("time");
+
+                    b.Property<int>("ROUTE_ID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SEQUENCE_NO")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("STOP_DURATION_MINUTES")
+                        .HasColumnType("int");
+
+                    b.Property<string>("STOP_TYPE")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("GEOFENCE_TABLE_ID");
+
+                    b.HasIndex("ROUTE_ID");
+
+                    b.ToTable("TRC_ROUTE_STOPS");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RouteTable", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("CREATED_AT")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CREATED_BY")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DESCRIPTION")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ROUTE_CODE")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ROUTE_NAME")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ROUTE_TYPE")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("STATUS")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UPDATED_AT")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UPDATED_BY")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("ID");
+
+                    b.ToTable("TRC_ROUTES");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.RouteType", b =>
@@ -5037,6 +5408,58 @@ namespace TMSBilling.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("TMSBilling.Models.RouteCustomerAssignment", b =>
+                {
+                    b.HasOne("TMSBilling.Models.RouteTable", "Route")
+                        .WithMany("CustomerAssignments")
+                        .HasForeignKey("ROUTE_ID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Route");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanStop", b =>
+                {
+                    b.HasOne("TMSBilling.Models.RoutePlanHeader", "RoutePlan")
+                        .WithMany("Stops")
+                        .HasForeignKey("RoutePlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RoutePlan");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanStopHistory", b =>
+                {
+                    b.HasOne("TMSBilling.Models.RoutePlanStop", "Stop")
+                        .WithMany("History")
+                        .HasForeignKey("RoutePlanStopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Stop");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RouteStopTable", b =>
+                {
+                    b.HasOne("TMSBilling.Models.GeofenceTable", "Geofence")
+                        .WithMany()
+                        .HasForeignKey("GEOFENCE_TABLE_ID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TMSBilling.Models.RouteTable", "Route")
+                        .WithMany("Stops")
+                        .HasForeignKey("ROUTE_ID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Geofence");
+
+                    b.Navigation("Route");
+                });
+
             modelBuilder.Entity("TMSBilling.Models.UserRole", b =>
                 {
                     b.HasOne("TMSBilling.Models.Role", "Role")
@@ -5119,6 +5542,23 @@ namespace TMSBilling.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanHeader", b =>
+                {
+                    b.Navigation("Stops");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RoutePlanStop", b =>
+                {
+                    b.Navigation("History");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.RouteTable", b =>
+                {
+                    b.Navigation("CustomerAssignments");
+
+                    b.Navigation("Stops");
                 });
 #pragma warning restore 612, 618
         }

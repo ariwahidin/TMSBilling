@@ -1,0 +1,1097 @@
+﻿@model TMSBilling.Models.RouteViewModel
+
+@using System.Text.Json
+
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = Model.ID > 0 ? "Edit Route" : "Create Route";
+
+    var isEdit = Model.ID > 0;
+
+    var stopTypes = new[]
+    {
+        "ORIGIN",
+        "PICKUP",
+        "DELIVERY",
+        "WAYPOINT",
+        "DESTINATION"
+    };
+
+    var geofenceJson = ViewBag.GeofenceMapData as string ?? "[]";
+}
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+    .route-page {
+        padding: 12px 16px 20px;
+        color: #253247;
+        font-size: 13px;
+    }
+
+        .route-page .card {
+            border: 1px solid #e3e8ef;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+            margin-bottom: 12px;
+        }
+
+        .route-page .card-header {
+            padding: 10px 12px;
+            background: #fff;
+            border-bottom: 1px solid #edf0f4;
+            font-weight: 600;
+        }
+
+        .route-page .card-body {
+            padding: 12px;
+        }
+
+        .route-page .form-label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #536174;
+        }
+
+        .route-page .form-control,
+        .route-page .form-select {
+            min-height: 32px;
+            padding: 5px 9px;
+            font-size: 12px;
+            border-color: #d8dee8;
+            border-radius: 5px;
+        }
+
+        .route-page textarea.form-control {
+            min-height: 32px;
+            resize: vertical;
+        }
+
+        .route-page .btn {
+            font-size: 12px;
+            border-radius: 5px;
+        }
+
+        .route-page .section-subtitle {
+            color: #8390a3;
+            font-size: 11px;
+            font-weight: 400;
+        }
+
+        .route-page .required {
+            color: #dc3545;
+        }
+
+        .route-page .route-stop {
+            border: 1px solid #e1e7ef;
+            border-radius: 7px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #fff;
+        }
+
+        .route-page .stop-index {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 25px;
+            height: 25px;
+            background: #edf3ff;
+            color: #2459a9;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .route-page .stop-heading {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .route-page .stop-actions .btn {
+            padding: 3px 7px;
+        }
+
+        .route-page .map-card {
+            position: sticky;
+            top: 12px;
+        }
+
+    #routeMap {
+        width: 100%;
+        height: 330px;
+        background: #edf1f5;
+        border-radius: 5px;
+        z-index: 1;
+    }
+
+    .route-page .map-meta {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        font-size: 11px;
+        color: #68778b;
+    }
+
+    .route-page .map-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .route-page .summary-box {
+        background: #f7f9fc;
+        border: 1px solid #e8edf4;
+        padding: 9px;
+        border-radius: 6px;
+    }
+
+    .route-page .summary-value {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .route-page .summary-label {
+        font-size: 11px;
+        color: #758196;
+    }
+
+    .route-page .select2-container {
+        width: 100% !important;
+        font-size: 12px;
+    }
+
+        .route-page .select2-container .select2-selection--single {
+            height: 32px;
+            border-color: #d8dee8;
+            border-radius: 5px;
+        }
+
+    .route-page .select2-container--default
+    .select2-selection--single .select2-selection__rendered {
+        line-height: 30px;
+        padding-left: 9px;
+    }
+
+    .route-page .select2-container--default
+    .select2-selection--single .select2-selection__arrow {
+        height: 30px;
+    }
+
+    .route-page .select2-container--default
+    .select2-selection--multiple {
+        min-height: 32px;
+        border-color: #d8dee8;
+        border-radius: 5px;
+    }
+
+        .route-page .select2-container--default
+        .select2-selection--multiple .select2-selection__choice {
+            margin-top: 3px;
+            font-size: 11px;
+        }
+
+    .route-page .validation-summary-errors ul {
+        margin: 0;
+        padding-left: 18px;
+    }
+
+    .route-page .validation-summary-valid {
+        display: none;
+    }
+
+    .route-page .field-validation-error {
+        display: block;
+        font-size: 11px;
+        margin-top: 3px;
+    }
+
+    @@media (max-width: 991px) {
+        .route-page {
+            padding: 10px;
+        }
+
+            .route-page .map-card {
+                position: static;
+            }
+
+        #routeMap {
+            height: 280px;
+        }
+    }
+</style>
+
+<div class="container-fluid route-page">
+
+    <!-- Page header -->
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <div class="text-secondary small mb-1">
+                TMS / Master Data / Route
+            </div>
+            <h5 class="fw-bold mb-0">
+                @(isEdit ? "Edit Route" : "Create Route")
+            </h5>
+        </div>
+
+        <a asp-controller="Route"
+           asp-action="Index"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <form asp-controller="Route"
+          asp-action="Save"
+          method="post"
+          id="routeForm">
+
+        @Html.AntiForgeryToken()
+        <input asp-for="ID" type="hidden" />
+
+        <div asp-validation-summary="ModelOnly"
+             class="alert alert-danger py-2 mb-3"></div>
+
+        <div class="row g-3">
+
+            <!-- LEFT: Route configuration -->
+            <div class="col-12 col-xl-8">
+
+                <!-- General information -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Route Information</span>
+                        <span class="section-subtitle">Required fields marked *</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row g-2">
+
+                            <div class="col-12 col-md-3">
+                                <label asp-for="ROUTE_CODE" class="form-label">
+                                    Route Code <span class="required">*</span>
+                                </label>
+
+                                <input asp-for="ROUTE_CODE"
+                                       class="form-control"
+                                       maxlength="30"
+                                       placeholder="Route code"
+                                       readonly="@isEdit" />
+
+                                <span asp-validation-for="ROUTE_CODE"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-5">
+                                <label asp-for="ROUTE_NAME" class="form-label">
+                                    Route Name <span class="required">*</span>
+                                </label>
+
+                                <input asp-for="ROUTE_NAME"
+                                       class="form-control"
+                                       maxlength="150"
+                                       placeholder="Route name" />
+
+                                <span asp-validation-for="ROUTE_NAME"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-6 col-md-2">
+                                <label asp-for="ROUTE_TYPE" class="form-label">
+                                    Route Type
+                                </label>
+
+                                <select asp-for="ROUTE_TYPE" class="form-select">
+                                    <option value="MULTI_STOP">Multi Stop</option>
+                                    <option value="ROUND_TRIP">Round Trip</option>
+                                </select>
+                            </div>
+
+                            <div class="col-6 col-md-2">
+                                <label asp-for="STATUS" class="form-label">
+                                    Status
+                                </label>
+
+                                <select asp-for="STATUS" class="form-select">
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="INACTIVE">Inactive</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="DESCRIPTION" class="form-label">
+                                    Description
+                                </label>
+
+                                <input asp-for="DESCRIPTION"
+                                       class="form-control"
+                                       maxlength="255"
+                                       placeholder="Optional description" />
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer assignment -->
+                <div class="card">
+                    <div class="card-header">Customer Assignment</div>
+
+                    <div class="card-body">
+                        <label asp-for="CUSTOMER_CODES" class="form-label">
+                            Customers
+                        </label>
+
+                        <select asp-for="CUSTOMER_CODES"
+                                asp-items="Model.AvailableCustomers"
+                                class="form-select select2"
+                                multiple="multiple"
+                                data-placeholder="Search and select customers">
+                        </select>
+
+                        <span asp-validation-for="CUSTOMER_CODES"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Stops -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <div>Route Stops</div>
+                            <div class="section-subtitle">
+                                Arrange locations in travel sequence
+                            </div>
+                        </div>
+
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                id="addStopButton">
+                            <i class="bi bi-plus-lg"></i> Add Stop
+                        </button>
+                    </div>
+
+                    <div class="card-body">
+
+                        <div class="d-flex flex-wrap gap-3 mb-3 map-meta">
+                            <span>
+                                <span class="map-dot" style="background:#2563eb"></span>
+                                Origin
+                            </span>
+                            <span>
+                                <span class="map-dot" style="background:#16a34a"></span>
+                                Intermediate Stop
+                            </span>
+                            <span>
+                                <span class="map-dot" style="background:#dc3545"></span>
+                                Destination
+                            </span>
+                        </div>
+
+                        <div class="alert alert-danger py-2 small"
+                             id="stopValidation"
+                             hidden></div>
+
+                        <div class="text-danger small mb-2">
+                            @Html.ValidationMessage("Stops")
+                        </div>
+
+                        <div id="stopsContainer">
+                            @for (var i = 0; i < Model.Stops.Count; i++)
+                            {
+                                var plannedArrival =
+                                Model.Stops[i].PLANNED_ARRIVAL?.ToString(@"hh\:mm") ?? "";
+
+                                <div class="route-stop" data-stop>
+                                    <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="stop-index"></span>
+                                            <span class="stop-heading"></span>
+                                            <span class="badge text-bg-light stop-type-badge">
+                                                @Model.Stops[i].STOP_TYPE
+                                            </span>
+                                        </div>
+
+                                        <div class="d-flex gap-1 stop-actions">
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary move-up"
+                                                    title="Move up">
+                                                ↑
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary move-down"
+                                                    title="Move down">
+                                                ↓
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-outline-danger remove-stop">
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">
+                                                Location <span class="required">*</span>
+                                            </label>
+
+                                            <select name="Stops[@i].GEOFENCE_TABLE_ID"
+                                                    class="form-select location-select"
+                                                    required>
+                                                <option value="">Select location</option>
+
+                                                @foreach (var location in Model.AvailableLocations)
+                                                {
+                                                    if (location.Value == Model.Stops[i].GEOFENCE_TABLE_ID.ToString())
+                                                    {
+                                                        <option value="@location.Value" selected>
+                                                            @location.Text
+                                                        </option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@location.Value">
+                                                            @location.Text
+                                                        </option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label">Stop Type</label>
+
+                                            <select name="Stops[@i].STOP_TYPE"
+                                                    class="form-select stop-type"
+                                                    required>
+                                                @foreach (var type in stopTypes)
+                                                {
+                                                    if (type == Model.Stops[i].STOP_TYPE)
+                                                    {
+                                                        <option value="@type" selected>@type</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@type">@type</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Arrival</label>
+
+                                            <input type="time"
+                                                   name="Stops[@i].PLANNED_ARRIVAL"
+                                                   value="@plannedArrival"
+                                                   class="form-control" />
+                                        </div>
+
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Duration (min)</label>
+
+                                            <input type="number"
+                                                   name="Stops[@i].STOP_DURATION_MINUTES"
+                                                   value="@Model.Stops[i].STOP_DURATION_MINUTES"
+                                                   class="form-control"
+                                                   min="0"
+                                                   max="1440"
+                                                   placeholder="30" />
+                                        </div>
+
+                                        <div class="col-12 col-md-9">
+                                            <label class="form-label">Notes</label>
+
+                                            <input type="text"
+                                                   name="Stops[@i].NOTES"
+                                                   value="@Model.Stops[i].NOTES"
+                                                   class="form-control"
+                                                   maxlength="255"
+                                                   placeholder="Optional instructions" />
+                                        </div>
+
+                                        <input type="hidden"
+                                               name="Stops[@i].SEQUENCE_NO"
+                                               value="@(i + 1)"
+                                               class="sequence-value" />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div id="noStopsMessage"
+                             class="text-center text-secondary py-3"
+                             hidden>
+                            No stops configured. Click Add Stop.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form actions -->
+                <div class="d-flex justify-content-end gap-2 mb-3">
+                    <a asp-controller="Route"
+                       asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+
+                    <button type="submit"
+                            class="btn btn-primary px-4"
+                            id="saveRouteButton">
+                        @(isEdit ? "Save Changes" : "Create Route")
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT: Map and route summary -->
+            <div class="col-12 col-xl-4">
+                <div class="card map-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Route Preview</span>
+                        <span class="badge text-bg-light" id="mapStatus">
+                            Waiting for locations
+                        </span>
+                    </div>
+
+                    <div class="card-body">
+                        <div id="routeMap"></div>
+
+                        <div class="row g-2 mt-2">
+                            <div class="col-6">
+                                <div class="summary-box">
+                                    <div class="summary-value" id="stopCount">0</div>
+                                    <div class="summary-label">Selected Stops</div>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="summary-box">
+                                    <div class="summary-value" id="mappedCount">0</div>
+                                    <div class="summary-label">Mapped Locations</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="small text-secondary mt-3"
+                             id="mapMessage">
+                            Select locations to display their positions on the map.
+                        </div>
+
+                        <hr class="my-3" />
+
+                        <div class="small fw-semibold mb-2">Stop Sequence</div>
+                        <ol class="small mb-0 ps-3" id="routeSequence"></ol>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<!-- Template for adding stops dynamically -->
+<template id="stopTemplate">
+    <div class="route-stop" data-stop>
+        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="stop-index"></span>
+                <span class="stop-heading"></span>
+                <span class="badge text-bg-light stop-type-badge"></span>
+            </div>
+
+            <div class="d-flex gap-1 stop-actions">
+                <button type="button"
+                        class="btn btn-outline-secondary move-up"
+                        title="Move up">
+                    ↑
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary move-down"
+                        title="Move down">
+                    ↓
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-danger remove-stop">
+                    Remove
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-12 col-md-6">
+                <label class="form-label">
+                    Location <span class="required">*</span>
+                </label>
+
+                <select name="Stops[__index__].GEOFENCE_TABLE_ID"
+                        class="form-select location-select"
+                        required>
+                    <option value="">Select location</option>
+
+                    @foreach (var location in Model.AvailableLocations)
+                    {
+                        <option value="@location.Value">@location.Text</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label class="form-label">Stop Type</label>
+
+                <select name="Stops[__index__].STOP_TYPE"
+                        class="form-select stop-type"
+                        required>
+                    @foreach (var type in stopTypes)
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label">Arrival</label>
+
+                <input type="time"
+                       name="Stops[__index__].PLANNED_ARRIVAL"
+                       class="form-control" />
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label">Duration (min)</label>
+
+                <input type="number"
+                       name="Stops[__index__].STOP_DURATION_MINUTES"
+                       class="form-control"
+                       min="0"
+                       max="1440"
+                       placeholder="30" />
+            </div>
+
+            <div class="col-12 col-md-9">
+                <label class="form-label">Notes</label>
+
+                <input type="text"
+                       name="Stops[__index__].NOTES"
+                       class="form-control"
+                       maxlength="255"
+                       placeholder="Optional instructions" />
+            </div>
+
+            <input type="hidden"
+                   name="Stops[__index__].SEQUENCE_NO"
+                   class="sequence-value" />
+        </div>
+    </div>
+</template>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        (() => {
+            const form = document.getElementById('routeForm');
+            const container = document.getElementById('stopsContainer');
+            const template = document.getElementById('stopTemplate');
+            const addButton = document.getElementById('addStopButton');
+            const saveButton = document.getElementById('saveRouteButton');
+            const noStopsMessage = document.getElementById('noStopsMessage');
+            const stopValidation = document.getElementById('stopValidation');
+
+            if (!form || !container || !template || !addButton) return;
+
+            const geofences = @Html.Raw(geofenceJson);
+            const geofenceById = new Map(
+                geofences.map(g => [String(g.id), g])
+            );
+
+            // Initialize Leaflet map.
+            const map = L.map('routeMap', {
+                scrollWheelZoom: false
+            }).setView([-2.5, 118], 4);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const markerLayer = L.layerGroup().addTo(map);
+            let routeLine = null;
+
+            function parseCoordinate(value) {
+                if (value === null || value === undefined || value === '') {
+                    return null;
+                }
+
+                const number = Number.parseFloat(String(value).trim());
+                return Number.isFinite(number) ? number : null;
+            }
+
+            function getCoordinates(location) {
+                if (!location) return null;
+
+                const lat = parseCoordinate(location.lat);
+                const lng = parseCoordinate(location.lng);
+
+                if (lat === null || lng === null) return null;
+                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    return null;
+                }
+
+                return [lat, lng];
+            }
+
+            function initializeSelect2(element) {
+                if (!window.jQuery || !jQuery.fn.select2) return;
+
+                const $element = jQuery(element);
+
+                if ($element.hasClass('select2-hidden-accessible')) return;
+
+                $element.select2({
+                    width: '100%',
+                    placeholder: 'Search location',
+                    allowClear: true
+                });
+            }
+
+            function initializeCustomerSelect() {
+                if (!window.jQuery || !jQuery.fn.select2) return;
+
+                const customer = document.querySelector(
+                    'select[name="CUSTOMER_CODES"]'
+                );
+
+                if (!customer) return;
+
+                const $customer = jQuery(customer);
+
+                if (!$customer.hasClass('select2-hidden-accessible')) {
+                    $customer.select2({
+                        width: '100%',
+                        placeholder: 'Search and select customers',
+                        closeOnSelect: false
+                    });
+                }
+            }
+
+            function getStops() {
+                return Array.from(container.querySelectorAll('[data-stop]'));
+            }
+
+            function renumberStops() {
+                const stops = getStops();
+
+                stops.forEach((stop, index) => {
+                    const number = index + 1;
+
+                    stop.querySelector('.stop-index').textContent = number;
+                    stop.querySelector('.stop-heading').textContent =
+                        'Stop ' + number;
+
+                    const type = stop.querySelector('.stop-type');
+                    stop.querySelector('.stop-type-badge').textContent =
+                        type.value || 'UNASSIGNED';
+
+                    stop.querySelector('.sequence-value').value = number;
+
+                    stop.querySelectorAll('[name]').forEach(element => {
+                        element.name = element.name.replace(
+                            /Stops\[(\d+|__index__)\]/g,
+                            'Stops[' + index + ']'
+                        );
+                    });
+
+                    stop.querySelector('.move-up').disabled = index === 0;
+                    stop.querySelector('.move-down').disabled =
+                        index === stops.length - 1;
+                });
+
+                noStopsMessage.hidden = stops.length > 0;
+
+                document.getElementById('stopCount').textContent =
+                    stops.filter(stop =>
+                        stop.querySelector('.location-select').value
+                    ).length;
+
+                updateMap();
+            }
+
+            function addStop() {
+                const index = getStops().length;
+                const fragment = template.content.cloneNode(true);
+                const stop = fragment.querySelector('[data-stop]');
+
+                stop.querySelectorAll('[name]').forEach(element => {
+                    element.name = element.name.replaceAll(
+                        '__index__',
+                        String(index)
+                    );
+                });
+
+                stop.querySelector('.stop-type').value = 'DELIVERY';
+
+                container.appendChild(fragment);
+
+                const newStop = container.lastElementChild;
+                initializeSelect2(newStop.querySelector('.location-select'));
+
+                renumberStops();
+            }
+
+            function showStopError(message) {
+                stopValidation.textContent = message;
+                stopValidation.hidden = false;
+                stopValidation.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+
+            function validateStops() {
+                stopValidation.hidden = true;
+
+                const stops = getStops();
+                const origins = stops.filter(
+                    stop => stop.querySelector('.stop-type').value === 'ORIGIN'
+                );
+                const destinations = stops.filter(
+                    stop => stop.querySelector('.stop-type').value === 'DESTINATION'
+                );
+
+                if (stops.length < 2) {
+                    showStopError('A route must contain at least two stops.');
+                    return false;
+                }
+
+                if (origins.length !== 1 ||
+                    stops[0].querySelector('.stop-type').value !== 'ORIGIN') {
+                    showStopError('Exactly one Origin must be the first stop.');
+                    return false;
+                }
+
+                if (destinations.length > 1 ||
+                    (destinations.length === 1 &&
+                     stops[stops.length - 1] !== destinations[0])) {
+                    showStopError(
+                        'Destination can appear only once and must be the last stop.'
+                    );
+                    return false;
+                }
+
+                const missingLocation = stops.some(
+                    stop => !stop.querySelector('.location-select').value
+                );
+
+                if (missingLocation) {
+                    showStopError('Select a location for every stop.');
+                    return false;
+                }
+
+                return true;
+            }
+
+            function updateMap() {
+                markerLayer.clearLayers();
+
+                if (routeLine) {
+                    map.removeLayer(routeLine);
+                    routeLine = null;
+                }
+
+                const stops = getStops();
+                const mappedPoints = [];
+                const sequence = document.getElementById('routeSequence');
+
+                sequence.replaceChildren();
+
+                stops.forEach((stop, index) => {
+                    const select = stop.querySelector('.location-select');
+                    const type = stop.querySelector('.stop-type').value;
+                    const location = geofenceById.get(String(select.value));
+
+                    if (!select.value) return;
+
+                    const listItem = document.createElement('li');
+                    listItem.className = 'mb-1';
+
+                    const label = location
+                        ? location.name
+                        : select.options[select.selectedIndex]?.text || 'Location';
+
+                    listItem.textContent = type + ': ' + label;
+                    sequence.appendChild(listItem);
+
+                    const coordinates = getCoordinates(location);
+
+                    if (!coordinates) return;
+
+                    mappedPoints.push({
+                        coordinates,
+                        type,
+                        name: label,
+                        address: location.address || '',
+                        index: index + 1
+                    });
+                });
+
+                mappedPoints.forEach(point => {
+                    const color = point.type === 'ORIGIN'
+                        ? '#2563eb'
+                        : point.type === 'DESTINATION'
+                            ? '#dc3545'
+                            : '#16a34a';
+
+                    const marker = L.circleMarker(point.coordinates, {
+                        radius: 7,
+                        color,
+                        weight: 2,
+                        fillColor: color,
+                        fillOpacity: 0.9
+                    });
+
+                    const popup = document.createElement('div');
+                    const title = document.createElement('strong');
+                    title.textContent = point.index + '. ' + point.name;
+                    popup.appendChild(title);
+
+                    const typeLabel = document.createElement('div');
+                    typeLabel.textContent = point.type;
+                    popup.appendChild(typeLabel);
+
+                    if (point.address) {
+                        const address = document.createElement('div');
+                        address.textContent = point.address;
+                        popup.appendChild(address);
+                    }
+
+                    marker.bindPopup(popup);
+                    marker.addTo(markerLayer);
+                });
+
+                const points = mappedPoints.map(point => point.coordinates);
+
+                if (points.length > 1) {
+                    routeLine = L.polyline(points, {
+                        color: '#4776c7',
+                        weight: 3,
+                        opacity: 0.8,
+                        dashArray: '6, 6'
+                    }).addTo(map);
+                }
+
+                document.getElementById('mappedCount').textContent =
+                    mappedPoints.length;
+
+                document.getElementById('stopCount').textContent =
+                    stops.filter(stop =>
+                        stop.querySelector('.location-select').value
+                    ).length;
+
+                const mapStatus = document.getElementById('mapStatus');
+                const mapMessage = document.getElementById('mapMessage');
+
+                if (mappedPoints.length === 0) {
+                    mapStatus.textContent = 'No coordinates';
+                    mapMessage.textContent =
+                        'Select a location with valid LAT and LONG coordinates to show it on the map.';
+                } else if (mappedPoints.length < points.length) {
+                    mapStatus.textContent = 'Partial map';
+                    mapMessage.textContent =
+                        'Some selected locations do not have valid coordinates and are omitted from the map.';
+                } else {
+                    mapStatus.textContent = 'Preview ready';
+                    mapMessage.textContent =
+                        'Map shows selected locations connected in stop sequence. Lines are illustrative, not road directions.';
+                }
+
+                if (points.length === 1) {
+                    map.setView(points[0], 13);
+                } else if (points.length > 1) {
+                    map.fitBounds(L.latLngBounds(points), {
+                        padding: [25, 25],
+                        maxZoom: 13
+                    });
+                }
+
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+
+            addButton.addEventListener('click', addStop);
+
+            container.addEventListener('change', event => {
+                if (event.target.matches('.location-select, .stop-type')) {
+                    renumberStops();
+                }
+            });
+
+            container.addEventListener('click', event => {
+                const button = event.target.closest('button');
+                if (!button) return;
+
+                const stop = button.closest('[data-stop]');
+                if (!stop) return;
+
+                if (button.classList.contains('remove-stop')) {
+                    const locationSelect = stop.querySelector('.location-select');
+
+                    if (window.jQuery && jQuery.fn.select2 &&
+                        jQuery(locationSelect).hasClass('select2-hidden-accessible')) {
+                        jQuery(locationSelect).select2('destroy');
+                    }
+
+                    stop.remove();
+                    renumberStops();
+                    return;
+                }
+
+                if (button.classList.contains('move-up')) {
+                    const previous = stop.previousElementSibling;
+                    if (previous) container.insertBefore(stop, previous);
+                    renumberStops();
+                    return;
+                }
+
+                if (button.classList.contains('move-down')) {
+                    const next = stop.nextElementSibling;
+                    if (next) container.insertBefore(next, stop);
+                    renumberStops();
+                }
+            });
+
+            container.querySelectorAll('.location-select')
+                .forEach(initializeSelect2);
+
+            initializeCustomerSelect();
+            renumberStops();
+
+            form.addEventListener('submit', event => {
+                renumberStops();
+
+                if (!validateStops()) {
+                    event.preventDefault();
+                    return;
+                }
+
+                // Prevent duplicate submissions.
+                saveButton.disabled = true;
+                saveButton.textContent = 'Saving...';
+            });
+        })();
+    </script>
+}
+

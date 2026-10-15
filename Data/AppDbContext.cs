@@ -95,6 +95,18 @@ namespace TMSBilling.Data
 
         public DbSet<MstHoliday> MstHolidays { get; set; }
 
+
+        public DbSet<RouteTable> Routes { get; set; } = null!;
+
+        public DbSet<RouteStopTable> RouteStops { get; set; } = null!;
+
+        public DbSet<RouteCustomerAssignment> RouteCustomerAssignments { get; set; }
+            = null!;
+
+        public DbSet<RoutePlanHeader> RoutePlans { get; set; }
+        public DbSet<RoutePlanStop> RoutePlanStops { get; set; }
+        public DbSet<RoutePlanStopHistory> RoutePlanStopHistories { get; set; }
+
         protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Integration>(e =>

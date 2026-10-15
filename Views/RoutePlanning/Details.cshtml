@@ -1,0 +1,154 @@
+@model TMSBilling.Models.RoutePlanHeader
+@using TMSBilling.Models
+@{
+    ViewData["Title"] = "Route Plan Details";
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    var canCorrect = string.Equals(Context.Session.GetString("RoutePlanCanCorrectStop"), "true", StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="mb-1">Route Plan Details</h2>
+            <div class="text-muted">Plan Number: <span class="fw-semibold">@Model.PlanNo</span></div>
+        </div>
+        <div class="d-flex gap-2">
+            @if (Model.Status == RoutePlanStatuses.Draft)
+            {
+                <a asp-action="Form" asp-route-id="@Model.Id" class="btn btn-outline-primary">Edit Draft</a>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+    @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Plan Information</span>
+            <span class="badge text-bg-@(Model.Status == RoutePlanStatuses.Completed ? "success" : Model.Status == RoutePlanStatuses.InProgress ? "primary" : Model.Status == RoutePlanStatuses.Cancelled ? "danger" : Model.Status == RoutePlanStatuses.Confirmed ? "info" : "secondary")">@Model.Status</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3"><div class="text-muted small">Plan Date</div><div class="fw-semibold">@Model.PlanDate.ToString("dd MMM yyyy")</div></div>
+                <div class="col-md-3"><div class="text-muted small">Master Route</div><div class="fw-semibold">@Model.RouteCode</div><div>@Model.RouteName</div></div>
+                <div class="col-md-3"><div class="text-muted small">Customer</div><div>@(Model.CustomerCode ?? "—")</div></div>
+                <div class="col-md-3"><div class="text-muted small">Planned Departure</div><div>@(Model.PlannedDeparture?.ToString("dd MMM yyyy HH:mm") ?? "—")</div></div>
+                <div class="col-md-3"><div class="text-muted small">Vehicle Number</div><div>@(Model.VehicleNo ?? "—")</div></div>
+                <div class="col-md-3"><div class="text-muted small">Driver</div><div>@(Model.DriverName ?? "—")</div></div>
+                <div class="col-md-6"><div class="text-muted small">Notes</div><div>@(Model.Notes ?? "—")</div></div>
+            </div>
+        </div>
+        <div class="card-footer bg-white d-flex flex-wrap gap-2">
+            @if (Model.Status == RoutePlanStatuses.Draft)
+            {
+                <form asp-action="ConfirmPlan" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-primary" type="submit">Confirm Plan</button></form>
+                <form asp-action="CancelPlan" method="post" onsubmit="return confirm('Cancel this Route Plan?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-outline-danger" type="submit">Cancel Plan</button></form>
+            }
+            @if (Model.Status == RoutePlanStatuses.Confirmed)
+            {
+                <form asp-action="StartRoute" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-primary" type="submit">Start Route</button></form>
+                <form asp-action="CancelPlan" method="post" onsubmit="return confirm('Cancel this Route Plan?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-outline-danger" type="submit">Cancel Plan</button></form>
+            }
+            @if (Model.Status == RoutePlanStatuses.InProgress)
+            {
+                <form asp-action="CompleteRoute" method="post" onsubmit="return confirm('Complete this Route Plan? All stops must be completed.');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-success" type="submit">Complete Route Plan</button></form>
+            }
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Route Stops Snapshot</span>
+            <span class="text-muted small">@Model.Stops.Count stop(s)</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th>Seq.</th><th>Stop Type</th><th>Location</th><th>Planned Arrival</th><th>Actual Arrival</th><th>Completed At</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                @foreach (var stop in Model.Stops.OrderBy(s => s.SequenceNo))
+                {
+                    <tr>
+                        <td>@stop.SequenceNo</td>
+                        <td>@stop.StopType</td>
+                        <td><div class="fw-semibold">@stop.FenceName</div><small class="text-muted">@stop.Address @stop.City</small></td>
+                        <td>@(stop.PlannedArrival?.ToString(@"hh\:mm") ?? "—")</td>
+                        <td>@(stop.ActualArrivalAt?.ToString("dd MMM HH:mm") ?? "—")</td>
+                        <td>@(stop.CompletedAt?.ToString("dd MMM HH:mm") ?? "—")</td>
+                        <td><span class="badge text-bg-@(stop.Status == RoutePlanStopStatuses.Completed ? "success" : stop.Status == RoutePlanStopStatuses.Arrived ? "primary" : "secondary")">@stop.Status</span></td>
+                        <td>
+                            @if (Model.Status == RoutePlanStatuses.InProgress && stop.Status == RoutePlanStopStatuses.Pending)
+                            {
+                                <form asp-action="UpdateStopStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="StopId" value="@stop.Id" /><input type="hidden" name="NewStatus" value="ARRIVED" /><button class="btn btn-sm btn-outline-primary" type="submit">Mark Arrived</button></form>
+                            }
+                            else if (Model.Status == RoutePlanStatuses.InProgress && stop.Status == RoutePlanStopStatuses.Arrived)
+                            {
+                                <form asp-action="UpdateStopStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="StopId" value="@stop.Id" /><input type="hidden" name="NewStatus" value="COMPLETED" /><button class="btn btn-sm btn-outline-success" type="submit">Complete Stop</button></form>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                    </tr>
+                    @if (canCorrect && Model.Status == RoutePlanStatuses.InProgress)
+                    {
+                        <tr class="table-light">
+                            <td colspan="8">
+                                <form asp-action="CorrectStopStatus" method="post" class="row g-2 align-items-end">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="StopId" value="@stop.Id" />
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Correction Status</label>
+                                        <select name="NewStatus" class="form-select form-select-sm">
+                                            @foreach (var status in RoutePlanStopStatuses.All)
+                                            {
+                                                <option value="@status" selected="@(stop.Status == status)">@status</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label small">Reason (required)</label>
+                                        <input name="Reason" class="form-control form-control-sm" minlength="5" maxlength="1000" required placeholder="Explain why this correction is needed" />
+                                    </div>
+                                    <div class="col-md-2"><button type="submit" class="btn btn-sm btn-warning w-100">Correct Status</button></div>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (stop.History.Any())
+                    {
+                        <tr>
+                            <td colspan="8">
+                                <details>
+                                    <summary class="small text-muted">View status audit history (@stop.History.Count)</summary>
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead><tr><th>Changed At</th><th>Previous</th><th>New</th><th>Action</th><th>Reason</th><th>Changed By</th></tr></thead>
+                                            <tbody>
+                                            @foreach (var h in stop.History.OrderByDescending(x => x.ChangedAt))
+                                            {
+                                                <tr><td>@h.ChangedAt.ToString("dd MMM yyyy HH:mm:ss")</td><td>@(h.PreviousStatus ?? "—")</td><td>@h.NewStatus</td><td>@h.ActionType</td><td>@(h.Reason ?? "—")</td><td>@h.ChangedBy</td></tr>
+                                            }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white text-muted small">
+            Stops may be processed in any order. A Route Plan cannot be completed until every stop is COMPLETED. Status corrections require the dedicated permission flag and a reason.
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Estimated Buy Price</div><div class="fs-4 fw-semibold">Rp 0</div><div class="text-muted small">Mockup only</div></div></div></div>
+        <div class="col-md-6"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Estimated Sell Price</div><div class="fs-4 fw-semibold">Rp 0</div><div class="text-muted small">Mockup only</div></div></div></div>
+    </div>
+</div>

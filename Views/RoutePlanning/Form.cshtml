@@ -1,0 +1,660 @@
+@model TMSBilling.Models.ViewModels.RoutePlanFormViewModel
+
+@using System.Globalization
+
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Create Route Plan" : "Edit Route Plan";
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    var isEdit = Model.Id > 0;
+    var stops = Model.Stops ?? new List<TMSBilling.Models.ViewModels.RoutePlanStopPreviewViewModel>();
+}
+
+<style>
+    .rp-page {
+        font-size: 13px;
+        color: #334155;
+    }
+
+    .rp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .rp-title {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .rp-subtitle {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .rp-section {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        margin-bottom: 16px;
+    }
+
+    .rp-section-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rp-section-title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .rp-section-body {
+        padding: 16px;
+    }
+
+    .rp-page .form-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 5px;
+    }
+
+    .rp-page .form-control,
+    .rp-page .form-select {
+        min-height: 36px;
+        font-size: 13px;
+        border-color: #cbd5e1;
+        border-radius: 5px;
+    }
+
+    .rp-page textarea.form-control {
+        min-height: 76px;
+    }
+
+    .rp-page .form-control:focus,
+    .rp-page .form-select:focus {
+        border-color: #64748b;
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, .12);
+    }
+
+    .rp-required {
+        color: #dc2626;
+    }
+
+    .rp-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .rp-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .rp-table-wrap {
+        overflow-x: auto;
+    }
+
+    .rp-table {
+        width: 100%;
+        border-collapse: collapse;
+        white-space: nowrap;
+    }
+
+        .rp-table th {
+            padding: 10px 12px;
+            background: #f8fafc;
+            color: #64748b;
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .rp-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .rp-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+    .rp-sequence {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 5px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 700;
+    }
+
+    .rp-muted {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .rp-empty {
+        padding: 28px 16px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .rp-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 4px;
+        padding-bottom: 20px;
+    }
+
+    .rp-footer-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .rp-page .btn {
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 13px;
+        border-radius: 5px;
+    }
+
+    .rp-page .validation-summary-errors {
+        margin-bottom: 14px;
+        padding: 10px 14px;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+        .rp-page .validation-summary-errors ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+    .rp-page .field-validation-error {
+        display: block;
+        color: #dc2626;
+        font-size: 11px;
+        margin-top: 4px;
+    }
+
+    @@media (max-width: 767.98px) {
+        .rp-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .rp-section-body {
+            padding: 12px;
+        }
+
+        .rp-footer {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .rp-footer-actions {
+            width: 100%;
+        }
+
+            .rp-footer-actions .btn {
+                flex: 1;
+            }
+    }
+</style>
+
+<div class="rp-page">
+    <div class="rp-header">
+        <div>
+            <h1 class="rp-title">@ViewData["Title"]</h1>
+            <p class="rp-subtitle">
+                Configure the route, assign a customer and review the planned stops.
+            </p>
+        </div>
+
+        <div class="rp-meta">
+            @if (isEdit)
+            {
+                <span>Plan No:</span>
+                <strong class="text-dark">@Model.PlanNo</strong>
+            }
+            <span class="rp-badge">@(Model.Status ?? "DRAFT")</span>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success py-2 mb-3" role="alert">
+            @TempData["Success"]
+        </div>
+    }
+
+    <form asp-controller="RoutePlanning"
+          asp-action="Save"
+          method="post"
+          id="routePlanForm">
+
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="PlanNo" type="hidden" />
+        <input asp-for="Status" type="hidden" />
+
+        @* <div asp-validation-summary="ModelOnly"></div> *@
+
+        <div asp-validation-summary="All"
+             class="alert alert-danger mb-3">
+        </div>
+
+        <!-- PLAN INFORMATION -->
+        <section class="rp-section">
+            <div class="rp-section-header">
+                <h2 class="rp-section-title">Plan Information</h2>
+                <span class="rp-muted">Required fields are marked with *</span>
+            </div>
+
+            <div class="rp-section-body">
+                <div class="row g-3">
+                    <div class="col-md-4 col-lg-3">
+                        <label asp-for="PlanDate" class="form-label">
+                            Plan Date <span class="rp-required">*</span>
+                        </label>
+                        <input asp-for="PlanDate"
+                               type="date"
+                               class="form-control"
+                               asp-format="{0:yyyy-MM-dd}" />
+                        <span asp-validation-for="PlanDate"></span>
+                    </div>
+
+                    <div class="col-md-8 col-lg-5">
+                        <label asp-for="RouteId" class="form-label">
+                            Master Route <span class="rp-required">*</span>
+                        </label>
+                        <select asp-for="RouteId"
+                                asp-items="Model.Routes"
+                                class="form-select"
+                                id="RouteId"
+                                required>
+                            <option value="">Select Master Route</option>
+                        </select>
+                        <span asp-validation-for="RouteId"></span>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <label asp-for="CustomerCode" class="form-label">
+                            Customer
+                        </label>
+                        <select asp-for="CustomerCode"
+                                asp-items="Model.Customers"
+                                class="form-select"
+                                id="CustomerCode">
+                            <option value="">All assigned customers / Not specified</option>
+                        </select>
+                        <div class="rp-muted mt-1">
+                            Customer options depend on the selected route.
+                        </div>
+                        <span asp-validation-for="CustomerCode"></span>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="PlannedDeparture" class="form-label">
+                            Planned Departure
+                        </label>
+                        <input asp-for="PlannedDeparture"
+                               type="datetime-local"
+                               class="form-control"
+                               value="@(Model.PlannedDeparture.HasValue? Model.PlannedDeparture.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) : string.Empty)" />
+                        <span asp-validation-for="PlannedDeparture"></span>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="VehicleNo" class="form-label">
+                            Vehicle No.
+                        </label>
+                        <input asp-for="VehicleNo"
+                               class="form-control"
+                               maxlength="50"
+                               placeholder="Enter vehicle number" />
+                        <span asp-validation-for="VehicleNo"></span>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="DriverName" class="form-label">
+                            Driver Name
+                        </label>
+                        <input asp-for="DriverName"
+                               class="form-control"
+                               maxlength="100"
+                               placeholder="Enter driver name" />
+                        <span asp-validation-for="DriverName"></span>
+                    </div>
+
+                    <div class="col-md-12 col-lg-3">
+                        <label asp-for="Notes" class="form-label">Notes</label>
+                        <textarea asp-for="Notes"
+                                  class="form-control"
+                                  rows="2"
+                                  maxlength="1000"
+                                  placeholder="Optional notes"></textarea>
+                        <span asp-validation-for="Notes"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROUTE STOPS -->
+        <section class="rp-section">
+            <div class="rp-section-header">
+                <div>
+                    <h2 class="rp-section-title">Planned Stops</h2>
+                    <div class="rp-muted mt-1">
+                        Stops are loaded from Master Route and saved as a snapshot.
+                    </div>
+                </div>
+
+                <span class="rp-badge" id="stopCount">@stops.Count stops</span>
+            </div>
+
+            <div class="rp-table-wrap">
+                <table class="rp-table">
+                    <thead>
+                        <tr>
+                            <th style="width:70px;">Sequence</th>
+                            <th>Location</th>
+                            <th>City</th>
+                            <th>Stop Type</th>
+                            <th>Planned Arrival</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routeStopsBody">
+                        @if (stops.Any())
+                        {
+                            foreach (var stop in stops.OrderBy(s => s.SequenceNo))
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="rp-sequence">@stop.SequenceNo</span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@stop.FenceName</div>
+                                        @if (!string.IsNullOrWhiteSpace(stop.Address))
+                                        {
+                                            <div class="rp-muted">@stop.Address</div>
+                                        }
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(stop.City) ? "-" : stop.City)</td>
+                            <td>@stop.StopType</td>
+                            <td>
+                                @(stop.PlannedArrival.HasValue
+                                                                ? stop.PlannedArrival.Value.ToString(@"hh\:mm")
+                                                                : "-")
+                            </td>
+                            <td>@stop.StopDurationMinutes min</td>
+                        </tr>
+                                                }
+                        }
+                        else
+                        {
+                            <tr id="emptyStopsRow">
+                                <td colspan="6" class="rp-empty">
+                                    Select a Master Route to load its planned stops.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-3 py-2 border-top rp-muted" id="stopMessage">
+                Stops are read-only here. To change the route sequence, update Master Route.
+            </div>
+        </section>
+
+        <div class="rp-footer">
+            <div class="rp-muted">
+                <icon></icon>
+                Only DRAFT Route Plans can be edited.
+            </div>
+
+            <div class="rp-footer-actions">
+                <a asp-controller="RoutePlanning"
+                   asp-action="Index"
+                   class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+
+                <button type="submit" class="btn btn-primary" id="saveButton">
+                    @(isEdit ? "Save Changes" : "Save as Draft")
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (() => {
+            const routeSelect = document.getElementById("RouteId");
+            const customerSelect = document.getElementById("CustomerCode");
+            const stopsBody = document.getElementById("routeStopsBody");
+            const stopCount = document.getElementById("stopCount");
+            const stopMessage = document.getElementById("stopMessage");
+            const form = document.getElementById("routePlanForm");
+            const saveButton = document.getElementById("saveButton");
+
+            const customersUrl = '@Url.Action("GetRouteCustomers", "RoutePlanning")';
+            const stopsUrl = '@Url.Action("GetRouteStops", "RoutePlanning")';
+
+            const initialRouteId = routeSelect.value;
+            const hasSavedStops = @((stops.Any()).ToString().ToLowerInvariant());
+
+            function addCell(row, value) {
+                const cell = document.createElement("td");
+                cell.textContent = value ?? "-";
+                row.appendChild(cell);
+                return cell;
+            }
+
+            function setEmptyStops(message) {
+                stopsBody.replaceChildren();
+
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+
+                cell.colSpan = 6;
+                cell.className = "rp-empty";
+                cell.textContent = message;
+
+                row.appendChild(cell);
+                stopsBody.appendChild(row);
+                stopCount.textContent = "0 stops";
+            }
+
+            function renderStops(stops) {
+                stopsBody.replaceChildren();
+
+                if (!Array.isArray(stops) || stops.length === 0) {
+                    setEmptyStops("No valid stops found for this Master Route.");
+                    return;
+                }
+
+                stops.forEach((stop, index) => {
+                    const row = document.createElement("tr");
+
+                    const sequenceCell = document.createElement("td");
+                    const sequence = document.createElement("span");
+                    sequence.className = "rp-sequence";
+                    sequence.textContent = stop.sEQUENCE_NO ?? (index + 1);
+                    sequenceCell.appendChild(sequence);
+                    row.appendChild(sequenceCell);
+
+                    const locationCell = document.createElement("td");
+                    const name = document.createElement("div");
+                    name.className = "fw-semibold";
+                    name.textContent = stop.fenceName ?? "(Unnamed Location)";
+                    locationCell.appendChild(name);
+
+                    if (stop.address) {
+                        const address = document.createElement("div");
+                        address.className = "rp-muted";
+                        address.textContent = stop.address;
+                        locationCell.appendChild(address);
+                    }
+
+                    row.appendChild(locationCell);
+                    addCell(row, stop.city || "-");
+                    addCell(row, stop.sTOP_TYPE || "-");
+                    addCell(row, stop.plannedArrival || "-");
+
+                    const duration = stop.sTOP_DURATION_MINUTES;
+                    addCell(row, duration == null ? "0 min" : `${duration} min`);
+
+                    stopsBody.appendChild(row);
+                });
+
+                stopCount.textContent = `${stops.length} stops`;
+            }
+
+            async function loadCustomers(routeId) {
+                customerSelect.replaceChildren();
+
+                const placeholder = document.createElement("option");
+                placeholder.value = "";
+                placeholder.textContent = "All assigned customers / Not specified";
+                customerSelect.appendChild(placeholder);
+
+                if (!routeId) {
+                    customerSelect.disabled = true;
+                    return;
+                }
+
+                customerSelect.disabled = true;
+
+                try {
+                    const response = await fetch(
+                        `${customersUrl}?routeId=${encodeURIComponent(routeId)}`,
+                        { headers: { "X-Requested-With": "XMLHttpRequest" } }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Unable to load customers.");
+                    }
+
+                    const customers = await response.json();
+
+                    customers.forEach(customer => {
+                        const option = document.createElement("option");
+                        option.value = customer.value;
+                        option.textContent = customer.text;
+                        customerSelect.appendChild(option);
+                    });
+
+                    customerSelect.disabled = false;
+                } catch (error) {
+                    customerSelect.disabled = false;
+                    stopMessage.textContent =
+                        "Customer list could not be loaded. Please reselect the route or reload the page.";
+                    console.error(error);
+                }
+            }
+
+            async function loadStops(routeId) {
+                if (!routeId) {
+                    setEmptyStops("Select a Master Route to load its planned stops.");
+                    return;
+                }
+
+                setEmptyStops("Loading route stops...");
+
+                try {
+                    const response = await fetch(
+                        `${stopsUrl}?routeId=${encodeURIComponent(routeId)}`,
+                        { headers: { "X-Requested-With": "XMLHttpRequest" } }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Unable to load route stops.");
+                    }
+
+                    renderStops(await response.json());
+                    stopMessage.textContent =
+                        "Stops are read-only here. To change the route sequence, update Master Route.";
+                } catch (error) {
+                    setEmptyStops("Failed to load route stops. Please try selecting the route again.");
+                    console.error(error);
+                }
+            }
+
+            routeSelect.addEventListener("change", async () => {
+                await Promise.all([
+                    loadCustomers(routeSelect.value),
+                    loadStops(routeSelect.value)
+                ]);
+            });
+
+            // form.addEventListener("submit", () => {
+            //     if (saveButton) {
+            //         saveButton.disabled = true;
+            //         saveButton.textContent = "Saving...";
+            //     }
+            // });
+
+            form.addEventListener("submit", (event) => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    form.reportValidity();
+                    return;
+                }
+
+                if (saveButton) {
+                    saveButton.disabled = true;
+                    saveButton.textContent = "Saving...";
+                }
+            });
+
+            if (!initialRouteId) {
+                customerSelect.disabled = true;
+            } else if (!hasSavedStops) {
+                loadStops(initialRouteId);
+            }
+        })();
+    </script>
+}
