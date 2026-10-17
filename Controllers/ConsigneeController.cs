@@ -36,7 +36,7 @@ namespace TMSBilling.Controllers
                 filter = new
                 {
                     ownership = "Customer",
-                    //category = new[] { "Umum", "Customer" },
+                    category = new[] { "Umum", "Customer" },
                     isGarage = false
                 }
             };
