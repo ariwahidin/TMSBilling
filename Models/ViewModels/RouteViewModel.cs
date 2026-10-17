@@ -46,6 +46,8 @@ namespace TMSBilling.Models
 
         public TimeSpan? PLANNED_ARRIVAL { get; set; }
 
+        public TimeSpan? PLANNED_DEPARTURE { get; set; }
+
         [Range(0, 1440, ErrorMessage = "Duration must be between 0 and 1440 minutes.")]
         public int? STOP_DURATION_MINUTES { get; set; }
 

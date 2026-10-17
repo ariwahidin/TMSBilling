@@ -26,6 +26,8 @@ namespace TMSBilling.Models
 
         public int? STOP_DURATION_MINUTES { get; set; }
 
+        public TimeSpan? PLANNED_DEPARTURE { get; set; }
+
         [MaxLength(255)]
         public string? NOTES { get; set; }
 

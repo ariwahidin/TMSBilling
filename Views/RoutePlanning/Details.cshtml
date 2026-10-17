@@ -5,6 +5,154 @@
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     var canCorrect = string.Equals(Context.Session.GetString("RoutePlanCanCorrectStop"), "true", StringComparison.OrdinalIgnoreCase);
 }
+<style>
+
+
+    /* Route Plan backend feedback */
+    .route-feedback {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 15px 18px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-left-width: 5px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        animation: feedback-enter 0.2s ease-out;
+    }
+
+    .route-feedback-success {
+        color: #14532d;
+        background-color: #dcfce7;
+        border-color: #86efac;
+        border-left-color: #16a34a;
+    }
+
+    .route-feedback-error {
+        color: #991b1b;
+        background-color: #fee2e2;
+        border-color: #fca5a5;
+        border-left-color: #dc2626;
+    }
+
+    .route-feedback-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 28px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .route-feedback-success .route-feedback-icon {
+        color: #fff;
+        background-color: #16a34a;
+    }
+
+    .route-feedback-error .route-feedback-icon {
+        color: #fff;
+        background-color: #dc2626;
+    }
+
+    .route-feedback-content {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        line-height: 1.5;
+    }
+
+    .route-feedback-title {
+        margin-bottom: 2px;
+        font-weight: 700;
+    }
+
+    .route-feedback-message {
+        white-space: pre-wrap;
+    }
+
+    .route-feedback-close {
+        flex: 0 0 auto;
+        padding: 0 4px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-size: 24px;
+        line-height: 1;
+        opacity: 0.7;
+        cursor: pointer;
+    }
+
+        .route-feedback-close:hover {
+            opacity: 1;
+        }
+
+    @@keyframes feedback-enter {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    @@media (max-width: 576px) {
+        .route-feedback
+
+    {
+        padding: 12px;
+        gap: 9px;
+    }
+
+    }
+</style>
+
+
+<style>
+    .route-action-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+        border-radius: 14px;
+        font-size: 1.4rem;
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+        .route-action-icon.danger {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .route-action-icon.success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .route-action-icon.primary {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+    .route-action-modal-placeholder {
+        min-height: 1px;
+    }
+</style>
+
+
+
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-start mb-4">
@@ -21,8 +169,59 @@
         </div>
     </div>
 
-    @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
-    @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+    @* @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    } *@
+
+
+    @{
+        var successMessage = TempData["Success"]?.ToString();
+        var errorMessage = TempData["Error"]?.ToString();
+    }
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="route-feedback route-feedback-success"
+             role="status"
+             aria-live="polite">
+            <span class="route-feedback-icon">✓</span>
+            <div class="route-feedback-content">
+                <div class="route-feedback-title">Succeed</div>
+                <div>@successMessage</div>
+            </div>
+            <button type="button"
+                    class="route-feedback-close"
+                    aria-label="Tutup notifikasi"
+                    onclick="this.parentElement.remove()">
+                &times;
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="route-feedback route-feedback-error"
+             role="alert"
+             aria-live="assertive">
+            <span class="route-feedback-icon">!</span>
+            <div class="route-feedback-content">
+                <div class="route-feedback-title">An Error Occurred</div>
+                <div class="route-feedback-message">@errorMessage</div>
+            </div>
+            <button type="button"
+                    class="route-feedback-close"
+                    aria-label="Tutup notifikasi"
+                    onclick="this.parentElement.remove()">
+                &times;
+            </button>
+        </div>
+    }
+
 
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -40,22 +239,93 @@
                 <div class="col-md-6"><div class="text-muted small">Notes</div><div>@(Model.Notes ?? "—")</div></div>
             </div>
         </div>
-        <div class="card-footer bg-white d-flex flex-wrap gap-2">
+
+        <div class="card-footer bg-white d-flex flex-wrap gap-2 py-3">
             @if (Model.Status == RoutePlanStatuses.Draft)
             {
-                <form asp-action="ConfirmPlan" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-primary" type="submit">Confirm Plan</button></form>
-                <form asp-action="CancelPlan" method="post" onsubmit="return confirm('Cancel this Route Plan?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-outline-danger" type="submit">Cancel Plan</button></form>
+                <button type="button"
+                        class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#routeActionModal"
+                        data-action-url="@Url.Action("ConfirmPlan")"
+                        data-action-id="@Model.Id"
+                        data-action-title="Confirm Route Plan"
+                        data-action-description="Are you sure you want to confirm this Route Plan? Review the route details before proceeding."
+                        data-action-button="Confirm Plan"
+                        data-action-icon="bi-check-circle"
+                        data-action-style="primary">
+                    <i class="bi bi-check2-circle me-1"></i>
+                    Confirm Plan
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#routeActionModal"
+                        data-action-url="@Url.Action("CancelPlan")"
+                        data-action-id="@Model.Id"
+                        data-action-title="Cancel Route Plan"
+                        data-action-description="This action will cancel the Route Plan. Are you sure you want to continue?"
+                        data-action-button="Yes, Cancel Plan"
+                        data-action-icon="bi-exclamation-triangle"
+                        data-action-style="danger">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Cancel Plan
+                </button>
             }
+
             @if (Model.Status == RoutePlanStatuses.Confirmed)
             {
-                <form asp-action="StartRoute" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-primary" type="submit">Start Route</button></form>
-                <form asp-action="CancelPlan" method="post" onsubmit="return confirm('Cancel this Route Plan?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-outline-danger" type="submit">Cancel Plan</button></form>
+                <button type="button"
+                        class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#routeActionModal"
+                        data-action-url="@Url.Action("StartRoute")"
+                        data-action-id="@Model.Id"
+                        data-action-title="Start Route"
+                        data-action-description="Starting this route will mark the Route Plan as In Progress. Ensure the driver is ready to begin."
+                        data-action-button="Start Route"
+                        data-action-icon="bi-play-circle"
+                        data-action-style="primary">
+                    <i class="bi bi-play-circle me-1"></i>
+                    Start Route
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#routeActionModal"
+                        data-action-url="@Url.Action("CancelPlan")"
+                        data-action-id="@Model.Id"
+                        data-action-title="Cancel Route Plan"
+                        data-action-description="This action will cancel the Route Plan. Are you sure you want to continue?"
+                        data-action-button="Yes, Cancel Plan"
+                        data-action-icon="bi-exclamation-triangle"
+                        data-action-style="danger">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Cancel Plan
+                </button>
             }
+
             @if (Model.Status == RoutePlanStatuses.InProgress)
             {
-                <form asp-action="CompleteRoute" method="post" onsubmit="return confirm('Complete this Route Plan? All stops must be completed.');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-success" type="submit">Complete Route Plan</button></form>
+                <button type="button"
+                        class="btn btn-success"
+                        data-bs-toggle="modal"
+                        data-bs-target="#routeActionModal"
+                        data-action-url="@Url.Action("CompleteRoute")"
+                        data-action-id="@Model.Id"
+                        data-action-title="Complete Route Plan"
+                        data-action-description="Are you sure you want to complete this Route Plan? All stops must be completed before proceeding."
+                        data-action-button="Complete Route Plan"
+                        data-action-icon="bi-check-circle"
+                        data-action-style="success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Complete Route Plan
+                </button>
             }
         </div>
+
     </div>
 
     <div class="card border-0 shadow-sm mb-3">
@@ -65,80 +335,124 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light"><tr><th>Seq.</th><th>Stop Type</th><th>Location</th><th>Planned Arrival</th><th>Actual Arrival</th><th>Completed At</th><th>Status</th><th>Action</th></tr></thead>
+                <thead class="table-light"><tr><th>Seq.</th><th>Stop Type</th><th>Location</th><th>Planned Arrival</th><th>Planned Departure</th><th>Actual Arrival</th><th>Actual Departure</th><th>Completed At</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>
-                @foreach (var stop in Model.Stops.OrderBy(s => s.SequenceNo))
-                {
-                    <tr>
-                        <td>@stop.SequenceNo</td>
-                        <td>@stop.StopType</td>
-                        <td><div class="fw-semibold">@stop.FenceName</div><small class="text-muted">@stop.Address @stop.City</small></td>
-                        <td>@(stop.PlannedArrival?.ToString(@"hh\:mm") ?? "—")</td>
-                        <td>@(stop.ActualArrivalAt?.ToString("dd MMM HH:mm") ?? "—")</td>
-                        <td>@(stop.CompletedAt?.ToString("dd MMM HH:mm") ?? "—")</td>
-                        <td><span class="badge text-bg-@(stop.Status == RoutePlanStopStatuses.Completed ? "success" : stop.Status == RoutePlanStopStatuses.Arrived ? "primary" : "secondary")">@stop.Status</span></td>
-                        <td>
-                            @if (Model.Status == RoutePlanStatuses.InProgress && stop.Status == RoutePlanStopStatuses.Pending)
-                            {
-                                <form asp-action="UpdateStopStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="StopId" value="@stop.Id" /><input type="hidden" name="NewStatus" value="ARRIVED" /><button class="btn btn-sm btn-outline-primary" type="submit">Mark Arrived</button></form>
-                            }
-                            else if (Model.Status == RoutePlanStatuses.InProgress && stop.Status == RoutePlanStopStatuses.Arrived)
-                            {
-                                <form asp-action="UpdateStopStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="StopId" value="@stop.Id" /><input type="hidden" name="NewStatus" value="COMPLETED" /><button class="btn btn-sm btn-outline-success" type="submit">Complete Stop</button></form>
-                            }
-                            else
-                            {
-                                <span class="text-muted small">—</span>
-                            }
-                        </td>
-                    </tr>
-                    @if (canCorrect && Model.Status == RoutePlanStatuses.InProgress)
-                    {
-                        <tr class="table-light">
-                            <td colspan="8">
-                                <form asp-action="CorrectStopStatus" method="post" class="row g-2 align-items-end">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="StopId" value="@stop.Id" />
-                                    <div class="col-md-2">
-                                        <label class="form-label small">Correction Status</label>
-                                        <select name="NewStatus" class="form-select form-select-sm">
-                                            @foreach (var status in RoutePlanStopStatuses.All)
-                                            {
-                                                <option value="@status" selected="@(stop.Status == status)">@status</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label small">Reason (required)</label>
-                                        <input name="Reason" class="form-control form-control-sm" minlength="5" maxlength="1000" required placeholder="Explain why this correction is needed" />
-                                    </div>
-                                    <div class="col-md-2"><button type="submit" class="btn btn-sm btn-warning w-100">Correct Status</button></div>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                    @if (stop.History.Any())
+                    @foreach (var stop in Model.Stops.OrderBy(s => s.SequenceNo))
                     {
                         <tr>
-                            <td colspan="8">
-                                <details>
-                                    <summary class="small text-muted">View status audit history (@stop.History.Count)</summary>
-                                    <div class="table-responsive mt-2">
-                                        <table class="table table-sm table-bordered mb-0">
-                                            <thead><tr><th>Changed At</th><th>Previous</th><th>New</th><th>Action</th><th>Reason</th><th>Changed By</th></tr></thead>
-                                            <tbody>
-                                            @foreach (var h in stop.History.OrderByDescending(x => x.ChangedAt))
-                                            {
-                                                <tr><td>@h.ChangedAt.ToString("dd MMM yyyy HH:mm:ss")</td><td>@(h.PreviousStatus ?? "—")</td><td>@h.NewStatus</td><td>@h.ActionType</td><td>@(h.Reason ?? "—")</td><td>@h.ChangedBy</td></tr>
-                                            }
-                                            </tbody>
-                                        </table>
+                            <td>@stop.SequenceNo</td>
+                            <td>@stop.StopType</td>
+                            <td><div class="fw-semibold">@stop.FenceName</div><small class="text-muted">@stop.Address @stop.City</small></td>
+                            <td>@(stop.PlannedArrival?.ToString(@"hh\:mm") ?? "—")</td>
+                            <td>@(stop.PlannedDeparture?.ToString(@"hh\:mm") ?? "—")</td>
+                            <td>@(stop.ActualArrivalAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
+                            <td>@(stop.ActualDepartureAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
+                            <td>@(stop.CompletedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
+                            <td><span class="badge text-bg-@(stop.Status == RoutePlanStopStatuses.Completed ? "success" : stop.Status == RoutePlanStopStatuses.Arrived ? "primary" : "secondary")">@stop.Status</span></td>
+                            <td>
+                                @if (Model.Status == RoutePlanStatuses.InProgress)
+                                {
+                                    <div class="d-flex flex-column align-items-start gap-1">
+                                        @if (stop.Status == RoutePlanStopStatuses.Pending)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#stopStatusModal"
+                                                    data-stop-id="@stop.Id"
+                                                    data-stop-name="@stop.FenceName"
+                                                    data-stop-type="@stop.StopType"
+                                                    data-current-arrival="@(stop.ActualArrivalAt?.ToString("yyyy-MM-ddTHH:mm"))"
+                                                    data-next-status="ARRIVED">
+                                                Mark Arrived
+                                            </button>
+                                        }
+                                        else if (stop.Status == RoutePlanStopStatuses.Arrived)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#stopStatusModal"
+                                                    data-stop-id="@stop.Id"
+                                                    data-stop-name="@stop.FenceName"
+                                                    data-stop-type="@stop.StopType"
+                                                    data-current-arrival="@(stop.ActualArrivalAt?.ToString("yyyy-MM-ddTHH:mm"))"
+                                                    data-next-status="COMPLETED">
+                                                Complete Stop
+                                            </button>
+                                        }
+
+                                        @if (stop.Status == RoutePlanStopStatuses.Arrived || stop.Status == RoutePlanStopStatuses.Completed)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#actualTimesModal"
+                                                    data-stop-id="@stop.Id"
+                                                    data-stop-name="@stop.FenceName"
+                                                    data-stop-type="@stop.StopType"
+                                                    data-stop-status="@stop.Status"
+                                                    data-actual-arrival="@(stop.ActualArrivalAt?.ToString("yyyy-MM-ddTHH:mm"))"
+                                                    data-actual-departure="@(stop.ActualDepartureAt?.ToString("yyyy-MM-ddTHH:mm"))"
+                                                    data-completed-at="@(stop.CompletedAt?.ToString("yyyy-MM-ddTHH:mm"))">
+                                                Edit Actual Time
+                                            </button>
+                                        }
                                     </div>
-                                </details>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
                             </td>
                         </tr>
+                        @if (canCorrect && Model.Status == RoutePlanStatuses.InProgress)
+                        {
+                            <tr class="table-light">
+                                <td colspan="10">
+                                    <form asp-action="CorrectStopStatus" method="post" class="row g-2 align-items-end">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="StopId" value="@stop.Id" />
+                                        <div class="col-md-2">
+                                            <label class="form-label small">Correction Status</label>
+                                            <select name="NewStatus" class="form-select form-select-sm">
+                                                @foreach (var status in RoutePlanStopStatuses.All)
+                                                {
+                                                    <option value="@status" selected="@(stop.Status == status)">@status</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label class="form-label small">Reason (required)</label>
+                                            <input name="Reason" class="form-control form-control-sm" minlength="5" maxlength="1000" required placeholder="Explain why this correction is needed" />
+                                        </div>
+                                        <div class="col-md-2"><button type="submit" class="btn btn-sm btn-warning w-100">Correct Status</button></div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (stop.History.Any())
+                        {
+                            <tr>
+                                <td colspan="10">
+                                    <details>
+                                        <summary class="small text-muted">View status audit history (@stop.History.Count)</summary>
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead><tr><th>Changed At</th><th>Previous</th><th>New</th><th>Action</th><th>Reason</th><th>Changed By</th></tr></thead>
+                                                <tbody>
+                                                    @foreach (var h in stop.History.OrderByDescending(x => x.ChangedAt))
+                                                    {
+                                                        <tr><td>@h.ChangedAt.ToString("dd MMM yyyy HH:mm:ss")</td><td>@(h.PreviousStatus ?? "—")</td><td>@h.NewStatus</td><td>@h.ActionType</td><td>@(h.Reason ?? "—")</td><td>@h.ChangedBy</td></tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </details>
+                                </td>
+                            </tr>
+                        }
                     }
-                }
                 </tbody>
             </table>
         </div>
@@ -151,4 +465,402 @@
         <div class="col-md-6"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Estimated Buy Price</div><div class="fs-4 fw-semibold">Rp 0</div><div class="text-muted small">Mockup only</div></div></div></div>
         <div class="col-md-6"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Estimated Sell Price</div><div class="fs-4 fw-semibold">Rp 0</div><div class="text-muted small">Mockup only</div></div></div></div>
     </div>
+
+
+    @if (Model.Status == RoutePlanStatuses.InProgress)
+    {
+        <!-- Modal used by Mark Arrived and Complete Stop: saves time + status together. -->
+        <div class="modal fade" id="stopStatusModal" tabindex="-1" aria-labelledby="stopStatusModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form asp-action="UpdateStopStatus" method="post" id="stopStatusForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="StopId" id="statusStopId" />
+                        <input type="hidden" name="NewStatus" id="statusNextStatus" />
+                        <div class="modal-header">
+                            <div>
+                                <h5 class="modal-title" id="stopStatusModalLabel">Update Stop</h5>
+                                <div class="small text-muted" id="statusStopName">Route stop</div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info py-2 small" id="statusModalHelp">
+                                The current date and time are filled in by default. You can edit them to record a historical time.
+                            </div>
+                            <div class="mb-3 d-none" id="statusArrivalField">
+                                <label for="statusActualArrival" class="form-label">Actual Arrival</label>
+                                <input type="datetime-local" step="60" class="form-control" name="actualArrivalAt" id="statusActualArrival" />
+                            </div>
+                            <div class="mb-3 d-none" id="statusDepartureField">
+                                <label for="statusActualDeparture" class="form-label">Actual Departure</label>
+                                <input type="datetime-local" step="60" class="form-control" name="actualDepartureAt" id="statusActualDeparture" />
+                            </div>
+                            <div class="mb-3 d-none" id="statusCompletedField">
+                                <label for="statusCompletedAt" class="form-label">Completion Time</label>
+                                <input type="datetime-local" step="60" class="form-control" name="completedAt" id="statusCompletedAt" />
+                            </div>
+                            <div class="text-danger small" id="statusModalValidation" role="alert"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveStopStatusButton">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Actual Time only edits the time allowed by the current stop status. -->
+        <div class="modal fade" id="actualTimesModal" tabindex="-1" aria-labelledby="actualTimesModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form asp-action="UpdateStopActualTimes" method="post" id="actualTimesForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="stopId" id="actualTimesStopId" />
+                        <div class="modal-header">
+                            <div>
+                                <h5 class="modal-title" id="actualTimesModalLabel">Edit Actual Time</h5>
+                                <div class="small text-muted" id="actualTimesStopName">Route stop</div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info py-2 small" id="actualTimesHelp">
+                                Editing the actual time does not change the stop status. Historical dates are allowed.
+                            </div>
+                            <div class="mb-3 d-none" id="editArrivalField">
+                                <label for="editActualArrival" class="form-label">Actual Arrival</label>
+                                <input type="datetime-local" step="60" class="form-control" name="actualArrivalAt" id="editActualArrival" />
+                            </div>
+                            <div class="mb-3 d-none" id="editDepartureField">
+                                <label for="editActualDeparture" class="form-label">Actual Departure</label>
+                                <input type="datetime-local" step="60" class="form-control" name="actualDepartureAt" id="editActualDeparture" />
+                            </div>
+                            <div class="mb-3 d-none" id="editCompletedField">
+                                <label for="editCompletedAt" class="form-label">Completion Time</label>
+                                <input type="datetime-local" step="60" class="form-control" name="completedAt" id="editCompletedAt" />
+                            </div>
+                            <div class="text-danger small" id="actualTimesValidation" role="alert"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveActualTimesButton">Save Actual Time</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                "use strict";
+
+                const statusModal = document.getElementById("stopStatusModal");
+                const statusForm = document.getElementById("stopStatusForm");
+                const editModal = document.getElementById("actualTimesModal");
+                const editForm = document.getElementById("actualTimesForm");
+                if (!statusModal || !statusForm || !editModal || !editForm) return;
+
+                const byId = id => document.getElementById(id);
+                const nowLocalValue = () => {
+                    const now = new Date();
+                    const pad = value => String(value).padStart(2, "0");
+                    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                };
+                const isDestination = stopType => String(stopType || "").trim().toUpperCase() === "DESTINATION";
+                const setVisibleField = (containerId, inputId, visible, required, value) => {
+                    const container = byId(containerId);
+                    const input = byId(inputId);
+                    container.classList.toggle("d-none", !visible);
+                    input.required = !!visible && !!required;
+                    input.value = visible ? (value || nowLocalValue()) : "";
+                };
+                const showStatusField = (name, value) => {
+                    setVisibleField("statusArrivalField", "statusActualArrival", name === "arrival", name === "arrival", value);
+                    setVisibleField("statusDepartureField", "statusActualDeparture", name === "departure", name === "departure", value);
+                    setVisibleField("statusCompletedField", "statusCompletedAt", name === "completed", name === "completed", value);
+                };
+                const showEditField = (name, value) => {
+                    setVisibleField("editArrivalField", "editActualArrival", name === "arrival", name === "arrival", value);
+                    setVisibleField("editDepartureField", "editActualDeparture", name === "departure", name === "departure", value);
+                    setVisibleField("editCompletedField", "editCompletedAt", name === "completed", name === "completed", value);
+                };
+
+                statusModal.addEventListener("show.bs.modal", function (event) {
+                    const button = event.relatedTarget;
+                    if (!button) return;
+
+                    const nextStatus = (button.dataset.nextStatus || "").toUpperCase();
+                    const destination = isDestination(button.dataset.stopType);
+                    byId("statusStopId").value = button.dataset.stopId || "";
+                    byId("statusNextStatus").value = nextStatus;
+                    byId("statusStopName").textContent = `${button.dataset.stopName || "Route stop"} · ${button.dataset.stopType || ""}`;
+                    byId("statusModalValidation").textContent = "";
+
+                    if (nextStatus === "ARRIVED") {
+                        byId("stopStatusModalLabel").textContent = "Mark Stop Arrived";
+                        byId("saveStopStatusButton").textContent = "Save Arrival & Mark Arrived";
+                        byId("statusModalHelp").textContent = "Enter the actual arrival date and time. It defaults to now, but you may backdate it.";
+                        showStatusField("arrival", "");
+                    } else if (destination) {
+                        byId("stopStatusModalLabel").textContent = "Complete Destination Stop";
+                        byId("saveStopStatusButton").textContent = "Save Completion & Complete Stop";
+                        byId("statusModalHelp").textContent = "A DESTINATION stop records Completion Time only. The value defaults to now and can be backdated.";
+                        showStatusField("completed", "");
+                    } else {
+                        byId("stopStatusModalLabel").textContent = "Complete Stop";
+                        byId("saveStopStatusButton").textContent = "Save Departure & Complete Stop";
+                        byId("statusModalHelp").textContent = "Enter the actual departure date and time. It defaults to now, but you may backdate it. This value is also saved as Completed At.";
+                        showStatusField("departure", "");
+                    }
+
+                    byId("saveStopStatusButton").disabled = false;
+                });
+
+                statusForm.addEventListener("submit", function (event) {
+                    const nextStatus = byId("statusNextStatus").value;
+                    const arrival = byId("statusActualArrival").value;
+                    const departure = byId("statusActualDeparture").value;
+                    const completed = byId("statusCompletedAt").value;
+                    const validation = byId("statusModalValidation");
+                    validation.textContent = "";
+
+                    if (nextStatus === "ARRIVED" && !arrival) {
+                        event.preventDefault();
+                        validation.textContent = "Actual Arrival is required.";
+                        return;
+                    }
+                    if (nextStatus === "COMPLETED" && departure && arrival && new Date(departure) < new Date(arrival)) {
+                        event.preventDefault();
+                        validation.textContent = "Actual Departure cannot be earlier than Actual Arrival.";
+                        return;
+                    }
+                    if (nextStatus === "COMPLETED" && completed && arrival && new Date(completed) < new Date(arrival)) {
+                        event.preventDefault();
+                        validation.textContent = "Completion Time cannot be earlier than Actual Arrival.";
+                        return;
+                    }
+
+                    const submitButton = byId("saveStopStatusButton");
+                    submitButton.disabled = true;
+                    submitButton.textContent = "Saving...";
+                });
+
+                editModal.addEventListener("show.bs.modal", function (event) {
+                    const button = event.relatedTarget;
+                    if (!button) return;
+
+                    const stopStatus = (button.dataset.stopStatus || "").toUpperCase();
+                    const destination = isDestination(button.dataset.stopType);
+                    byId("actualTimesStopId").value = button.dataset.stopId || "";
+                    byId("actualTimesStopName").textContent = `${button.dataset.stopName || "Route stop"} · ${button.dataset.stopType || ""}`;
+                    byId("actualTimesValidation").textContent = "";
+
+                    if (stopStatus === "ARRIVED") {
+                        byId("actualTimesModalLabel").textContent = "Edit Actual Arrival";
+                        showEditField("arrival", button.dataset.actualArrival || "");
+                    } else if (stopStatus === "COMPLETED" && destination) {
+                        byId("actualTimesModalLabel").textContent = "Edit Completion Time";
+                        showEditField("completed", button.dataset.completedAt || "");
+                    } else if (stopStatus === "COMPLETED") {
+                        byId("actualTimesModalLabel").textContent = "Edit Actual Departure";
+                        showEditField("departure", button.dataset.actualDeparture || "");
+                    } else {
+                        showEditField("none", "");
+                    }
+
+                    byId("saveActualTimesButton").disabled = false;
+                    byId("saveActualTimesButton").textContent = "Save Actual Time";
+                });
+
+                editForm.addEventListener("submit", function (event) {
+                    const arrival = byId("editActualArrival").value;
+                    const departure = byId("editActualDeparture").value;
+                    const completed = byId("editCompletedAt").value;
+                    const validation = byId("actualTimesValidation");
+                    validation.textContent = "";
+
+                    if (departure && arrival && new Date(departure) < new Date(arrival)) {
+                        event.preventDefault();
+                        validation.textContent = "Actual Departure cannot be earlier than Actual Arrival.";
+                        return;
+                    }
+                    if (completed && arrival && new Date(completed) < new Date(arrival)) {
+                        event.preventDefault();
+                        validation.textContent = "Completion Time cannot be earlier than Actual Arrival.";
+                        return;
+                    }
+
+                    const submitButton = byId("saveActualTimesButton");
+                    submitButton.disabled = true;
+                    submitButton.textContent = "Saving...";
+                });
+            })();
+        </script>
+    }
 </div>
+
+    <div class="modal fade"
+     id="routeActionModal"
+     tabindex="-1"
+     aria-labelledby="routeActionModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form id="routeActionForm" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="routeActionId" />
+
+                <div class="modal-header border-0 pb-0">
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="routeActionIcon"
+                             class="route-action-icon">
+                            <i class="bi bi-question-circle"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-1"
+                                id="routeActionModalLabel">
+                                Confirm Action
+                            </h5>
+                            <div class="text-muted small">
+                                Route Plan: @Model.PlanNo
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body pt-4">
+                    <p id="routeActionDescription"
+                       class="text-secondary mb-0">
+                        Are you sure you want to continue?
+                    </p>
+                </div>
+
+                <div class="modal-footer border-0 pt-2">
+                    <button type="button"
+                            class="btn btn-light border"
+                            data-bs-dismiss="modal"
+                            id="routeActionCancel">
+                        <i class="bi bi-x-lg me-1"></i>
+                        Go Back
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary"
+                            id="routeActionConfirm">
+                        Confirm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    (() => {
+        "use strict";
+
+        const modal = document.getElementById("routeActionModal");
+        const form = document.getElementById("routeActionForm");
+
+        if (!modal || !form) return;
+
+        const title = document.getElementById("routeActionModalLabel");
+        const description = document.getElementById("routeActionDescription");
+        const actionId = document.getElementById("routeActionId");
+        const icon = document.getElementById("routeActionIcon");
+        const confirmButton = document.getElementById("routeActionConfirm");
+        const cancelButton = document.getElementById("routeActionCancel");
+
+        const allowedActions = [
+            "@Url.Action("ConfirmPlan")",
+            "@Url.Action("CancelPlan")",
+            "@Url.Action("StartRoute")",
+            "@Url.Action("CompleteRoute")"
+        ];
+
+        const iconNames = {
+            "bi-check-circle": "bi-check-circle",
+            "bi-play-circle": "bi-play-circle",
+            "bi-exclamation-triangle": "bi-exclamation-triangle"
+        };
+
+        modal.addEventListener("show.bs.modal", event => {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const actionUrl = button.dataset.actionUrl;
+
+            if (!allowedActions.includes(actionUrl)) {
+                event.preventDefault();
+                return;
+            }
+
+            form.action = actionUrl;
+            actionId.value = button.dataset.actionId || "";
+            title.textContent = button.dataset.actionTitle || "Confirm Action";
+            description.textContent =
+                button.dataset.actionDescription || "Are you sure you want to continue?";
+
+            const style = button.dataset.actionStyle || "primary";
+            const iconName = iconNames[button.dataset.actionIcon]
+                || "bi-question-circle";
+
+            icon.className = `route-action-icon ${style}`;
+            icon.innerHTML = "";
+
+            const iconElement = document.createElement("i");
+            iconElement.className = `bi ${iconName}`;
+            icon.appendChild(iconElement);
+
+            confirmButton.className = `btn btn-${style}`;
+            confirmButton.textContent =
+                button.dataset.actionButton || "Confirm";
+
+            confirmButton.disabled = false;
+            confirmButton.innerHTML =
+                `<i class="bi ${iconName} me-1"></i> ` +
+                (button.dataset.actionButton || "Confirm");
+
+            cancelButton.disabled = false;
+        });
+
+        form.addEventListener("submit", event => {
+            if (!form.action || !allowedActions.includes(
+                new URL(form.action, window.location.href).pathname
+                    .replace(/\/+$/, "")
+            )) {
+                // The complete URL may include a PathBase.
+                const resolved = new URL(form.action, window.location.href);
+                const valid = allowedActions.some(url => {
+                    const allowed = new URL(url, window.location.href);
+                    return allowed.pathname === resolved.pathname;
+                });
+
+                if (!valid) {
+                    event.preventDefault();
+                    return;
+                }
+            }
+
+            confirmButton.disabled = true;
+            cancelButton.disabled = true;
+            confirmButton.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2" ' +
+                'aria-hidden="true"></span>Processing...';
+        });
+
+        modal.addEventListener("hidden.bs.modal", () => {
+            confirmButton.disabled = false;
+            cancelButton.disabled = false;
+        });
+    })();
+</script>
+

@@ -1,63 +1,390 @@
 @model TMSBilling.Models.ViewModels.RoutePlanIndexViewModel
 @using TMSBilling.Models
+
 @{
     ViewData["Title"] = "Route Planning";
     Layout = "~/Views/Shared/_MainLayout.cshtml";
 }
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    .route-page {
+        --rp-border: #e2e8f0;
+        --rp-muted: #64748b;
+        --rp-text: #1e293b;
+        --rp-primary: #2563eb;
+        font-size: 12.5px;
+        color: var(--rp-text);
+    }
+
+        .route-page h1,
+        .route-page h2,
+        .route-page h3,
+        .route-page h4,
+        .route-page h5 {
+            color: var(--rp-text);
+        }
+
+    .rp-page-title {
+        font-size: 20px;
+        font-weight: 650;
+        letter-spacing: -.35px;
+        margin: 0;
+    }
+
+    .rp-subtitle {
+        color: var(--rp-muted);
+        font-size: 12px;
+        margin-top: 3px;
+    }
+
+    .rp-card {
+        background: #fff;
+        border: 1px solid var(--rp-border);
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .035);
+    }
+
+    .rp-card-header {
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--rp-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .rp-card-title {
+        font-size: 12.5px;
+        font-weight: 650;
+        margin: 0;
+    }
+
+    .rp-card-body {
+        padding: 14px;
+    }
+
+    .route-page .form-label {
+        color: #475569;
+        font-size: 11.5px;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .route-page .form-control,
+    .route-page .form-select {
+        min-height: 33px;
+        height: 33px;
+        border-color: #dbe2ea;
+        border-radius: 5px;
+        font-size: 12px;
+        padding: 5px 9px;
+        color: #334155;
+        box-shadow: none;
+    }
+
+        .route-page .form-control:focus,
+        .route-page .form-select:focus {
+            border-color: #93b4fc;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, .09);
+        }
+
+    .route-page .btn {
+        font-size: 12px;
+        font-weight: 550;
+        border-radius: 5px;
+        padding: 6px 11px;
+        min-height: 32px;
+    }
+
+    .route-page .btn-sm {
+        min-height: 27px;
+        padding: 3px 9px;
+        font-size: 11.5px;
+    }
+
+    .rp-table {
+        width: 100%;
+        margin: 0;
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+        .rp-table thead th {
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .35px;
+            padding: 10px 13px;
+            border-bottom: 1px solid var(--rp-border);
+            border-top: 0;
+        }
+
+        .rp-table tbody td {
+            padding: 10px 13px;
+            border-color: #edf1f5;
+            vertical-align: middle;
+            color: #475569;
+        }
+
+        .rp-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .rp-table tbody tr:hover > * {
+            background-color: #f8fbff;
+        }
+
+    .rp-primary-text {
+        color: #1e293b;
+        font-weight: 600;
+    }
+
+    .rp-secondary-text {
+        display: block;
+        color: #94a3b8;
+        font-size: 11px;
+        margin-top: 2px;
+    }
+
+    .rp-plan-no {
+        color: #2563eb;
+        font-weight: 650;
+    }
+
+    .rp-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border-radius: 4px;
+        padding: 4px 7px;
+        font-size: 10.5px;
+        font-weight: 650;
+        line-height: 1.2;
+        border: 1px solid transparent;
+    }
+
+        .rp-status::before {
+            content: "";
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+    .rp-status-success {
+        color: #15803d;
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+    }
+
+    .rp-status-primary {
+        color: #1d4ed8;
+        background: #eff6ff;
+        border-color: #bfdbfe;
+    }
+
+    .rp-status-info {
+        color: #0e7490;
+        background: #ecfeff;
+        border-color: #a5f3fc;
+    }
+
+    .rp-status-danger {
+        color: #b91c1c;
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    .rp-status-secondary {
+        color: #64748b;
+        background: #f8fafc;
+        border-color: #e2e8f0;
+    }
+
+    .rp-stop-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 25px;
+        height: 23px;
+        padding: 0 6px;
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        font-size: 11px;
+    }
+
+    .rp-table-footer {
+        padding: 9px 14px;
+        border-top: 1px solid var(--rp-border);
+        color: #64748b;
+        font-size: 11px;
+    }
+
+    .rp-empty {
+        padding: 42px 16px !important;
+        text-align: center;
+        color: #94a3b8 !important;
+    }
+
+        .rp-empty i {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #cbd5e1;
+        }
+
+    .rp-alert {
+        font-size: 12px;
+        padding: 9px 12px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+    }
+
+    @@media (max-width: 767.98px) {
+        .rp-page-title {
+            font-size: 18px;
+        }
+
+        .rp-card-body {
+            padding: 11px;
+        }
+
+        .rp-table thead th,
+        .rp-table tbody td {
+            padding: 9px 10px;
+        }
+    }
+</style>
+
+<div class="container-fluid py-3 route-page">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
         <div>
-            <h2 class="mb-1">Route Planning</h2>
-            <div class="text-muted">Plan and track route execution.</div>
+            <h1 class="rp-page-title">Route Planning</h1>
+            <div class="rp-subtitle">
+                Manage route plans, schedules, vehicles, and execution status.
+            </div>
         </div>
-        <a asp-action="Form" class="btn btn-primary"><i class="fas fa-plus me-1"></i> Create Route Plan</a>
+
+        <a asp-action="Form" class="btn btn-primary flex-shrink-0">
+            <i class="fas fa-plus me-1"></i>
+            Create Plan
+        </a>
     </div>
 
-    @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
-    @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+    <!-- Notifications -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success rp-alert">
+            <i class="fas fa-check-circle me-1"></i>
+            @TempData["Success"]
+        </div>
+    }
 
-    <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-            <form method="get" asp-action="Index" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Plan Number</label>
-                    <input class="form-control" name="PlanNo" value="@Model.PlanNo" placeholder="Search plan number" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Route Code</label>
-                    <input class="form-control" name="RouteCode" value="@Model.RouteCode" placeholder="Search route" />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="Status">
-                        <option value="">All Statuses</option>
-                        @foreach (var status in RoutePlanStatuses.All)
-                        {
-                            <option value="@status" selected="@(Model.Status == status)">@status</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Plan Date From</label>
-                    <input type="date" class="form-control" name="StartDate" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Plan Date To</label>
-                    <input type="date" class="form-control" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
-                </div>
-                <div class="col-12 d-flex gap-2">
-                    <button class="btn btn-primary" type="submit"><i class="fas fa-search me-1"></i> Search</button>
-                    <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger rp-alert">
+            <i class="fas fa-exclamation-circle me-1"></i>
+            @TempData["Error"]
+        </div>
+    }
+
+    <!-- Search Filters -->
+    <div class="rp-card mb-3">
+        <div class="rp-card-header">
+            <div class="rp-card-title">
+                <i class="fas fa-filter me-2 text-secondary"></i>Filters
+            </div>
+
+            <a asp-action="Index" class="text-decoration-none text-secondary"
+               style="font-size:11.5px;">
+                <i class="fas fa-undo-alt me-1"></i>Reset filters
+            </a>
+        </div>
+
+        <div class="rp-card-body">
+            <form method="get" asp-action="Index">
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label">Plan Number</label>
+                        <input class="form-control"
+                               name="PlanNo"
+                               value="@Model.PlanNo"
+                               placeholder="Search plan no." />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label">Route Code</label>
+                        <input class="form-control"
+                               name="RouteCode"
+                               value="@Model.RouteCode"
+                               placeholder="Search route" />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="Status">
+                            <option value="">All Statuses</option>
+                            @foreach (var status in RoutePlanStatuses.All)
+                            {
+                                <option value="@status"
+                                        selected="@(Model.Status == status)">
+                                    @status
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label">Date From</label>
+                        <input type="date"
+                               class="form-control"
+                               name="StartDate"
+                               value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
+                    </div>
+
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label">Date To</label>
+                        <input type="date"
+                               class="form-control"
+                               name="EndDate"
+                               value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
+                    </div>
+
+                    <div class="col-12 col-lg-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-1"></i> Search
+                        </button>
+                    </div>
+
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    <!-- Route Plan Table -->
+    <div class="rp-card">
+        <div class="rp-card-header">
+            <div>
+                <h2 class="rp-card-title">Route Plans</h2>
+                <div class="rp-subtitle">Review and open route plan details.</div>
+            </div>
+
+            <span class="text-secondary" style="font-size:11px;">
+                <i class="fas fa-list me-1"></i>Plan records
+            </span>
+        </div>
+
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+            <table class="table table-hover align-middle rp-table">
+                <thead>
                     <tr>
                         <th>Plan Number</th>
                         <th>Plan Date</th>
@@ -70,34 +397,96 @@
                         <th class="text-end">Action</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                @if (Model.Items.Count == 0)
-                {
-                    <tr><td colspan="9" class="text-center text-muted py-5">No route plans found.</td></tr>
-                }
-                else
-                {
-                    @foreach (var item in Model.Items)
+                    @if (Model.Items == null || !Model.Items.Any())
                     {
-                        var badge = item.Status == RoutePlanStatuses.Completed ? "success"
-                            : item.Status == RoutePlanStatuses.InProgress ? "primary"
-                            : item.Status == RoutePlanStatuses.Confirmed ? "info"
-                            : item.Status == RoutePlanStatuses.Cancelled ? "danger" : "secondary";
                         <tr>
-                            <td class="fw-semibold">@item.PlanNo</td>
-                            <td>@item.PlanDate.ToString("dd MMM yyyy")</td>
-                            <td><div class="fw-semibold">@item.RouteCode</div><small class="text-muted">@item.RouteName</small></td>
-                            <td>@(item.CustomerCode ?? "—")</td>
-                            <td>@(item.PlannedDeparture?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
-                            <td><div>@(item.VehicleNo ?? "—")</div><small class="text-muted">@(item.DriverName ?? "—")</small></td>
-                            <td class="text-center">@item.Stops.Count</td>
-                            <td><span class="badge text-bg-@badge">@item.Status</span></td>
-                            <td class="text-end"><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Open</a></td>
+                            <td colspan="9" class="rp-empty">
+                                <i class="fas fa-route"></i>
+                                <div class="rp-primary-text mb-1">No route plans found</div>
+                                <div>Try changing your filters or create a new route plan.</div>
+                            </td>
                         </tr>
                     }
-                }
+                    else
+                    {
+                        @foreach (var item in Model.Items)
+                        {
+                            var statusClass =
+                            item.Status == RoutePlanStatuses.Completed ? "rp-status-success" :
+                            item.Status == RoutePlanStatuses.InProgress ? "rp-status-primary" :
+                            item.Status == RoutePlanStatuses.Confirmed ? "rp-status-info" :
+                            item.Status == RoutePlanStatuses.Cancelled ? "rp-status-danger" :
+                            "rp-status-secondary";
+
+                            <tr>
+                                <td>
+                                    <span class="rp-plan-no">@item.PlanNo</span>
+                                </td>
+
+                                <td>
+                                    @item.PlanDate.ToString("dd MMM yyyy")
+                                </td>
+
+                                <td>
+                                    <span class="rp-primary-text">@item.RouteCode</span>
+                                    <span class="rp-secondary-text">@item.RouteName</span>
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(item.CustomerCode)
+                                                                ? "—"
+                                                                : item.CustomerCode)
+                                                                                </td>
+
+                                <td>
+                                    @(item.PlannedDeparture?.ToString("dd MMM yyyy HH:mm") ?? "—")
+                                </td>
+
+                                <td>
+                                    <span class="rp-primary-text">
+                                        @(string.IsNullOrWhiteSpace(item.VehicleNo)
+                                                                        ? "—"
+                                                                        : item.VehicleNo)
+                                                                                     </span>
+                                                                                     <span class="rp-secondary-text">
+                                        @(string.IsNullOrWhiteSpace(item.DriverName)
+                                                                        ? "No driver assigned"
+                                                                        : item.DriverName)
+                            </span>
+                        </td>
+
+                                <td class="text-center">
+                                    <span class="rp-stop-count">@item.Stops.Count</span>
+                                </td>
+
+                                <td>
+                                    <span class="rp-status @statusClass">@item.Status</span>
+                                </td>
+
+                                <td class="text-end">
+                                    <a asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Open <i class="fas fa-chevron-right ms-1"
+                                                style="font-size:9px;"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                                        }
+                    }
                 </tbody>
             </table>
         </div>
+
+        <div class="rp-table-footer d-flex justify-content-between align-items-center">
+            <span>
+                <i class="fas fa-info-circle me-1"></i>
+                Showing @((Model.Items ?? Enumerable.Empty<dynamic>()).Count()) route plan(s)
+            </span>
+            <span>Route Planning</span>
+        </div>
     </div>
+
 </div>

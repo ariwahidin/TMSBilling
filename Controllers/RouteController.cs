@@ -79,6 +79,7 @@ namespace TMSBilling.Controllers
                             SEQUENCE_NO = s.SEQUENCE_NO,
                             STOP_TYPE = s.STOP_TYPE,
                             PLANNED_ARRIVAL = s.PLANNED_ARRIVAL,
+                            PLANNED_DEPARTURE = s.PLANNED_DEPARTURE,
                             STOP_DURATION_MINUTES =
                                 s.STOP_DURATION_MINUTES,
                             NOTES = s.NOTES
@@ -152,6 +153,18 @@ namespace TMSBilling.Controllers
                     .ToUpperInvariant();
 
                 stop.NOTES = stop.NOTES?.Trim();
+
+                // Departure is calculated server-side as the source of truth.
+                if (stop.PLANNED_ARRIVAL.HasValue &&
+                    stop.STOP_DURATION_MINUTES.HasValue)
+                {
+                    stop.PLANNED_DEPARTURE = stop.PLANNED_ARRIVAL.Value
+                        .Add(TimeSpan.FromMinutes(stop.STOP_DURATION_MINUTES.Value));
+                }
+                else
+                {
+                    stop.PLANNED_DEPARTURE = null;
+                }
             }
 
             // -----------------------------------------------------
@@ -428,6 +441,7 @@ namespace TMSBilling.Controllers
                         SEQUENCE_NO = index + 1,
                         STOP_TYPE = input.STOP_TYPE,
                         PLANNED_ARRIVAL = input.PLANNED_ARRIVAL,
+                        PLANNED_DEPARTURE = input.PLANNED_DEPARTURE,
                         STOP_DURATION_MINUTES =
                             input.STOP_DURATION_MINUTES,
                         NOTES = input.NOTES
@@ -500,62 +514,6 @@ namespace TMSBilling.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-
-        // =========================================================
-        // Populate dropdowns for GET and validation-error responses
-        // =========================================================
-        //private async Task PopulateOptionsAsync(RouteViewModel model)
-        //{
-        //    model.CUSTOMER_CODES ??= new List<string>();
-        //    model.Stops ??= new List<RouteStopInput>();
-
-        //    // -----------------------------------------------------
-        //    // Locations: existing GeofenceTable / TRC_GEOFENCE
-        //    // -----------------------------------------------------
-        //    model.AvailableLocations = await _context.Geofences
-        //        .AsNoTracking()
-        //        .Where(g =>
-        //            g.FenceName != null &&
-        //            g.FenceName.Trim() != "")
-        //        .OrderBy(g => g.FenceName)
-        //        .ThenBy(g => g.City)
-        //        .Select(g => new SelectListItem
-        //        {
-        //            // Use the table's primary key, not GEOFENCE_ID.
-        //            Value = g.Id.ToString(),
-
-        //            Text = g.FenceName +
-        //                (string.IsNullOrWhiteSpace(g.City)
-        //                    ? string.Empty
-        //                    : " — " + g.City)
-        //        })
-        //        .ToListAsync();
-
-        //    // -----------------------------------------------------
-        //    // Customers: existing CustomerGroups
-        //    // -----------------------------------------------------
-        //    var customerCodes = await _context.CustomerGroups
-        //        .AsNoTracking()
-        //        .Where(c =>
-        //            c.CUST_CODE != null &&
-        //            c.CUST_CODE != "")
-        //        .Select(c => c.CUST_CODE)
-        //        .Distinct()
-        //        .OrderBy(code => code)
-        //        .ToListAsync();
-
-        //    model.AvailableCustomers = customerCodes
-        //        .Select(code => new SelectListItem
-        //        {
-        //            Value = code,
-        //            Text = code,
-        //            Selected = model.CUSTOMER_CODES.Contains(
-        //                code,
-        //                StringComparer.OrdinalIgnoreCase)
-        //        })
-        //        .ToList();
-        //}
-
 
         private async Task PopulateOptionsAsync(RouteViewModel model)
         {

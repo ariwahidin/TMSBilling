@@ -1,3 +1,6 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
 @model TMSBilling.Models.ViewModels.RoutePlanFormViewModel
 
 @using System.Globalization
@@ -11,215 +14,669 @@
 
 <style>
     .rp-page {
+        --rp-ink: #172033;
+        --rp-muted: #64748b;
+        --rp-border: #e2e8f0;
+        --rp-surface: #ffffff;
+        --rp-subtle: #f8fafc;
+        --rp-primary: #2457c5;
+        color: var(--rp-ink);
         font-size: 13px;
-        color: #334155;
+        min-width: 0;
+        padding-bottom: 18px;
     }
+
+        .rp-page * {
+            box-sizing: border-box;
+        }
 
     .rp-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 18px;
+        gap: 18px;
+        margin-bottom: 20px;
+        min-width: 0;
+        padding: 4px 0 16px;
+        border-bottom: 1px solid var(--rp-border);
+    }
+
+    .rp-heading {
+        min-width: 0;
+    }
+
+    .rp-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 7px;
+        color: var(--rp-primary);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
     }
 
     .rp-title {
         margin: 0;
-        font-size: 22px;
-        font-weight: 700;
-        color: #0f172a;
+        color: var(--rp-ink);
+        font-size: clamp(21px, 2vw, 26px);
+        font-weight: 750;
+        letter-spacing: -.035em;
+        line-height: 1.2;
     }
 
     .rp-subtitle {
-        margin: 4px 0 0;
-        color: #64748b;
-        font-size: 12px;
-    }
-
-    .rp-section {
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: #fff;
-        margin-bottom: 16px;
-    }
-
-    .rp-section-header {
-        padding: 12px 16px;
-        border-bottom: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .rp-section-title {
-        margin: 0;
-        font-size: 13px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
-    .rp-section-body {
-        padding: 16px;
-    }
-
-    .rp-page .form-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #475569;
-        margin-bottom: 5px;
-    }
-
-    .rp-page .form-control,
-    .rp-page .form-select {
-        min-height: 36px;
-        font-size: 13px;
-        border-color: #cbd5e1;
-        border-radius: 5px;
-    }
-
-    .rp-page textarea.form-control {
-        min-height: 76px;
-    }
-
-    .rp-page .form-control:focus,
-    .rp-page .form-select:focus {
-        border-color: #64748b;
-        box-shadow: 0 0 0 2px rgba(100, 116, 139, .12);
-    }
-
-    .rp-required {
-        color: #dc2626;
+        margin: 7px 0 0;
+        color: var(--rp-muted);
+        font-size: 12.5px;
+        line-height: 1.5;
     }
 
     .rp-meta {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
         gap: 8px;
-        color: #64748b;
+        color: var(--rp-muted);
         font-size: 12px;
+    }
+
+    .rp-plan-number {
+        padding: 7px 10px;
+        border: 1px solid var(--rp-border);
+        border-radius: 7px;
+        background: var(--rp-surface);
+        color: var(--rp-ink);
+        font-weight: 700;
     }
 
     .rp-badge {
         display: inline-flex;
         align-items: center;
-        padding: 4px 8px;
-        border-radius: 4px;
-        background: #f1f5f9;
-        color: #475569;
+        gap: 6px;
+        padding: 6px 10px;
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .04em;
+    }
+
+    .rp-feedback {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 12px 14px;
+        border: 1px solid;
+        border-radius: 9px;
+        box-shadow: 0 2px 6px rgba(15,23,42,.03);
+    }
+
+    .rp-feedback-icon {
+        flex: 0 0 auto;
+        font-size: 17px;
+        line-height: 1.2;
+    }
+
+    .rp-feedback-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .rp-feedback-title {
+        margin-bottom: 2px;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .rp-feedback-message {
+        font-size: 12.5px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .rp-feedback-success {
+        border-color: #86efac;
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    .rp-feedback-error {
+        border-color: #fca5a5;
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .rp-feedback .btn-close {
+        margin-left: auto;
+        padding: 3px;
+        font-size: 10px;
+    }
+
+    .rp-validation-summary:empty {
+        display: none;
+    }
+
+    .rp-validation-summary.validation-summary-errors {
+        margin-bottom: 15px;
+        padding: 12px 15px;
+        border: 1px solid #fca5a5;
+        border-radius: 9px;
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .rp-validation-summary ul {
+        margin: 5px 0 0;
+        padding-left: 20px;
+    }
+
+    .rp-page .field-validation-error {
+        display: block;
+        margin-top: 5px;
+        color: #dc2626;
         font-size: 11px;
-        font-weight: 700;
+    }
+
+    .rp-page .input-validation-error {
+        border-color: #ef4444 !important;
+        background-color: #fffafa;
+    }
+
+    .rp-section {
+        min-width: 0;
+        margin-bottom: 16px;
+        overflow: hidden;
+        border: 1px solid var(--rp-border);
+        border-radius: 11px;
+        background: var(--rp-surface);
+        box-shadow: 0 3px 10px rgba(15,23,42,.025);
+    }
+
+    .rp-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 15px 18px;
+        border-bottom: 1px solid var(--rp-border);
+        background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+    }
+
+    .rp-section-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 11px;
+        min-width: 0;
+    }
+
+    .rp-section-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 34px;
+        width: 34px;
+        height: 34px;
+        border: 1px solid #dbeafe;
+        border-radius: 9px;
+        background: #eff6ff;
+        color: var(--rp-primary);
+        font-size: 16px;
+    }
+
+    .rp-section-title {
+        margin: 0;
+        color: var(--rp-ink);
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: -.01em;
+    }
+
+    .rp-section-description {
+        margin-top: 4px;
+        color: var(--rp-muted);
+        font-size: 11.5px;
+        line-height: 1.45;
+    }
+
+    .rp-section-body {
+        padding: 19px 18px;
+    }
+
+    .rp-page .form-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #475569;
+        font-size: 11.5px;
+        font-weight: 750;
+    }
+
+    .rp-required {
+        margin-left: 2px;
+        color: #dc2626;
+    }
+
+    .rp-page .form-control, .rp-page .form-select {
+        min-height: 39px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background-color: #fff;
+        color: #1e293b;
+        font-size: 12.5px;
+        box-shadow: none;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .rp-page .form-control {
+        padding: 8px 11px;
+    }
+
+    .rp-page textarea.form-control {
+        min-height: 88px;
+        resize: vertical;
+    }
+
+    .rp-page .form-control::placeholder {
+        color: #94a3b8;
+    }
+
+    .rp-page .form-control:focus, .rp-page .form-select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+
+    .rp-help {
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        margin-top: 6px;
+        color: var(--rp-muted);
+        font-size: 10.5px;
+        line-height: 1.45;
+    }
+
+        .rp-help i {
+            margin-top: 1px;
+        }
+
+    .rp-field {
+        min-width: 0;
     }
 
     .rp-table-wrap {
+        width: 100%;
+        max-width: 100%;
         overflow-x: auto;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
     .rp-table {
         width: 100%;
-        border-collapse: collapse;
-        white-space: nowrap;
+        min-width: 820px;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        white-space: normal;
     }
 
+        .rp-table th, .rp-table td {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: normal;
+        }
+
         .rp-table th {
-            padding: 10px 12px;
+            padding: 11px 12px;
+            border-bottom: 1px solid #e2e8f0;
             background: #f8fafc;
             color: #64748b;
             text-align: left;
-            font-size: 11px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .065em;
             text-transform: uppercase;
-            letter-spacing: .03em;
-            border-bottom: 1px solid #e2e8f0;
         }
 
         .rp-table td {
-            padding: 10px 12px;
+            padding: 12px;
             border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
+            color: #334155;
+            font-size: 12px;
+            vertical-align: top;
+        }
+
+        .rp-table tbody tr:hover {
+            background: #fbfdff;
         }
 
         .rp-table tbody tr:last-child td {
             border-bottom: 0;
         }
 
+        .rp-table th:nth-child(1), .rp-table td:nth-child(1) {
+            width: 76px;
+        }
+
+        .rp-table th:nth-child(2), .rp-table td:nth-child(2) {
+            width: 30%;
+        }
+
+        .rp-table th:nth-child(3), .rp-table td:nth-child(3) {
+            width: 13%;
+        }
+
+        .rp-table th:nth-child(4), .rp-table td:nth-child(4) {
+            width: 13%;
+        }
+
+        .rp-table th:nth-child(5), .rp-table td:nth-child(5) {
+            width: 13%;
+        }
+
+        .rp-table th:nth-child(6), .rp-table td:nth-child(6) {
+            width: 13%;
+        }
+
+        .rp-table th:nth-child(7), .rp-table td:nth-child(7) {
+            width: 12%;
+        }
+
+    .rp-stop-name, .rp-stop-address {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: normal;
+        white-space: normal;
+    }
+
+    .rp-stop-name {
+        color: #1e293b;
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 1.45;
+    }
+
+    .rp-stop-address {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.5;
+    }
+
     .rp-sequence {
         display: inline-flex;
-        justify-content: center;
         align-items: center;
-        width: 26px;
-        height: 26px;
-        border-radius: 5px;
+        justify-content: center;
+        width: 29px;
+        height: 29px;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
         background: #eff6ff;
         color: #1d4ed8;
-        font-weight: 700;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .rp-stop-type {
+        display: inline-flex;
+        padding: 4px 7px;
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 10px;
+        font-weight: 750;
+    }
+
+    .rp-time {
+        color: #334155;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .rp-duration {
+        color: #475569;
+        white-space: nowrap;
     }
 
     .rp-muted {
-        color: #64748b;
-        font-size: 12px;
+        color: var(--rp-muted);
+        font-size: 11.5px;
+    }
+
+    .rp-stop-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 7px;
+        background: #fff;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 750;
+        white-space: nowrap;
     }
 
     .rp-empty {
-        padding: 28px 16px;
+        padding: 36px 18px !important;
+        color: #64748b !important;
         text-align: center;
-        color: #64748b;
     }
 
+    .rp-empty-icon {
+        display: block;
+        margin-bottom: 8px;
+        color: #94a3b8;
+        font-size: 23px;
+    }
+
+    .rp-table-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 11px 16px;
+        border-top: 1px solid var(--rp-border);
+        background: #fbfcfe;
+        color: var(--rp-muted);
+        font-size: 11px;
+        line-height: 1.5;
+    }
+
+        .rp-table-note i {
+            color: #64748b;
+        }
+
     .rp-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        padding-top: 4px;
-        padding-bottom: 20px;
+        gap: 14px;
+        margin-top: 18px;
+        padding: 13px 16px;
+        border: 1px solid var(--rp-border);
+        border-radius: 11px;
+        background: rgba(255,255,255,.96);
+        box-shadow: 0 -4px 18px rgba(15,23,42,.04);
+        backdrop-filter: blur(10px);
     }
+
+    .rp-footer-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        color: var(--rp-muted);
+        font-size: 11px;
+        line-height: 1.5;
+    }
+
+        .rp-footer-note i {
+            margin-top: 1px;
+            color: #64748b;
+        }
 
     .rp-footer-actions {
         display: flex;
-        gap: 8px;
+        align-items: center;
+        gap: 9px;
     }
 
     .rp-page .btn {
-        font-size: 13px;
-        font-weight: 600;
-        padding: 8px 13px;
-        border-radius: 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 38px;
+        padding: 8px 14px;
+        border-radius: 7px;
+        font-size: 12px;
+        font-weight: 750;
+        transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
     }
 
-    .rp-page .validation-summary-errors {
-        margin-bottom: 14px;
-        padding: 10px 14px;
-        border: 1px solid #fecaca;
-        border-radius: 6px;
-        background: #fef2f2;
-        color: #b91c1c;
-    }
-
-        .rp-page .validation-summary-errors ul {
-            margin: 0;
-            padding-left: 18px;
+        .rp-page .btn:active {
+            transform: translateY(1px);
         }
 
-    .rp-page .field-validation-error {
-        display: block;
-        color: #dc2626;
-        font-size: 11px;
-        margin-top: 4px;
+    .rp-page .btn-primary {
+        border-color: var(--rp-primary);
+        background: var(--rp-primary);
+        box-shadow: 0 2px 5px rgba(36,87,197,.16);
+    }
+
+        .rp-page .btn-primary:hover {
+            border-color: #1d4ed8;
+            background: #1d4ed8;
+        }
+
+    .rp-page .btn-outline-secondary {
+        border-color: #cbd5e1;
+        background: #fff;
+        color: #475569;
+    }
+
+        .rp-page .btn-outline-secondary:hover {
+            background: #f8fafc;
+        }
+
+    /* Select2 matches the form controls above. */
+    .rp-page .select2-container {
+        width: 100% !important;
+    }
+
+    .rp-page .select2-container--default .select2-selection--single {
+        display: flex;
+        align-items: center;
+        height: 39px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background: #fff;
+    }
+
+        .rp-page .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding: 0 34px 0 11px;
+            color: #1e293b;
+            font-size: 12.5px;
+            line-height: 37px;
+        }
+
+        .rp-page .select2-container--default .select2-selection--single .select2-selection__placeholder {
+            color: #94a3b8;
+        }
+
+        .rp-page .select2-container--default .select2-selection--single .select2-selection__arrow {
+            top: 2px;
+            right: 5px;
+            height: 34px;
+        }
+
+        .rp-page .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 6px;
+            color: #64748b;
+        }
+
+    .rp-page .select2-container--default.select2-container--focus .select2-selection--single, .rp-page .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+
+    .rp-page .select2-dropdown {
+        overflow: hidden;
+        border-color: #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(15,23,42,.12);
+    }
+
+    .rp-page .select2-search--dropdown {
+        padding: 8px;
+    }
+
+        .rp-page .select2-search--dropdown .select2-search__field {
+            padding: 7px 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            font-size: 12px;
+        }
+
+    .rp-page .select2-results__option {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .rp-page .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .rp-page .select2-container--default .select2-results__option--selected {
+        background: #f1f5f9;
+        color: #334155;
+    }
+
+    @@media (max-width: 991.98px) {
+        .rp-section-body {
+            padding: 16px;
+        }
+
+        .rp-table {
+            min-width: 800px;
+        }
     }
 
     @@media (max-width: 767.98px) {
         .rp-header {
             align-items: flex-start;
             flex-direction: column;
+            gap: 12px;
+        }
+
+        .rp-meta {
+            justify-content: flex-start;
+        }
+
+        .rp-section-header {
+            align-items: flex-start;
+            padding: 13px;
         }
 
         .rp-section-body {
-            padding: 12px;
+            padding: 13px;
         }
 
         .rp-footer {
+            position: static;
             align-items: stretch;
             flex-direction: column;
+            padding: 12px;
         }
 
         .rp-footer-actions {
@@ -230,38 +687,61 @@
                 flex: 1;
             }
     }
+
+    @@media (max-width: 420px) {
+        .rp-footer-actions {
+            flex-direction: column-reverse;
+        }
+
+            .rp-footer-actions .btn {
+                width: 100%;
+            }
+
+        .rp-plan-number {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+    }
 </style>
 
 <div class="rp-page">
     <div class="rp-header">
-        <div>
+        <div class="rp-heading">
+            <div class="rp-eyebrow"><i class="bi bi-signpost-2"></i> Route Planning / Plan Setup</div>
             <h1 class="rp-title">@ViewData["Title"]</h1>
-            <p class="rp-subtitle">
-                Configure the route, assign a customer and review the planned stops.
-            </p>
+            <p class="rp-subtitle">Configure route details, assign fleet resources, and review the planned stops before saving.</p>
         </div>
 
         <div class="rp-meta">
-            @if (isEdit)
+            @if (isEdit && !string.IsNullOrWhiteSpace(Model.PlanNo))
             {
-                <span>Plan No:</span>
-                <strong class="text-dark">@Model.PlanNo</strong>
+                <span class="rp-plan-number"><i class="bi bi-hash me-1"></i>@Model.PlanNo</span>
             }
-            <span class="rp-badge">@(Model.Status ?? "DRAFT")</span>
+            <span class="rp-badge"><i class="bi bi-circle-fill" style="font-size:6px"></i>@(string.IsNullOrWhiteSpace(Model.Status) ? "DRAFT" : Model.Status.ToUpperInvariant())</span>
         </div>
     </div>
 
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger py-2 mb-3" role="alert">
-            @TempData["Error"]
+        <div class="alert rp-feedback rp-feedback-error" role="alert" aria-live="assertive">
+            <i class="bi bi-exclamation-octagon-fill rp-feedback-icon"></i>
+            <div class="rp-feedback-content">
+                <div class="rp-feedback-title">An Error Occurred</div>
+                <div class="rp-feedback-message">@TempData["Error"]</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success py-2 mb-3" role="alert">
-            @TempData["Success"]
+        <div class="alert rp-feedback rp-feedback-success" role="status" aria-live="polite">
+            <i class="bi bi-check-circle-fill rp-feedback-icon"></i>
+            <div class="rp-feedback-content">
+                <div class="rp-feedback-title">Success</div>
+                <div class="rp-feedback-message">@TempData["Success"]</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
@@ -275,17 +755,19 @@
         <input asp-for="PlanNo" type="hidden" />
         <input asp-for="Status" type="hidden" />
 
-        @* <div asp-validation-summary="ModelOnly"></div> *@
-
-        <div asp-validation-summary="All"
-             class="alert alert-danger mb-3">
-        </div>
+        <div asp-validation-summary="All" class="rp-validation-summary" role="alert"></div>
 
         <!-- PLAN INFORMATION -->
         <section class="rp-section">
             <div class="rp-section-header">
-                <h2 class="rp-section-title">Plan Information</h2>
-                <span class="rp-muted">Required fields are marked with *</span>
+                <div class="rp-section-heading">
+                    <span class="rp-section-icon"><i class="bi bi-sliders2"></i></span>
+                    <div>
+                        <h2 class="rp-section-title">Plan Information</h2>
+                        <div class="rp-section-description">Set the schedule, route, customer, and assigned resources.</div>
+                    </div>
+                </div>
+                <span class="rp-muted"><span class="rp-required">*</span> Required</span>
             </div>
 
             <div class="rp-section-body">
@@ -307,8 +789,9 @@
                         </label>
                         <select asp-for="RouteId"
                                 asp-items="Model.Routes"
-                                class="form-select"
+                                class="form-select js-select2"
                                 id="RouteId"
+                                data-placeholder="Select Master Route"
                                 required>
                             <option value="">Select Master Route</option>
                         </select>
@@ -321,13 +804,11 @@
                         </label>
                         <select asp-for="CustomerCode"
                                 asp-items="Model.Customers"
-                                class="form-select"
-                                id="CustomerCode">
+                                class="form-select js-select2"
+                                id="CustomerCode" data-placeholder="All assigned customers / Not specified">
                             <option value="">All assigned customers / Not specified</option>
                         </select>
-                        <div class="rp-muted mt-1">
-                            Customer options depend on the selected route.
-                        </div>
+                        <div class="rp-help"><i class="bi bi-info-circle"></i><span id="customerMessage">Customer options depend on the selected route.</span></div>
                         <span asp-validation-for="CustomerCode"></span>
                     </div>
 
@@ -343,25 +824,41 @@
                     </div>
 
                     <div class="col-md-6 col-lg-3">
-                        <label asp-for="VehicleNo" class="form-label">
+                        <label asp-for="VehicleId" class="form-label">
                             Vehicle No.
                         </label>
-                        <input asp-for="VehicleNo"
-                               class="form-control"
-                               maxlength="50"
-                               placeholder="Enter vehicle number" />
-                        <span asp-validation-for="VehicleNo"></span>
+                        <select asp-for="VehicleId"
+                                asp-items="Model.Vehicles"
+                                class="form-select js-select2"
+                                id="VehicleId" data-placeholder="-- Select Vehicle --">
+                            <option value="">-- Select Vehicle --</option>
+                        </select>
+                        <span asp-validation-for="VehicleId" class="text-danger"></span>
+                        <div class="rp-help"><i class="bi bi-cloud-arrow-down"></i><span>Vehicle list is provided by the external fleet system.</span></div>
+
+                        @* Save currently persists the license plate in VehicleNo. *@
+                        <input asp-for="VehicleNo" type="hidden" id="VehicleNo" />
                     </div>
 
                     <div class="col-md-6 col-lg-3">
-                        <label asp-for="DriverName" class="form-label">
-                            Driver Name
-                        </label>
-                        <input asp-for="DriverName"
-                               class="form-control"
-                               maxlength="100"
-                               placeholder="Enter driver name" />
-                        <span asp-validation-for="DriverName"></span>
+                        <label asp-for="DriverId" class="form-label">Driver Name</label>
+                        <select asp-for="DriverId"
+                                class="form-select js-select2"
+                                id="DriverId"
+                                data-placeholder="-- Select Driver --">
+                            <option value="">-- Select Driver --</option>
+                            @foreach (var driver in Model.Drivers ?? new List<TMSBilling.Models.ExternalDriver>())
+                            {
+                                <option value="@driver.Id"
+                                        data-driver-name="@driver.Name"
+                                        selected="@(Model.DriverId == driver.Id ? "selected" : null)">
+                                    @driver.Name (ID: @driver.Id)
+                                </option>
+                            }
+                        </select>
+                        <input asp-for="DriverName" type="hidden" id="DriverName" />
+                        <span asp-validation-for="DriverId" class="text-danger"></span>
+                        <div class="rp-help"><i class="bi bi-person-badge"></i><span>Driver data comes from the external fleet system. The ID helps distinguish drivers with identical names.</span></div>
                     </div>
 
                     <div class="col-md-12 col-lg-3">
@@ -370,7 +867,7 @@
                                   class="form-control"
                                   rows="2"
                                   maxlength="1000"
-                                  placeholder="Optional notes"></textarea>
+                                  placeholder="Add operational instructions or notes (optional)"></textarea>
                         <span asp-validation-for="Notes"></span>
                     </div>
                 </div>
@@ -380,14 +877,14 @@
         <!-- ROUTE STOPS -->
         <section class="rp-section">
             <div class="rp-section-header">
-                <div>
-                    <h2 class="rp-section-title">Planned Stops</h2>
-                    <div class="rp-muted mt-1">
-                        Stops are loaded from Master Route and saved as a snapshot.
+                <div class="rp-section-heading">
+                    <span class="rp-section-icon"><i class="bi bi-geo-alt"></i></span>
+                    <div>
+                        <h2 class="rp-section-title">Planned Stops</h2>
+                        <div class="rp-section-description">Read-only preview of the stop sequence configured on the selected Master Route.</div>
                     </div>
                 </div>
-
-                <span class="rp-badge" id="stopCount">@stops.Count stops</span>
+                <span class="rp-stop-count"><i class="bi bi-list-ol"></i><span id="stopCount">@stops.Count stops</span></span>
             </div>
 
             <div class="rp-table-wrap">
@@ -395,11 +892,12 @@
                     <thead>
                         <tr>
                             <th style="width:70px;">Sequence</th>
-                            <th>Location</th>
-                            <th>City</th>
-                            <th>Stop Type</th>
-                            <th>Planned Arrival</th>
-                            <th>Duration</th>
+                            <th style="width:30%;">Location</th>
+                            <th style="width:12%;">City</th>
+                            <th style="width:12%;">Stop Type</th>
+                            <th style="width:110px;">Planned Arrival</th>
+                            <th style="width:120px;">Planned Departure</th>
+                            <th style="width:100px;">Duration</th>
                         </tr>
                     </thead>
                     <tbody id="routeStopsBody">
@@ -412,28 +910,27 @@
                                         <span class="rp-sequence">@stop.SequenceNo</span>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">@stop.FenceName</div>
+                                        <div class="fw-semibold rp-stop-name">@stop.FenceName</div>
                                         @if (!string.IsNullOrWhiteSpace(stop.Address))
                                         {
-                                            <div class="rp-muted">@stop.Address</div>
+                                            <div class="rp-muted rp-stop-address">@stop.Address</div>
                                         }
-                            </td>
-                            <td>@(string.IsNullOrWhiteSpace(stop.City) ? "-" : stop.City)</td>
-                            <td>@stop.StopType</td>
-                            <td>
-                                @(stop.PlannedArrival.HasValue
-                                                                ? stop.PlannedArrival.Value.ToString(@"hh\:mm")
-                                                                : "-")
-                            </td>
-                            <td>@stop.StopDurationMinutes min</td>
-                        </tr>
-                                                }
+                                    </td>
+                                    <td>@(string.IsNullOrWhiteSpace(stop.City) ? "-" : stop.City)</td>
+                                    <td><span class="rp-stop-type">@stop.StopType</span></td>
+                                    <td><span class="rp-time">@(stop.PlannedArrival.HasValue? stop.PlannedArrival.Value.ToString(@"hh\:mm") : "-")</span></td>
+                                    <td><span class="rp-time">@(stop.PlannedDeparture.HasValue? stop.PlannedDeparture.Value.ToString(@"hh\:mm") : "-")</span></td>
+                                    <td><span class="rp-duration">@stop.StopDurationMinutes min</span></td>
+                                </tr>
+                            }
                         }
                         else
                         {
                             <tr id="emptyStopsRow">
-                                <td colspan="6" class="rp-empty">
-                                    Select a Master Route to load its planned stops.
+                                <td colspan="7" class="rp-empty">
+                                    <i class="bi bi-signpost-split rp-empty-icon"></i>
+                                    <div class="fw-semibold">No stops to display</div>
+                                    <div class="rp-muted mt-1">Select a Master Route to load its planned stops.</div>
                                 </td>
                             </tr>
                         }
@@ -441,26 +938,25 @@
                 </table>
             </div>
 
-            <div class="px-3 py-2 border-top rp-muted" id="stopMessage">
-                Stops are read-only here. To change the route sequence, update Master Route.
+            <div class="rp-table-note" id="stopMessage">
+                <i class="bi bi-info-circle"></i>
+                <span>Stops are read-only here. To change the route sequence, update Master Route.</span>
             </div>
         </section>
 
         <div class="rp-footer">
-            <div class="rp-muted">
-                <icon></icon>
-                Only DRAFT Route Plans can be edited.
+            <div class="rp-footer-note">
+                <i class="bi bi-shield-lock"></i>
+                <span>Only DRAFT Route Plans can be edited. Review the route and assignments before saving.</span>
             </div>
 
             <div class="rp-footer-actions">
-                <a asp-controller="RoutePlanning"
-                   asp-action="Index"
-                   class="btn btn-outline-secondary">
-                    Cancel
+                <a asp-controller="RoutePlanning" asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancel
                 </a>
-
                 <button type="submit" class="btn btn-primary" id="saveButton">
-                    @(isEdit ? "Save Changes" : "Save as Draft")
+                    <i class="bi bi-check2-circle" id="saveButtonIcon"></i>
+                    <span id="saveButtonText">@(isEdit ? "Save Changes" : "Save as Draft")</span>
                 </button>
             </div>
         </div>
@@ -469,40 +965,139 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-
     <script>
-        (() => {
+        (async function () {
+            "use strict";
+
             const routeSelect = document.getElementById("RouteId");
             const customerSelect = document.getElementById("CustomerCode");
             const stopsBody = document.getElementById("routeStopsBody");
             const stopCount = document.getElementById("stopCount");
             const stopMessage = document.getElementById("stopMessage");
+            const customerMessage = document.getElementById("customerMessage");
             const form = document.getElementById("routePlanForm");
             const saveButton = document.getElementById("saveButton");
+            const vehicleSelect = document.getElementById("VehicleId");
+            const vehicleNoInput = document.getElementById("VehicleNo");
+            const driverSelect = document.getElementById("DriverId");
+            const driverNameInput = document.getElementById("DriverName");
 
             const customersUrl = '@Url.Action("GetRouteCustomers", "RoutePlanning")';
             const stopsUrl = '@Url.Action("GetRouteStops", "RoutePlanning")';
-
-            const initialRouteId = routeSelect.value;
+            const initialRouteId = routeSelect ? routeSelect.value : "";
+            const initialCustomerCode = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerCode));
             const hasSavedStops = @((stops.Any()).ToString().ToLowerInvariant());
+
+            function loadScript(src) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement("script");
+                    script.src = src;
+                    script.async = true;
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error("Failed to load script: " + src));
+                    document.head.appendChild(script);
+                });
+            }
+
+            async function ensureSelect2() {
+                // Reuse jQuery from the main layout; only load it if the layout does not provide it.
+                if (!window.jQuery) {
+                    await loadScript("https://code.jquery.com/jquery-3.7.1.min.js");
+                }
+                if (!window.jQuery.fn || !window.jQuery.fn.select2) {
+                    await loadScript("https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js");
+                }
+                if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+                    throw new Error("Select2 did not initialize.");
+                }
+
+                const $ = window.jQuery;
+                $(".js-select2").each(function () {
+                    const $select = $(this);
+                    if ($select.hasClass("select2-hidden-accessible")) {
+                        $select.select2("destroy");
+                    }
+                    $select.select2({
+                        width: "100%",
+                        placeholder: this.dataset.placeholder || $select.find("option:first").text(),
+                        allowClear: !this.required,
+                        minimumResultsForSearch: 0
+                    });
+                });
+            }
+
+            function refreshSelect2(select) {
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 &&
+                    window.jQuery(select).hasClass("select2-hidden-accessible")) {
+                    window.jQuery(select).trigger("change.select2");
+                }
+            }
+
+            function setSelectValue(select, value) {
+                select.value = value == null ? "" : String(value);
+                refreshSelect2(select);
+            }
+
+            function syncDriverName(clearWhenEmpty) {
+                if (!driverSelect || !driverNameInput) return;
+                const selectedOption = driverSelect.options[driverSelect.selectedIndex];
+                if (driverSelect.value && selectedOption) {
+                    driverNameInput.value = selectedOption.dataset.driverName || selectedOption.textContent.trim();
+                } else if (clearWhenEmpty) {
+                    driverNameInput.value = "";
+                }
+            }
+
+            function syncVehicleNo() {
+                if (!vehicleSelect || !vehicleNoInput) return;
+                const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
+                vehicleNoInput.value = vehicleSelect.value && selectedOption
+                    ? selectedOption.textContent.trim()
+                    : "";
+            }
 
             function addCell(row, value) {
                 const cell = document.createElement("td");
-                cell.textContent = value ?? "-";
+                cell.textContent = value == null || value === "" ? "-" : String(value);
                 row.appendChild(cell);
                 return cell;
             }
 
+            function readValue(object, ...keys) {
+                for (const key of keys) {
+                    if (object && Object.prototype.hasOwnProperty.call(object, key) && object[key] != null) {
+                        return object[key];
+                    }
+                }
+                return null;
+            }
+
+            function setStopMessage(message) {
+                if (!stopMessage) return;
+                let messageNode = stopMessage.querySelector("span");
+                if (!messageNode) {
+                    messageNode = document.createElement("span");
+                    stopMessage.appendChild(messageNode);
+                }
+                messageNode.textContent = message;
+            }
+
+            function setCustomerMessage(message) {
+                if (customerMessage) customerMessage.textContent = message;
+            }
+
             function setEmptyStops(message) {
                 stopsBody.replaceChildren();
-
                 const row = document.createElement("tr");
                 const cell = document.createElement("td");
-
-                cell.colSpan = 6;
+                cell.colSpan = 7;
                 cell.className = "rp-empty";
-                cell.textContent = message;
-
+                const icon = document.createElement("i");
+                icon.className = "bi bi-info-circle rp-empty-icon";
+                const title = document.createElement("div");
+                title.className = "fw-semibold";
+                title.textContent = message;
+                cell.append(icon, title);
                 row.appendChild(cell);
                 stopsBody.appendChild(row);
                 stopCount.textContent = "0 stops";
@@ -518,44 +1113,49 @@
 
                 stops.forEach((stop, index) => {
                     const row = document.createElement("tr");
-
                     const sequenceCell = document.createElement("td");
                     const sequence = document.createElement("span");
                     sequence.className = "rp-sequence";
-                    sequence.textContent = stop.sEQUENCE_NO ?? (index + 1);
+                    sequence.textContent = readValue(stop, "sequenceNo", "SequenceNo", "sEQUENCE_NO", "SEQUENCE_NO", "sequence_no") ?? (index + 1);
                     sequenceCell.appendChild(sequence);
                     row.appendChild(sequenceCell);
 
                     const locationCell = document.createElement("td");
                     const name = document.createElement("div");
-                    name.className = "fw-semibold";
-                    name.textContent = stop.fenceName ?? "(Unnamed Location)";
+                    name.className = "fw-semibold rp-stop-name";
+                    name.textContent = readValue(stop, "fenceName", "FenceName", "fence_name") || "(Unnamed Location)";
                     locationCell.appendChild(name);
 
-                    if (stop.address) {
+                    const addressValue = readValue(stop, "address", "Address");
+                    if (addressValue) {
                         const address = document.createElement("div");
-                        address.className = "rp-muted";
-                        address.textContent = stop.address;
+                        address.className = "rp-muted rp-stop-address";
+                        address.textContent = addressValue;
                         locationCell.appendChild(address);
                     }
-
                     row.appendChild(locationCell);
-                    addCell(row, stop.city || "-");
-                    addCell(row, stop.sTOP_TYPE || "-");
-                    addCell(row, stop.plannedArrival || "-");
 
-                    const duration = stop.sTOP_DURATION_MINUTES;
-                    addCell(row, duration == null ? "0 min" : `${duration} min`);
-
+                    addCell(row, readValue(stop, "city", "City") || "-");
+                    const typeCell = addCell(row, readValue(stop, "stopType", "StopType", "sTOP_TYPE", "STOP_TYPE", "stop_type") || "-");
+                    const typeBadge = document.createElement("span");
+                    typeBadge.className = "rp-stop-type";
+                    typeBadge.textContent = typeCell.textContent;
+                    typeCell.replaceChildren(typeBadge);
+                    const arrivalCell = addCell(row, readValue(stop, "plannedArrival", "PlannedArrival", "planned_arrival") || "-");
+                    arrivalCell.classList.add("rp-time");
+                    const departureCell = addCell(row, readValue(stop, "plannedDeparture", "PlannedDeparture", "planned_departure") || "-");
+                    departureCell.classList.add("rp-time");
+                    const duration = readValue(stop, "stopDurationMinutes", "StopDurationMinutes", "sTOP_DURATION_MINUTES", "STOP_DURATION_MINUTES", "stop_duration_minutes");
+                    const durationCell = addCell(row, duration == null ? "0 min" : `${duration} min`);
+                    durationCell.classList.add("rp-duration");
                     stopsBody.appendChild(row);
                 });
 
                 stopCount.textContent = `${stops.length} stops`;
             }
 
-            async function loadCustomers(routeId) {
+            async function loadCustomers(routeId, selectedCustomerCode) {
                 customerSelect.replaceChildren();
-
                 const placeholder = document.createElement("option");
                 placeholder.value = "";
                 placeholder.textContent = "All assigned customers / Not specified";
@@ -563,36 +1163,48 @@
 
                 if (!routeId) {
                     customerSelect.disabled = true;
+                    setSelectValue(customerSelect, "");
+                    customerSelect.disabled = true;
+                    refreshSelect2(customerSelect);
                     return;
                 }
 
                 customerSelect.disabled = true;
-
+                refreshSelect2(customerSelect);
                 try {
                     const response = await fetch(
                         `${customersUrl}?routeId=${encodeURIComponent(routeId)}`,
                         { headers: { "X-Requested-With": "XMLHttpRequest" } }
                     );
-
                     if (!response.ok) {
-                        throw new Error("Unable to load customers.");
+                        throw new Error(`Unable to load customers (HTTP ${response.status}).`);
                     }
 
                     const customers = await response.json();
+                    if (!Array.isArray(customers)) {
+                        throw new Error("Customer response is not a list.");
+                    }
 
                     customers.forEach(customer => {
                         const option = document.createElement("option");
-                        option.value = customer.value;
-                        option.textContent = customer.text;
+                        option.value = customer.value ?? customer.Value ?? "";
+                        option.textContent = customer.text ?? customer.Text ?? option.value;
                         customerSelect.appendChild(option);
                     });
 
+                    const available = Array.from(customerSelect.options).some(
+                        option => option.value !== "" && option.value === String(selectedCustomerCode ?? "")
+                    );
                     customerSelect.disabled = false;
+                    setSelectValue(customerSelect, available ? selectedCustomerCode : "");
+                    setCustomerMessage(customers.length === 0
+                        ? "No customers are assigned to this Master Route. Customer can remain unspecified."
+                        : "Customer options depend on the selected route.");
                 } catch (error) {
-                    customerSelect.disabled = false;
-                    stopMessage.textContent =
-                        "Customer list could not be loaded. Please reselect the route or reload the page.";
-                    console.error(error);
+                    customerSelect.disabled = true;
+                    refreshSelect2(customerSelect);
+                    setCustomerMessage("Customer list could not be loaded. Check the route assignment or reload the page.");
+                    console.error("Route Planning: failed to load customers", error);
                 }
             }
 
@@ -603,57 +1215,96 @@
                 }
 
                 setEmptyStops("Loading route stops...");
-
                 try {
                     const response = await fetch(
                         `${stopsUrl}?routeId=${encodeURIComponent(routeId)}`,
                         { headers: { "X-Requested-With": "XMLHttpRequest" } }
                     );
-
                     if (!response.ok) {
-                        throw new Error("Unable to load route stops.");
+                        throw new Error(`Unable to load route stops (HTTP ${response.status}).`);
                     }
 
-                    renderStops(await response.json());
-                    stopMessage.textContent =
-                        "Stops are read-only here. To change the route sequence, update Master Route.";
+                    const stops = await response.json();
+                    renderStops(stops);
+                    setStopMessage(Array.isArray(stops) && stops.length
+                        ? "Stops are read-only here. To change the route sequence, update Master Route."
+                        : "No valid stops found for this Master Route. Check its configured stops and geofences.");
                 } catch (error) {
-                    setEmptyStops("Failed to load route stops. Please try selecting the route again.");
-                    console.error(error);
+                    setEmptyStops("Failed to load route stops. Please reselect the route or reload the page.");
+                    setStopMessage("Could not load Master Route stop details.");
+                    console.error("Route Planning: failed to load stops", error);
                 }
             }
 
-            routeSelect.addEventListener("change", async () => {
-                await Promise.all([
-                    loadCustomers(routeSelect.value),
-                    loadStops(routeSelect.value)
-                ]);
-            });
+            try {
+                await ensureSelect2();
+            } catch (error) {
+                // Native selects remain usable if the CDN is unavailable, but record a clear diagnostic.
+                console.error("Route Planning: Select2 could not be loaded; using native dropdowns.", error);
+            }
 
-            // form.addEventListener("submit", () => {
-            //     if (saveButton) {
-            //         saveButton.disabled = true;
-            //         saveButton.textContent = "Saving...";
-            //     }
-            // });
-
-            form.addEventListener("submit", (event) => {
-                if (!form.checkValidity()) {
-                    event.preventDefault();
-                    form.reportValidity();
-                    return;
+            function onSelectChange(select, handler) {
+                if (!select) return;
+                // Select2 emits jQuery change events. Subscribe through jQuery when present;
+                // native listeners are the fallback for a native dropdown if CDN loading fails.
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 &&
+                    window.jQuery(select).hasClass("select2-hidden-accessible")) {
+                    window.jQuery(select).on("change.routePlanning", handler);
+                } else {
+                    select.addEventListener("change", handler);
                 }
+            }
 
-                if (saveButton) {
-                    saveButton.disabled = true;
-                    saveButton.textContent = "Saving...";
+            if (driverSelect) {
+                onSelectChange(driverSelect, () => syncDriverName(true));
+                syncDriverName(false);
+            }
+            if (vehicleSelect) {
+                onSelectChange(vehicleSelect, syncVehicleNo);
+                syncVehicleNo();
+            }
+
+            if (routeSelect) {
+                onSelectChange(routeSelect, async () => {
+                    // Changing route resets Customer to the placeholder, then retrieves only
+                    // customers assigned to the newly selected route and the route's stops.
+                    await Promise.all([
+                        loadCustomers(routeSelect.value, ""),
+                        loadStops(routeSelect.value)
+                    ]);
+                });
+            }
+
+            // Critical: populate dependent data even when the route is already selected on initial load.
+            if (initialRouteId) {
+                await loadCustomers(initialRouteId, initialCustomerCode);
+                if (!hasSavedStops) {
+                    await loadStops(initialRouteId);
                 }
-            });
-
-            if (!initialRouteId) {
+            } else {
                 customerSelect.disabled = true;
-            } else if (!hasSavedStops) {
-                loadStops(initialRouteId);
+                refreshSelect2(customerSelect);
+                setEmptyStops("Select a Master Route to load its planned stops.");
+            }
+
+            if (form) {
+                form.addEventListener("submit", (event) => {
+                    syncDriverName(false);
+                    syncVehicleNo();
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        form.reportValidity();
+                        return;
+                    }
+                    if (saveButton) {
+                        saveButton.disabled = true;
+                        saveButton.setAttribute("aria-busy", "true");
+                        const saveButtonText = document.getElementById("saveButtonText");
+                        const saveButtonIcon = document.getElementById("saveButtonIcon");
+                        if (saveButtonText) saveButtonText.textContent = "Saving...";
+                        if (saveButtonIcon) saveButtonIcon.className = "bi bi-arrow-repeat";
+                    }
+                });
             }
         })();
     </script>

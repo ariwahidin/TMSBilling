@@ -36,22 +36,31 @@ namespace TMSBilling.Models
         [Column("ROUTE_ID")]
         public int RouteId { get; set; }
 
-        // Route identity snapshot prevents later Master Route rename from changing history.
         [Required, StringLength(50), Column("ROUTE_CODE")]
         public string RouteCode { get; set; } = string.Empty;
 
         [Required, StringLength(150), Column("ROUTE_NAME")]
         public string RouteName { get; set; } = string.Empty;
 
-        // Optional. This is an existing CustomerGroup.SUB_CODE, not a new customer table.
         [StringLength(50), Column("CUSTOMER_CODE")]
         public string? CustomerCode { get; set; }
 
         [Column("PLANNED_DEPARTURE")]
         public DateTime? PlannedDeparture { get; set; }
 
+        // External Fleet vehicle ID and human-readable license plate snapshot.
+        [Column("VEHICLE_ID")]
+        public int? VehicleId { get; set; }
+
         [StringLength(50), Column("VEHICLE_NO")]
         public string? VehicleNo { get; set; }
+
+
+        [Column("DRIVER_ID")]
+        public int? DriverId { get; set; }
+
+        [StringLength(100), Column("EXTERNAL_FLEET_TASK_ID")]
+        public string? ExternalFleetTaskId { get; set; }
 
         [StringLength(100), Column("DRIVER_NAME")]
         public string? DriverName { get; set; }
@@ -128,6 +137,9 @@ namespace TMSBilling.Models
         [Column("PLANNED_ARRIVAL")]
         public TimeSpan? PlannedArrival { get; set; }
 
+        [Column("PLANNED_DEPARTURE", TypeName = "time")]
+        public TimeSpan? PlannedDeparture { get; set; }
+
         [Column("STOP_DURATION_MINUTES")]
         public int StopDurationMinutes { get; set; }
 
@@ -136,6 +148,9 @@ namespace TMSBilling.Models
 
         [Column("ACTUAL_ARRIVAL_AT")]
         public DateTime? ActualArrivalAt { get; set; }
+
+        [Column("ACTUAL_DEPARTURE_AT", TypeName = "datetime2")]
+        public DateTime? ActualDepartureAt { get; set; }
 
         [Column("COMPLETED_AT")]
         public DateTime? CompletedAt { get; set; }
@@ -174,6 +189,7 @@ namespace TMSBilling.Models
         public string? Reason { get; set; }
 
         [Required, StringLength(100), Column("CHANGED_BY")]
+
         public string ChangedBy { get; set; } = "System";
 
         [Column("CHANGED_AT")]

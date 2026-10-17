@@ -4385,10 +4385,19 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("CUSTOMER_CODE");
 
+                    b.Property<int?>("DriverId")
+                        .HasColumnType("int")
+                        .HasColumnName("DRIVER_ID");
+
                     b.Property<string>("DriverName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("DRIVER_NAME");
+
+                    b.Property<string>("ExternalFleetTaskId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("EXTERNAL_FLEET_TASK_ID");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -4449,6 +4458,10 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("UPDATED_BY");
 
+                    b.Property<int?>("VehicleId")
+                        .HasColumnType("int")
+                        .HasColumnName("VEHICLE_ID");
+
                     b.Property<string>("VehicleNo")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
@@ -4471,6 +4484,10 @@ namespace TMSBilling.Migrations
                     b.Property<DateTime?>("ActualArrivalAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("ACTUAL_ARRIVAL_AT");
+
+                    b.Property<DateTime?>("ActualDepartureAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ACTUAL_DEPARTURE_AT");
 
                     b.Property<string>("Address")
                         .HasMaxLength(500)
@@ -4508,6 +4525,10 @@ namespace TMSBilling.Migrations
                     b.Property<TimeSpan?>("PlannedArrival")
                         .HasColumnType("time")
                         .HasColumnName("PLANNED_ARRIVAL");
+
+                    b.Property<TimeSpan?>("PlannedDeparture")
+                        .HasColumnType("time")
+                        .HasColumnName("PLANNED_DEPARTURE");
 
                     b.Property<int>("RoutePlanId")
                         .HasColumnType("int")
@@ -4612,6 +4633,9 @@ namespace TMSBilling.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<TimeSpan?>("PLANNED_ARRIVAL")
+                        .HasColumnType("time");
+
+                    b.Property<TimeSpan?>("PLANNED_DEPARTURE")
                         .HasColumnType("time");
 
                     b.Property<int>("ROUTE_ID")

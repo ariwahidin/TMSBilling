@@ -36,6 +36,16 @@ namespace TMSBilling.Models.ViewModels
         public List<SelectListItem> Routes { get; set; } = new();
         public List<SelectListItem> Customers { get; set; } = new();
         public List<RoutePlanStopPreviewViewModel> Stops { get; set; } = new();
+
+        public int? VehicleId { get; set; }
+        public List<SelectListItem> Vehicles { get; set; }
+            = new List<SelectListItem>();
+
+        public int? DriverId { get; set; }
+
+        public List<TMSBilling.Models.ExternalDriver> Drivers { get; set; } = new();
+
+
     }
 
     public class RoutePlanStopPreviewViewModel
@@ -46,9 +56,12 @@ namespace TMSBilling.Models.ViewModels
         public string? Address { get; set; }
         public string? City { get; set; }
         public TimeSpan? PlannedArrival { get; set; }
+
+        public TimeSpan? PlannedDeparture { get; set; }
         public int StopDurationMinutes { get; set; }
         public string Status { get; set; } = "PENDING";
         public DateTime? ActualArrivalAt { get; set; }
+        public DateTime? ActualDepartureAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public int StopId { get; set; }
     }
