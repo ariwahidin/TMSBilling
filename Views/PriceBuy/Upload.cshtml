@@ -1,9 +1,10 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Import Data Price Buy";
 }
 
 <div class="d-flex align-items-center gap-2 flex-wrap">
+    @Html.AntiForgeryToken()
     <a href="/PriceBuy/Index" class="btn btn-primary">Back</a>
     <a href="/PriceBuy/DownloadTemplate" class="btn btn-secondary">Download Template Excel</a>
     <input type="file" name="file" id="excelFile" accept=".xlsx" class="form-control" style="width:auto;" />
@@ -108,9 +109,9 @@
         /* ── preview ── */
         function previewExcel() {
             const file = document.getElementById('excelFile').files[0];
-            if (!file) return alert('Pilih file Excel terlebih dahulu!');
+            if (!file) { Swal.fire({ icon: 'warning', title: 'No File Selected', text: 'Please select an Excel file first.' }); return; }
 
-            showLoading('Membaca file Excel...');
+            showLoading('Reading Excel file...');
             setButtonLoading('previewBtn', true);
 
             const reader = new FileReader();
@@ -157,7 +158,7 @@
 
                 } catch (err) {
                     console.error(err);
-                    alert('Gagal membaca file Excel.');
+                    Swal.fire({ icon: 'error', title: 'Unable to Read Excel File', text: 'Please check the file format and try again.' });
                     hideLoading();
                     setButtonLoading('previewBtn', false);
                 }
@@ -186,30 +187,48 @@
         /* ── submit ── */
         function submitData() {
             if (!parsedData.length) {
-                alert('Preview data terlebih dahulu!');
+                Swal.fire({ icon: 'warning', title: 'Preview Required', text: 'Please preview the Excel data before submitting.' });
                 return;
             }
 
             const mode = document.getElementById('operationType').value;
-            showLoading('Menyimpan data...');
+            showLoading('Submitting approval request...');
             setButtonLoading('submitBtn', true);
 
             fetch('/PriceBuy/UploadExcel', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
                 body: JSON.stringify({ mode: mode, data: parsedData })
             })
-            .then(res => res.json())
+            .then(async res => {
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(result.message || 'The approval request could not be submitted.');
+                return result;
+            })
             .then(result => {
                 hideLoading();
                 setButtonLoading('submitBtn', false);
                 renderResultCard(result);
+                if (result.success === true && result.approvalId) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Request Submitted Successfully',
+                        html: `<p>Excel import approval request <strong>#${result.approvalId}</strong> has been submitted.</p>
+                               <p>Your request is now <strong>pending approval</strong>.</p>
+                               <p>No tariff changes will be applied until the request is approved.</p>
+                               <p>Please contact your direct supervisor to review and approve the request.</p>`,
+                        confirmButtonText: 'Understood',
+                        confirmButtonColor: '#198754'
+                    });
+                } else {
+                    Swal.fire({ icon: 'info', title: 'No Request Submitted', text: result.message || 'No approval request was created.' });
+                }
             })
             .catch(err => {
                 console.error(err);
                 hideLoading();
                 setButtonLoading('submitBtn', false);
-                alert('Gagal menghubungi server.');
+                Swal.fire({ icon: 'error', title: 'Submission Failed', text: err.message || 'Unable to contact the server. Please try again.' });
             });
         }
 
@@ -223,7 +242,7 @@
 
             function makeSection(label, colorClass, items) {
                 if (!items.length) return '';
-                const lis = items.map(i => `<li class="list-group-item py-1 px-3" style="font-size:13px;">${i}</li>`).join('');
+                const lis = items.map(i => `<li class="list-group-item py-1 px-3" style="font-size:13px;">${String(i).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</li>`).join('');
                 return `
                     <div class="mt-3">
                         <p class="mb-1 fw-semibold ${colorClass}" style="font-size:14px;">${label} (${items.length})</p>

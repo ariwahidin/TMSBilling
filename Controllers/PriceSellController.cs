@@ -5,23 +5,40 @@ using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.UploadModels;
+using TMSBilling.Services;
+using System.Text.Json;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 [SessionAuthorize]
 public class PriceSellController : Controller
 {
     private readonly AppDbContext _context;
     private readonly SelectListService _selectList;
+    private readonly PriceSellApprovalService _approvalService;
+    private readonly ILogger<PriceSellController> _logger;
 
-    public PriceSellController(AppDbContext context, SelectListService selectList)
+    public PriceSellController(
+        AppDbContext context,
+        SelectListService selectList,
+        PriceSellApprovalService approvalService,
+        ILogger<PriceSellController> logger)
     {
         _context = context;
         _selectList = selectList;
+        _approvalService = approvalService;
+        _logger = logger;
     }
 
-    public IActionResult Index()
-    {
-        return View(_context.PriceSells.ToList());
-    }
+public async Task<IActionResult> Index()
+{
+    ViewBag.PendingApprovalCount = await _context.PriceSellApprovals
+        .CountAsync(x => x.Status == "PENDING");
+
+    var priceSells = await _context.PriceSells.ToListAsync();
+
+    return View(priceSells);
+}
 
     public IActionResult Form(int? id)
     {
@@ -41,68 +58,344 @@ public class PriceSellController : Controller
         return PartialView("_Form", model);
     }
 
+    // Create: form must post here when id_seq == 0.
     [HttpPost]
-    public IActionResult Save(PriceSell model)
+    [ValidateAntiForgeryToken]
+    [RequirePermission("pricesell_create")]
+    public async Task<IActionResult> SubmitCreate(PriceSell model, CancellationToken ct)
     {
         if (!ModelState.IsValid)
+        {
+            await PopulateFormListsAsync();
             return PartialView("_Form", model);
-
-        var username = HttpContext.Session.GetString("username") ?? "System";
-
-        if (model.id_seq == 0)
-        {
-            model.entry_date = DateTime.Now;
-            model.entry_user = username;
-            _context.PriceSells.Add(model);
-        }
-        else
-        {
-            var db = _context.PriceSells.Find(model.id_seq);
-            if (db == null) return NotFound();
-
-            db.cust_code = model.cust_code;
-            db.origin = model.origin;
-            db.dest = model.dest;
-            db.serv_type = model.serv_type;
-            db.serv_moda = model.serv_moda;
-            db.truck_size = model.truck_size;
-            db.charge_uom = model.charge_uom;
-            db.flag_min = model.flag_min;
-            db.charge_min = model.charge_min;
-            db.flag_range = model.flag_range;
-            db.min_range = model.min_range;
-            db.max_range = model.max_range;
-            db.sell1 = model.sell1;
-            db.sell2 = model.sell2;
-            db.sell3 = model.sell3;
-            db.sell_ret_empty = model.sell_ret_empty;
-            db.sell_ret_cargo = model.sell_ret_cargo;
-            db.sell_ovnight = model.sell_ovnight;
-            db.sell_cancel = model.sell_cancel;
-            db.selltrip2 = model.selltrip2;
-            db.selltrip3 = model.selltrip3;
-            db.sell_diff_area = model.sell_diff_area;
-            db.valid_date = model.valid_date;
-            db.curr = model.curr;
-            db.rate_value = model.rate_value;
-            db.active_flag = model.active_flag;
-            db.update_user = username;
-            db.update_date = DateTime.Now;
         }
 
-        _context.SaveChanges();
-        return RedirectToAction("Index");
+        if (model.id_seq != 0)
+            return BadRequest(new { success = false, message = "Create tidak menerima id_seq." });
+
+        try
+        {
+            var dto = new PriceSellApprovalSubmitDto
+            {
+                RequestType = "CREATE",
+                Items = new List<PriceSellApprovalItemDto>
+                {
+                    new()
+                    {
+                        OperationType = "CREATE",
+                        NewValuesJson = JsonSerializer.Serialize(model)
+                    }
+                }
+            };
+
+            var approvalId = await _approvalService.SubmitAsync(
+                dto, HttpContext.Session.GetString("username") ?? "", ct);
+            TempData["SuccessMessage"] = $"Request approval berhasil diajukan (ID: {approvalId}).";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            await PopulateFormListsAsync();
+            return PartialView("_Form", model);
+        }
+        catch (DbUpdateException)
+        {
+            ModelState.AddModelError(string.Empty, "Tarif konflik dengan data atau request approval pending lain.");
+            await PopulateFormListsAsync();
+            return PartialView("_Form", model);
+        }
     }
 
+    // Update: form must post here when id_seq > 0.
+    //[HttpPost]
+    //[ValidateAntiForgeryToken]
+    //[RequirePermission("pricesell_update")]
+    //public async Task<IActionResult> SubmitUpdate(PriceSell model, CancellationToken ct)
+    //{
+    //    if (!ModelState.IsValid)
+    //    {
+    //        await PopulateFormListsAsync();
+    //        return PartialView("_Form", model);
+    //    }
+
+    //    if (model.id_seq <= 0)
+    //        return BadRequest(new { success = false, message = "id_seq wajib untuk update." });
+
+    //    var existing = await _context.PriceSells.AsNoTracking()
+    //        .FirstOrDefaultAsync(x => x.id_seq == model.id_seq, ct);
+    //    if (existing == null) return NotFound();
+
+    //    try
+    //    {
+    //        var dto = new PriceSellApprovalSubmitDto
+    //        {
+    //            RequestType = "UPDATE",
+    //            Items = new List<PriceSellApprovalItemDto>
+    //            {
+    //                new()
+    //                {
+    //                    OperationType = "UPDATE",
+    //                    PriceSellId = existing.id_seq,
+    //                    NewValuesJson = JsonSerializer.Serialize(model)
+    //                }
+    //            }
+    //        };
+
+    //        var approvalId = await _approvalService.SubmitAsync(
+    //            dto, HttpContext.Session.GetString("username") ?? "", ct);
+    //        TempData["SuccessMessage"] = $"Request update approval berhasil diajukan (ID: {approvalId}).";
+    //        return RedirectToAction(nameof(Index));
+    //    }
+    //    catch (InvalidOperationException ex)
+    //    {
+    //        ModelState.AddModelError(string.Empty, ex.Message);
+    //        await PopulateFormListsAsync();
+    //        return PartialView("_Form", model);
+    //    }
+    //    catch (DbUpdateException)
+    //    {
+    //        ModelState.AddModelError(string.Empty, "Tarif konflik dengan request approval pending lain.");
+    //        await PopulateFormListsAsync();
+    //        return PartialView("_Form", model);
+    //    }
+    //}
+
     [HttpPost]
-    public IActionResult Delete(int id)
+    [ValidateAntiForgeryToken]
+    [RequirePermission("pricesell_update")]
+    public async Task<IActionResult> SubmitUpdate(
+    PriceSell model,
+    CancellationToken ct)
     {
-        var model = _context.PriceSells.Find(id);
+        // 1. Validate the session
+        var username = HttpContext.Session.GetString("username");
+
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return Unauthorized(new
+            {
+                success = false,
+                message = "Your session has expired. Please log in again."
+            });
+        }
+
+        // 2. Validate the submitted ID
+        if (model.id_seq <= 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "A valid tariff ID is required for an update."
+            });
+        }
+
+        // 3. Validate the submitted model
+        if (!ModelState.IsValid)
+        {
+            await PopulateFormListsAsync();
+
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+            return PartialView("_Form", model);
+        }
+
+        try
+        {
+            // 4. Verify that the existing tariff still exists
+            var existing = await _context.PriceSells
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.id_seq == model.id_seq,
+                    ct);
+
+            if (existing == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "The tariff you are trying to update was not found. Please refresh the page."
+                });
+            }
+
+            // 5. Create the approval request
+            var dto = new PriceSellApprovalSubmitDto
+            {
+                RequestType = "UPDATE",
+                Items = new List<PriceSellApprovalItemDto>
+            {
+                new()
+                {
+                    OperationType = "UPDATE",
+                    PriceSellId = existing.id_seq,
+                    NewValuesJson = JsonSerializer.Serialize(model)
+                }
+            }
+            };
+
+            var approvalId = await _approvalService.SubmitAsync(
+                dto,
+                username,
+                ct);
+
+            _logger.LogInformation(
+                "PriceSell update approval submitted. ApprovalId: {ApprovalId}, TariffId: {TariffId}, User: {Username}",
+                approvalId,
+                existing.id_seq,
+                username);
+
+            TempData["SuccessMessage"] =
+                "Your tariff update request has been submitted successfully and is awaiting approval.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        catch (InvalidOperationException ex)
+        {
+            // Business validation or approval conflict.
+            _logger.LogWarning(
+                ex,
+                "PriceSell update request rejected. TariffId: {TariffId}, User: {Username}",
+                model.id_seq,
+                username);
+
+            ModelState.AddModelError(string.Empty, ex.Message);
+
+            await PopulateFormListsAsync();
+
+            Response.StatusCode = StatusCodes.Status409Conflict;
+
+            return PartialView("_Form", model);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            // Prevent duplicate pending approval requests.
+            _logger.LogWarning(
+                ex,
+                "PriceSell update approval conflicts with an existing request. TariffId: {TariffId}",
+                model.id_seq);
+
+            ModelState.AddModelError(
+                string.Empty,
+                "A pending approval request already exists for this tariff. Please review the existing request.");
+
+            await PopulateFormListsAsync();
+
+            Response.StatusCode = StatusCodes.Status409Conflict;
+
+            return PartialView("_Form", model);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Database error while submitting PriceSell update. TariffId: {TariffId}",
+                model.id_seq);
+
+            ModelState.AddModelError(
+                string.Empty,
+                "The request could not be saved because of a database error. Please try again or contact support.");
+
+            await PopulateFormListsAsync();
+
+            Response.StatusCode = StatusCodes.Status500InternalServerError;
+
+            return PartialView("_Form", model);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Propagate HTTP request cancellation.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected error while submitting PriceSell update. TariffId: {TariffId}",
+                model.id_seq);
+
+            ModelState.AddModelError(
+                string.Empty,
+                "An unexpected error occurred while submitting your request. Please try again later.");
+
+            await PopulateFormListsAsync();
+
+            Response.StatusCode = StatusCodes.Status500InternalServerError;
+
+            return PartialView("_Form", model);
+        }
+
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        return ex.GetBaseException() is SqlException sqlException
+            && (sqlException.Number == 2601 || sqlException.Number == 2627);
+    }
+
+    // Keep the old URL fail-closed so stale clients cannot write directly.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult Save() => BadRequest(new
+    {
+        success = false,
+        message = "Endpoint Save lama dinonaktifkan. Form harus menggunakan SubmitCreate atau SubmitUpdate."
+    });
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission("pricesell_deactivate")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        var model = await _context.PriceSells.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.id_seq == id, ct);
         if (model == null) return NotFound();
 
-        _context.PriceSells.Remove(model);
-        _context.SaveChanges();
-        return Ok();
+        try
+        {
+            var dto = new PriceSellApprovalSubmitDto
+            {
+                RequestType = "DEACTIVATE",
+                Items = new List<PriceSellApprovalItemDto>
+                {
+                    new()
+                    {
+                        OperationType = "DEACTIVATE",
+                        PriceSellId = model.id_seq,
+                        NewValuesJson = JsonSerializer.Serialize(model)
+                    }
+                }
+            };
+
+            var approvalId = await _approvalService.SubmitAsync(
+                dto, HttpContext.Session.GetString("username") ?? "", ct);
+            return Ok(new
+            {
+                success = true,
+                message = "Request deactivation berhasil diajukan untuk approval.",
+                approvalId
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { success = false, message = "Tarif sudah memiliki request approval pending." });
+        }
+    }
+
+    private Task PopulateFormListsAsync()
+    {
+        ViewBag.ListCustomer = _selectList.getCustomerMains();
+        ViewBag.ListOrigin = _selectList.GetOrigins();
+        ViewBag.ListDestination = _selectList.GetDestinations();
+        ViewBag.ListServiceType = _selectList.GetServiceTypes();
+        ViewBag.ListServiceModa = _selectList.GetServiceModas();
+        ViewBag.ListTruckSize = _selectList.GetTruckSizes();
+        ViewBag.ListChargeUom = _selectList.GetChargeUoms();
+        ViewBag.ListCurrency = _selectList.GetCurrency();
+        return Task.CompletedTask;
     }
 
     public IActionResult Upload()
@@ -362,64 +655,60 @@ public class PriceSellController : Controller
     //}
 
     [HttpPost]
-    public async Task<IActionResult> UploadExcel([FromBody] UploadPriceSellRequest request)
+    [ValidateAntiForgeryToken]
+    [RequirePermission("pricesell_import")]
+    public async Task<IActionResult> UploadExcel([FromBody] UploadPriceSellRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Model binding failed." });
 
-        if (request?.data == null || !request.data.Any())
-            return BadRequest(new { message = "Data is empty or unreadable." });
+        if (request?.data == null || request.data.Count == 0)
+            return BadRequest(new { message = "Data kosong atau tidak terbaca." });
 
-        var processed = new List<string>();
-        var skipped = new List<string>();
         var errors = new List<string>();
+        var skipped = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var approvalItems = new List<PriceSellApprovalItemDto>();
+        var mode = (request.mode ?? "").Trim().ToLowerInvariant();
+        if (mode is not ("add" or "edit"))
+            return BadRequest(new { message = "Mode harus add atau edit." });
 
-        var seen = new HashSet<string>();
-
+        var username = HttpContext.Session.GetString("username") ?? "";
         foreach (var item in request.data)
         {
             var key = $"{item.cust_code}|{item.origin}|{item.dest}|{item.serv_type}|{item.serv_moda}|{item.truck_size}|{item.charge_uom}";
-            var label = $"{item.cust_code} › {item.origin} › {item.dest} › {item.serv_type} › {item.serv_moda} › {item.truck_size} › {item.charge_uom}";
-
-            // 1. Cek duplikat antar baris di file
+            var label = key.Replace("|", " › ");
             if (!seen.Add(key))
             {
                 errors.Add($"[Duplikat di file] {label}");
                 continue;
             }
 
-            // 2. Validasi master data
             var (isValid, errorMessage) = await ValidatePriceSellItemAsync(item);
             if (!isValid)
             {
-                errors.Add($"[Validasi] {label} — {errorMessage}");
+                errors.Add($"[Validasi master] {label} — {errorMessage}");
                 continue;
             }
 
-            // 3. Cek eksistensi di DB
-            var exists = await _context.PriceSells.AnyAsync(x =>
-                x.cust_code == item.cust_code &&
-                x.origin == item.origin &&
-                x.dest == item.dest &&
-                x.serv_type == item.serv_type &&
-                x.serv_moda == item.serv_moda &&
-                x.truck_size == item.truck_size &&
-                x.charge_uom == item.charge_uom
-            );
+            var existing = await _context.PriceSells.FirstOrDefaultAsync(x =>
+                x.cust_code == item.cust_code && x.origin == item.origin &&
+                x.dest == item.dest && x.serv_type == item.serv_type &&
+                x.serv_moda == item.serv_moda && x.truck_size == item.truck_size &&
+                x.charge_uom == item.charge_uom, ct);
 
-            if (request.mode == "add" && exists)
+            if (mode == "add" && existing != null)
             {
+                // Preserve the existing ADD behavior: already-existing tariffs are skipped.
                 skipped.Add(label);
                 continue;
             }
-
-            if (request.mode == "edit" && !exists)
+            if (mode == "edit" && existing == null)
             {
-                errors.Add($"[Tidak ditemukan] {label}");
+                errors.Add($"[Tidak ditemukan untuk edit] {label}");
                 continue;
             }
 
-            // 4. Build entity
             var entity = new PriceSell
             {
                 cust_code = item.cust_code,
@@ -448,65 +737,61 @@ public class PriceSellController : Controller
                 active_flag = item.active_flag,
                 curr = item.curr,
                 rate_value = item.rate_value,
-                entry_user = HttpContext.Session.GetString("username") ?? "System",
+                entry_user = username,
                 entry_date = DateTime.Now
             };
 
-            // 5. Insert atau Update
-            if (request.mode == "edit")
+            approvalItems.Add(new PriceSellApprovalItemDto
             {
-                var existing = await _context.PriceSells.FirstOrDefaultAsync(x =>
-                    x.cust_code == item.cust_code &&
-                    x.origin == item.origin &&
-                    x.dest == item.dest &&
-                    x.serv_type == item.serv_type &&
-                    x.serv_moda == item.serv_moda &&
-                    x.truck_size == item.truck_size &&
-                    x.charge_uom == item.charge_uom
-                );
-
-                if (existing != null)
-                {
-                    existing.flag_min = entity.flag_min;
-                    existing.charge_min = entity.charge_min;
-                    existing.flag_range = entity.flag_range;
-                    existing.min_range = entity.min_range;
-                    existing.max_range = entity.max_range;
-                    existing.sell1 = entity.sell1;
-                    existing.sell2 = entity.sell2;
-                    existing.sell3 = entity.sell3;
-                    existing.sell_ret_empty = entity.sell_ret_empty;
-                    existing.sell_ret_cargo = entity.sell_ret_cargo;
-                    existing.sell_ovnight = entity.sell_ovnight;
-                    existing.sell_cancel = entity.sell_cancel;
-                    existing.selltrip2 = entity.selltrip2;
-                    existing.selltrip3 = entity.selltrip3;
-                    existing.sell_diff_area = entity.sell_diff_area;
-                    existing.valid_date = entity.valid_date;
-                    existing.active_flag = entity.active_flag;
-                    existing.curr = entity.curr;
-                    existing.rate_value = entity.rate_value;
-                    existing.update_user = HttpContext.Session.GetString("username") ?? "System";
-                    existing.update_date = DateTime.Now;
-
-                    processed.Add(label);
-                    continue;
-                }
-            }
-
-            _context.PriceSells.Add(entity);
-            processed.Add(label);
+                OperationType = mode == "add" ? "CREATE" : "UPDATE",
+                PriceSellId = existing?.id_seq,
+                NewValuesJson = JsonSerializer.Serialize(entity)
+            });
         }
 
-        await _context.SaveChangesAsync();
+        // All-or-nothing: no approval request is created if any row has an error.
+        if (errors.Count > 0)
+            return BadRequest(new
+            {
+                message = "Import dibatalkan. Ada baris yang tidak valid; tidak ada request approval yang dibuat.",
+                errors,
+                skipped
+            });
 
-        return Ok(new
+        if (approvalItems.Count == 0)
+            return Ok(new
+            {
+                message = "Tidak ada baris baru untuk diajukan. Semua baris mungkin sudah ada.",
+                approvalId = (long?)null,
+                skipped
+            });
+
+        try
         {
-            message = $"Selesai. {processed.Count} berhasil, {skipped.Count} dilewati, {errors.Count} error.",
-            processed,
-            skipped,
-            errors
-        });
+            var dto = new PriceSellApprovalSubmitDto
+            {
+                RequestType = "IMPORT",
+                SourceFileName = "PriceSell upload",
+                Items = approvalItems
+            };
+            var approvalId = await _approvalService.SubmitAsync(dto, username, ct);
+            return Ok(new
+            {
+                success = true,
+                message = $"Import diajukan untuk approval: {approvalItems.Count} baris.",
+                approvalId,
+                submitted = approvalItems.Count,
+                skipped
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { success = false, message = ex.Message, skipped });
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { success = false, message = "Import konflik dengan request pending lain atau data yang sudah ada.", skipped });
+        }
     }
 
     [HttpGet]

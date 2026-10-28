@@ -140,6 +140,12 @@ builder.Services.AddSingleton<IIntegrationScheduler>(sp =>
 builder.Services.AddScoped<IAttachmentBuilder, AttachmentBuilder>();
 builder.Services.AddScoped<IReportingTokenService, ReportingTokenService>();
 
+// PriceSell Approval Service
+builder.Services.AddScoped<PriceSellApprovalService>();
+
+
+builder.Services.AddScoped<PriceBuyApprovalService>();
+builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
 
 
 //   q.AddJob<MailReportSchedulerJob>(opts => opts.WithIdentity("MailReportJob"));

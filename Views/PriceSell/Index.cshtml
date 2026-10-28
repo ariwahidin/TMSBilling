@@ -1,258 +1,580 @@
-﻿
 @model IEnumerable<TMSBilling.Models.PriceSell>
+
 @{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Price Sell";
     var isAdmin = Context.Session.GetString("is_admin") == "true";
 }
 
-<div class="mb-3 d-flex gap-2">
+<div class="container-fluid py-3">
 
-    @if (isAdmin)
-    {
-
-        <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Sell</button>
-        <a href="/PriceSell/Upload" class="btn btn-success btn-sm">Import</a>
-        <button class="btn btn-info btn-sm" id="btnDownloadPriceSell">
-            Download Price Sell
-        </button>
-    }
-</div>
-
-<table class="table table-bordered table-sm table-striped nowrap" id="priceSellTable">
-    <thead>
-        <tr>
-            <th>Customer Main</th>
-            <th>Origin</th>
-            <th>Destination</th>
-            <th>Service Type</th>
-            <th>Moda</th>
-            <th>Truk Size</th>
-            <th>Charge UoM</th>
-            <th>Status</th>
-            <th style="width:80px">Action</th>
-        </tr>
-        <tr>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Search Customer"></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Search Origin"></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Search Destination"></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Service Type"></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Moda"></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Truck Size"></th>
-            <th><input type="text" class="form-control form-control-sm" placeholder="Charge UoM"></th>
-            <th>
-                <select class="form-select form-select-sm">
-                    <option value="">All</option>
-                    <option value="Aktif">Aktif</option>
-                    <option value="Nonaktif">Nonaktif</option>
-                </select>
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
+    <div class="mb-3 d-flex flex-wrap gap-2">
+        @if (isAdmin)
         {
-            <tr>
-                <td>@item.cust_code</td>
-                <td>@item.origin</td>
-                <td>@item.dest</td>
-                <td>@item.serv_type</td>
-                <td>@item.serv_moda</td>
-                <td>@item.truck_size</td>
-                <td>@item.charge_uom</td>
-                <td>@(item.active_flag == 1 ? "Aktif" : "Nonaktif")</td>
-                <td style="text-align:center">
-                @if (isAdmin)
-                {
-                    <button class="btn btn-sm btn-warning" onclick="loadForm(@item.id_seq)">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
-                    @* <button class="btn btn-sm btn-danger btnDelete" data-id="@item.id_seq">
-                        <i class="bi bi-trash"></i>
-                    </button> *@
-                }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+            <button type="button" class="btn btn-primary btn-sm"
+                    onclick="loadForm(0)">
+                <i class="bi bi-plus-circle"></i> Add Price Sell
+            </button>
 
-<!-- Modal -->
-<div class="modal fade" id="formModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Detail Selling Price</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="formBody">
-                <!-- form will load here -->
+            <a href="/PriceSell/Upload" class="btn btn-success btn-sm">
+                <i class="bi bi-file-earmark-excel"></i> Import
+            </a>
+
+            <a asp-controller="PriceSellApproval"
+               asp-action="Index"
+               class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-clipboard-check"></i> Price Sell Approval
+                @if ((ViewBag.PendingApprovalCount ?? 0) > 0)
+                {
+                    <span class="badge rounded-pill bg-danger ms-1">
+                        @ViewBag.PendingApprovalCount
+                    </span>
+                }
+            </a>
+
+            <button type="button" class="btn btn-info btn-sm"
+                    id="btnDownloadPriceSell">
+                <i class="bi bi-download"></i> Download Price Sell
+            </button>
+        }
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm table-striped nowrap w-100"
+                       id="priceSellTable">
+                    <thead>
+                        <tr>
+                            <th>Customer Main</th>
+                            <th>Origin</th>
+                            <th>Destination</th>
+                            <th>Service Type</th>
+                            <th>Moda</th>
+                            <th>Truck Size</th>
+                            <th>Charge UoM</th>
+                            <th>Status</th>
+                            <th style="width: 90px;">Action</th>
+                        </tr>
+                        <tr class="filter-row">
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Search Customer" />
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Search Origin" />
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Search Destination" />
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Service Type" />
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Moda" />
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Truck Size" />
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Charge UoM" />
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm">
+                                    <option value="">All</option>
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Nonaktif">Nonaktif</option>
+                                </select>
+                            </th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.cust_code</td>
+                                <td>@item.origin</td>
+                                <td>@item.dest</td>
+                                <td>@item.serv_type</td>
+                                <td>@item.serv_moda</td>
+                                <td>@item.truck_size</td>
+                                <td>@item.charge_uom</td>
+                                <td>
+                                    @if (item.active_flag == 1)
+                                    {
+                                        <span class="badge bg-success">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Nonaktif</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (isAdmin)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-warning"
+                                                title="Edit"
+                                                onclick="loadForm(@item.id_seq)">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Download -->
-<div class="modal fade" id="downloadModal" tabindex="-1">
+<!-- Price Sell Form Modal -->
+<div class="modal fade" id="formModal" tabindex="-1"
+     aria-labelledby="formModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="formModalTitle">
+                    Detail Selling Price
+                </h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body" id="formBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2">Loading form...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Download Modal -->
+<div class="modal fade" id="downloadModal" tabindex="-1"
+     aria-labelledby="downloadModalTitle" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Download Price Sell</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="downloadModalTitle">
+                    Download Price Sell
+                </h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
 
-                <label class="form-label">Customer</label>
-                <select id="customerSelect" class="form-select select2" multiple>
-                    <option value="">ALL</option>
-                    @foreach (var c in Model.Select(x => x.cust_code).Distinct())
+            <div class="modal-body">
+                <label for="customerSelect" class="form-label">Customer</label>
+
+                <select id="customerSelect" class="form-select" multiple>
+                    @foreach (var customer in Model
+                                        .Select(x => x.cust_code)
+                                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                                        .Distinct()
+                                        .OrderBy(x => x))
                     {
-                        <option value="@c">@c</option>
+                        <option value="@customer">@customer</option>
                     }
                 </select>
-                <div class="form-text">Clear Selection = All Customer</div>
+
+                <div class="form-text">
+                    Leave the selection empty to download all customers.
+                </div>
             </div>
+
             <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                <button class="btn btn-primary btn-sm" id="btnDownloadNow">Download</button>
+                <button type="button" class="btn btn-secondary btn-sm"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+
+                <button type="button" class="btn btn-primary btn-sm"
+                        id="btnDownloadNow">
+                    <i class="bi bi-download"></i> Download
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-
 <style>
-    /* Compact table look */
     #priceSellTable {
         font-size: 13px;
     }
 
         #priceSellTable th,
         #priceSellTable td {
-            padding: 4px 8px !important;
+            padding: 5px 8px !important;
             vertical-align: middle;
         }
 
-        #priceSellTable thead input,
-        #priceSellTable thead select {
+        #priceSellTable thead .filter-row input,
+        #priceSellTable thead .filter-row select {
             width: 100%;
-            padding: 2px 4px;
+            min-width: 65px;
+            padding: 3px 5px;
             font-size: 12px;
-            height: 24px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
+            height: 29px;
         }
+
+    #formModal .modal-body {
+        min-height: 150px;
+    }
+
+    #formBody .validation-summary-errors {
+        color: #842029;
+        background-color: #f8d7da;
+        border: 1px solid #f5c2c7;
+        border-radius: .375rem;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+    }
+
+        #formBody .validation-summary-errors ul {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+
+    #formBody .input-validation-error {
+        border-color: #dc3545 !important;
+    }
+
+    #formBody .field-validation-error {
+        color: #dc3545;
+        font-size: .875rem;
+    }
+
+    #formBody .form-control,
+    #formBody .form-select {
+        max-width: 100%;
+    }
 </style>
+
+@if (TempData["SuccessMessage"] is string successMessage && !string.IsNullOrWhiteSpace(successMessage))
+{
+    <div id="priceSellSuccessMessage" data-message="@successMessage" hidden></div>
+}
 
 @section Scripts {
     <script>
+        // =========================================================
+        // FORM MODAL
+        // =========================================================
+
         function loadForm(id) {
-            $.get('/PriceSell/Form', { id })
-                .done((html) => {
-                    $('#formBody').html(html);
-                    const modal = new bootstrap.Modal(document.getElementById('formModal'));
-                    modal.show();
-                    $('.select2').select2({
-                        dropdownParent: $('#formModal'),
-                        placeholder: "Select an Option",
-                        allowClear: true,
-                        width: '100%'
-                    });
-                })
-                .fail(() => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Failed to load form',
-                        text: 'Please try again later.'
-                    });
+            const formBody = $('#formBody');
+
+            formBody.html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2">Loading form...</div>
+                </div>
+            `);
+
+            bootstrap.Modal
+                .getOrCreateInstance(document.getElementById('formModal'))
+                .show();
+
+            $.ajax({
+                url: '/PriceSell/Form',
+                type: 'GET',
+                data: { id: id },
+                cache: false
+            })
+            .done(function (html) {
+                formBody.html(html);
+                initializeFormPlugins();
+            })
+            .fail(function (xhr) {
+                formBody.html(`
+                    <div class="alert alert-danger mb-0">
+                        Failed to load the form. Please close the modal
+                        and try again.
+                    </div>
+                `);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to load form',
+                    text: xhr.responseJSON?.message ||
+                          'Please try again later.'
                 });
+            });
+        }
+
+        // =========================================================
+        // INITIALIZE PLUGINS FOR DYNAMICALLY LOADED FORM
+        // =========================================================
+
+        function initializeFormPlugins() {
+            $('#formBody .select2').each(function () {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
+                }
+
+                $(this).select2({
+                    dropdownParent: $('#formModal'),
+                    placeholder: 'Select an Option',
+                    allowClear: true,
+                    width: '100%'
+                });
+            });
+        }
+
+        // =========================================================
+        // AJAX FORM SUBMISSION
+        // Works for forms dynamically loaded into #formBody.
+        // =========================================================
+
+        $(document).on('submit', '#formBody form', function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+
+            if (form.data('submitting')) {
+                return;
+            }
+
+            const submitButtons = form.find(
+                'button[type="submit"], input[type="submit"]'
+            );
+
+            const originalButtonHtml = submitButtons
+                .map(function () {
+                    return $(this).is('button')
+                        ? $(this).html()
+                        : $(this).val();
+                }).get();
+
+            form.data('submitting', true);
+            submitButtons.prop('disabled', true);
+
+            $.ajax({
+                url: form.attr('action'),
+                type: (form.attr('method') || 'POST').toUpperCase(),
+                data: form.serialize(),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                dataType: 'html'
+            })
+            .done(function (response, status, xhr) {
+                const isIndexPage =
+                    response.includes('id="priceSellTable"') ||
+                    response.includes("id='priceSellTable'");
+
+                if (isIndexPage) {
+                    const responseDoc = new DOMParser().parseFromString(
+                        response,
+                        'text/html'
+                    );
+
+                    const messageElement = responseDoc.querySelector(
+                        '#priceSellSuccessMessage'
+                    );
+
+                    const successMessage = messageElement
+                        ? messageElement.getAttribute('data-message')
+                        : null;
+
+                    bootstrap.Modal
+                        .getOrCreateInstance(
+                            document.getElementById('formModal')
+                        )
+                        .hide();
+
+                    if (successMessage && typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Request Submitted Successfully',
+                            html: `
+                                <p>${escapeHtml(successMessage)}</p>
+                                <p>Your request is now
+                                   <strong>pending approval</strong>.</p>
+                                <p>Please contact your direct supervisor
+                                   to review and approve the request.</p>
+                            `,
+                            confirmButtonText: 'Understood',
+                            confirmButtonColor: '#198754'
+                        }).then(() => {
+                            location.reload();
+                        });
+
+                        return;
+                    }
+
+                    location.reload();
+                    return;
+                }
+
+                const contentType =
+                    xhr.getResponseHeader('content-type') || '';
+
+                if (contentType.includes('text/html')) {
+                    $('#formBody').html(response);
+                    initializeFormPlugins();
+                    return;
+                }
+
+                location.reload();
+            })
+            .fail(function (xhr) {
+                const contentType =
+                    xhr.getResponseHeader('content-type') || '';
+
+                // Validation errors / approval conflicts should return
+                // _Form.cshtml as HTML with status 400 or 409.
+                if (
+                    (xhr.status === 400 ||
+                     xhr.status === 409 ||
+                     xhr.status === 422) &&
+                    contentType.includes('text/html') &&
+                    xhr.responseText
+                ) {
+                    $('#formBody').html(xhr.responseText);
+                    initializeFormPlugins();
+                    return;
+                }
+
+                const message =
+                    xhr.responseJSON?.message ||
+                    'Unable to submit the request. Please try again.';
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Request failed',
+                    text: message
+                });
+            })
+            .always(function () {
+                form.removeData('submitting');
+
+                // The form may have been replaced by a validation response.
+                $('#formBody')
+                    .find('button[type="submit"], input[type="submit"]')
+                    .prop('disabled', false);
+            });
+        });
+
+        // =========================================================
+        // DATATABLES AND COLUMN FILTERS
+        // =========================================================
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         $(document).ready(function () {
+            // Show confirmation after a Price Sell approval request is submitted.
+            const successElement = document.getElementById('priceSellSuccessMessage');
+
+            if (successElement) {
+                const serverMessage = successElement.dataset.message || '';
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Request Submitted Successfully',
+                    html: `
+                        <p class="mb-2">${escapeHtml(serverMessage)}</p>
+                        <p class="mb-2">Your request is now <strong>pending approval</strong>.</p>
+                        <p class="mb-0">Please contact your direct supervisor to review and approve the request.</p>
+                    `,
+                    confirmButtonText: 'Understood',
+                    confirmButtonColor: '#198754'
+                });
+            }
+
             const table = $('#priceSellTable').DataTable({
                 responsive: true,
                 orderCellsTop: true,
                 fixedHeader: true,
-                pageLength: 25
+                pageLength: 25,
+                autoWidth: false,
+                language: {
+                    emptyTable: 'No Price Sell records found.',
+                    search: 'Search:',
+                    lengthMenu: 'Show _MENU_ entries',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                    infoEmpty: 'No entries available',
+                    zeroRecords: 'No matching records found.'
+                },
+                columnDefs: [
+                    {
+                        targets: 8,
+                        orderable: false,
+                        searchable: false
+                    }
+                ]
             });
 
-            // Filter per kolom
-            $('#priceSellTable thead tr:eq(1) th').each(function (i) {
+            $('#priceSellTable thead tr.filter-row th').each(function (i) {
                 const input = $('input, select', this);
-                if (input.length) {
-                    input.on('keyup change', function () {
-                        if (table.column(i).search() !== this.value) {
-                            table
-                                .column(i)
-                                .search(this.value)
-                                .draw();
-                        }
-                    });
+
+                if (!input.length) {
+                    return;
                 }
+
+                input.on('keyup change', function () {
+                    const value = this.value;
+
+                    if (table.column(i).search() !== value) {
+                        table.column(i).search(value).draw();
+                    }
+                });
             });
 
+            // =====================================================
+            // DOWNLOAD MODAL
+            // =====================================================
 
-            // open modal
-            $("#btnDownloadPriceSell").click(function () {
-                const modal = new bootstrap.Modal(document.getElementById('downloadModal'));
-                modal.show();
+            $('#btnDownloadPriceSell').on('click', function () {
+                bootstrap.Modal
+                    .getOrCreateInstance(
+                        document.getElementById('downloadModal')
+                    )
+                    .show();
 
-                $('#customerSelect').select2({
+                const customerSelect = $('#customerSelect');
+
+                if (customerSelect.hasClass('select2-hidden-accessible')) {
+                    customerSelect.select2('destroy');
+                }
+
+                customerSelect.select2({
                     dropdownParent: $('#downloadModal'),
-                    placeholder: "Select Customer",
-                    width: "100%",
+                    placeholder: 'Select Customer',
+                    width: '100%',
                     allowClear: true
                 });
             });
 
-            // download
-            $("#btnDownloadNow").click(function () {
-                let selected = $("#customerSelect").val(); // array
+            // =====================================================
+            // DOWNLOAD EXCEL
+            // =====================================================
 
-                // jika hanya pilih ALL (value == "")
-                if (selected && selected.length === 1 && selected[0] === "") {
-                    selected = [];
-                }
+            $('#btnDownloadNow').on('click', function () {
+                let selected = $('#customerSelect').val() || [];
 
-                const url = "/PriceSell/DownloadExcel?cust=" + encodeURIComponent(JSON.stringify(selected));
+                // Empty selection means all customers.
+                const url = '/PriceSell/DownloadExcel?cust=' +
+                    encodeURIComponent(JSON.stringify(selected));
+
                 window.location.href = url;
             });
         });
-
-        // $(document).on("click", ".btnDelete", function () {
-        //     const id = $(this).data("id");
-
-        //     Swal.fire({
-        //         title: "Delete this record?",
-        //         text: "This action cannot be undone.",
-        //         icon: "warning",
-        //         showCancelButton: true,
-        //         confirmButtonText: "Delete",
-        //         cancelButtonText: "Cancel",
-        //         confirmButtonColor: "#d33",
-        //         cancelButtonColor: "#3085d6"
-        //     }).then((result) => {
-        //         if (result.isConfirmed) {
-        //             $.post("/PriceSell/Delete", { id })
-        //                 .done(() => {
-        //                     Swal.fire({
-        //                         title: "Deleted",
-        //                         text: "Record deleted successfully.",
-        //                         icon: "success",
-        //                         timer: 1500,
-        //                         showConfirmButton: false
-        //                     }).then(() => location.reload());
-        //                 })
-        //                 .fail(() => {
-        //                     Swal.fire({
-        //                         title: "Error",
-        //                         text: "Failed to delete the record.",
-        //                         icon: "error"
-        //                     });
-        //                 });
-        //         }
-        //     });
-        // });
     </script>
 }

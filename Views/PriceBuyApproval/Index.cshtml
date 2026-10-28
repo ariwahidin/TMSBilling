@@ -1,0 +1,640 @@
+﻿@model IEnumerable<TMSBilling.Models.PriceBuyApproval>
+@using System
+@using System.Linq
+@using System.Collections.Generic
+
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Price Buy Approval";
+
+    var requests = (Model ?? Enumerable.Empty<TMSBilling.Models.PriceBuyApproval>())
+        .OrderByDescending(x => string.Equals(x.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+        .ThenByDescending(x => x.RequestedAt)
+        .ToList();
+
+    int pendingCount = requests.Count(x =>
+        string.Equals(x.Status, "PENDING", StringComparison.OrdinalIgnoreCase));
+    int approvedCount = requests.Count(x =>
+        string.Equals(x.Status, "APPROVED", StringComparison.OrdinalIgnoreCase));
+    int rejectedCount = requests.Count(x =>
+        string.Equals(x.Status, "REJECTED", StringComparison.OrdinalIgnoreCase));
+    int cancelledCount = requests.Count(x =>
+        string.Equals(x.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase));
+
+    string StatusClass(string? status) => (status ?? "").ToUpperInvariant() switch
+    {
+        "PENDING" => "status-pending",
+        "APPROVED" => "status-approved",
+        "REJECTED" => "status-rejected",
+        "CANCELLED" => "status-cancelled",
+        _ => "status-other"
+    };
+
+    string RequestTypeLabel(string? type) => (type ?? "").ToUpperInvariant() switch
+    {
+        "CREATE" => "Create tariff",
+        "UPDATE" => "Update tariff",
+        "DEACTIVATE" => "Deactivate tariff",
+        "IMPORT" => "Excel import",
+        _ => string.IsNullOrWhiteSpace(type) ? "Unknown" : type
+    };
+
+    string RequestTypeClass(string? type) => (type ?? "").ToUpperInvariant() switch
+    {
+        "CREATE" => "type-create",
+        "UPDATE" => "type-update",
+        "DEACTIVATE" => "type-deactivate",
+        "IMPORT" => "type-import",
+        _ => "type-other"
+    };
+}
+
+<style>
+    .approval-page {
+        color: #172033;
+    }
+
+    .approval-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+        .approval-heading h4 {
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: -.02em;
+        }
+
+    .approval-subtitle {
+        color: #64748b;
+        font-size: .9rem;
+        margin-top: 5px;
+    }
+
+    .approval-kpi {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+        padding: 17px 18px;
+        height: 100%;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+    }
+
+    .approval-kpi-label {
+        color: #64748b;
+        font-size: .82rem;
+        font-weight: 600;
+    }
+
+    .approval-kpi-value {
+        font-size: 1.8rem;
+        line-height: 1.2;
+        font-weight: 750;
+        margin-top: 7px;
+    }
+
+    .approval-kpi-note {
+        font-size: .78rem;
+        color: #64748b;
+        margin-top: 5px;
+    }
+
+    .approval-kpi.pending {
+        border-left: 4px solid #d97706;
+    }
+
+    .approval-kpi.approved {
+        border-left: 4px solid #16a34a;
+    }
+
+    .approval-kpi.rejected {
+        border-left: 4px solid #dc2626;
+    }
+
+    .approval-kpi.total {
+        border-left: 4px solid #64748b;
+    }
+
+    .approval-panel {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+        overflow: hidden;
+    }
+
+    .approval-toolbar {
+        padding: 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .approval-toolbar-title {
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .approval-table-wrap {
+        overflow-x: auto;
+    }
+
+    .approval-table {
+        min-width: 950px;
+        margin: 0;
+        vertical-align: middle;
+    }
+
+        .approval-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .04em;
+            white-space: nowrap;
+            padding: 13px 14px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .approval-table tbody td {
+            padding: 13px 14px;
+            border-color: #eef2f7;
+        }
+
+        .approval-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .approval-table tbody tr.pending-row {
+            background: #fffbeb;
+        }
+
+            .approval-table tbody tr.pending-row:hover {
+                background: #fef3c7;
+            }
+
+    .request-no {
+        font-weight: 700;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+
+    .cell-subtext {
+        color: #64748b;
+        font-size: .78rem;
+        margin-top: 4px;
+    }
+
+    .status-pill,
+    .type-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 5px 9px;
+        font-size: .72rem;
+        font-weight: 750;
+        white-space: nowrap;
+    }
+
+    .status-pending {
+        color: #92400e;
+        background: #fef3c7;
+    }
+
+    .status-approved {
+        color: #166534;
+        background: #dcfce7;
+    }
+
+    .status-rejected {
+        color: #991b1b;
+        background: #fee2e2;
+    }
+
+    .status-cancelled {
+        color: #475569;
+        background: #e2e8f0;
+    }
+
+    .status-other {
+        color: #334155;
+        background: #e2e8f0;
+    }
+
+    .type-create {
+        color: #1d4ed8;
+        background: #dbeafe;
+    }
+
+    .type-update {
+        color: #6d28d9;
+        background: #ede9fe;
+    }
+
+    .type-deactivate {
+        color: #9f1239;
+        background: #ffe4e6;
+    }
+
+    .type-import {
+        color: #0f766e;
+        background: #ccfbf1;
+    }
+
+    .type-other {
+        color: #334155;
+        background: #e2e8f0;
+    }
+
+    .pending-flag {
+        display: inline-block;
+        color: #92400e;
+        font-size: .7rem;
+        font-weight: 800;
+        margin-top: 5px;
+    }
+
+    .btn-review {
+        font-weight: 650;
+        white-space: nowrap;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 44px 20px;
+        color: #64748b;
+    }
+
+        .empty-state .empty-title {
+            color: #334155;
+            font-weight: 700;
+            margin: 10px 0 4px;
+        }
+
+    .filter-count {
+        color: #64748b;
+        font-size: .82rem;
+        white-space: nowrap;
+    }
+
+    @@media (max-width: 767px) {
+        .approval-kpi-value {
+            font-size: 1.5rem;
+        }
+
+        .approval-toolbar {
+            padding: 12px;
+        }
+    }
+</style>
+
+<div class="container-fluid approval-page py-3">
+
+    <div class="approval-heading">
+        <div>
+            <h4>Price Buy Approval</h4>
+            <div class="approval-subtitle">
+                Review proposed buying tariff changes before they are applied to the official price list.
+            </div>
+
+            <span class="badge rounded-pill text-bg-warning mt-2">
+                @pendingCount awaiting review
+            </span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a asp-controller="PriceBuy"
+               asp-action="Index"
+               class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Back to Price Buy
+            </a>
+
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    id="refreshApprovalList"
+                    title="Refresh list">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-xl-3">
+            <div class="approval-kpi total">
+                <div class="approval-kpi-label">Total requests</div>
+                <div class="approval-kpi-value">@requests.Count</div>
+                <div class="approval-kpi-note">All statuses</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="approval-kpi pending">
+                <div class="approval-kpi-label">Awaiting approval</div>
+                <div class="approval-kpi-value">@pendingCount</div>
+                <div class="approval-kpi-note">Require management action</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="approval-kpi approved">
+                <div class="approval-kpi-label">Approved</div>
+                <div class="approval-kpi-value">@approvedCount</div>
+                <div class="approval-kpi-note">Requests approved</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="approval-kpi rejected">
+                <div class="approval-kpi-label">Rejected / Cancelled</div>
+                <div class="approval-kpi-value">@(rejectedCount + cancelledCount)</div>
+                <div class="approval-kpi-note">
+                    Rejected: @rejectedCount · Cancelled: @cancelledCount
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Approval Queue -->
+    <div class="approval-panel">
+
+        <div class="approval-toolbar">
+            <div class="approval-toolbar-title">
+                Approval request queue
+            </div>
+
+            <div class="row g-2 align-items-end">
+
+                <div class="col-12 col-lg-4">
+                    <label for="approvalSearch" class="form-label small fw-semibold">
+                        Search
+                    </label>
+                    <input type="search"
+                           id="approvalSearch"
+                           class="form-control"
+                           placeholder="Request no, requester, type..."
+                           autocomplete="off" />
+                </div>
+
+                <div class="col-6 col-lg-2">
+                    <label for="approvalStatus" class="form-label small fw-semibold">
+                        Status
+                    </label>
+                    <select id="approvalStatus" class="form-select">
+                        <option value="ALL">All statuses</option>
+                        <option value="PENDING" selected>Pending approval</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-2">
+                    <label for="approvalType" class="form-label small fw-semibold">
+                        Request type
+                    </label>
+                    <select id="approvalType" class="form-select">
+                        <option value="ALL">All types</option>
+                        <option value="CREATE">Create tariff</option>
+                        <option value="UPDATE">Update tariff</option>
+                        <option value="DEACTIVATE">Deactivate tariff</option>
+                        <option value="IMPORT">Excel import</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-2">
+                    <label for="approvalSort" class="form-label small fw-semibold">
+                        Sort by
+                    </label>
+                    <select id="approvalSort" class="form-select">
+                        <option value="OLDEST">Oldest first</option>
+                        <option value="NEWEST" selected>Newest first</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-2 d-grid">
+                    <button type="button"
+                            id="resetApprovalFilters"
+                            class="btn btn-outline-secondary">
+                        Reset filters
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                <div class="filter-count" id="approvalResultCount">
+                    Showing @requests.Count requests
+                </div>
+
+                <div class="small text-muted">
+                    <span class="text-warning fw-bold">●</span>
+                    Highlighted rows need approval
+                </div>
+            </div>
+        </div>
+
+        <div class="approval-table-wrap">
+
+            <table class="table approval-table" id="approvalTable">
+                <thead>
+                    <tr>
+                        <th>Request</th>
+                        <th>Request type</th>
+                        <th>Status</th>
+                        <th>Requested by</th>
+                        <th>Submitted at</th>
+                        <th class="text-center">Tariff rows</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="approvalTableBody">
+                    @foreach (var x in requests)
+                    {
+                        var isPending = string.Equals(
+                        x.Status, "PENDING", StringComparison.OrdinalIgnoreCase);
+
+                        var status = (x.Status ?? "").ToUpperInvariant();
+                        var type = (x.RequestType ?? "").ToUpperInvariant();
+
+                        var age = DateTime.Now - x.RequestedAt;
+                        var ageLabel = age.TotalDays >= 1
+                        ? $"{(int)age.TotalDays}d ago"
+                        : age.TotalHours >= 1
+                        ? $"{(int)age.TotalHours}h ago"
+                        : $"{Math.Max(1, (int)age.TotalMinutes)}m ago";
+
+                        <tr class="@(isPending ? "pending-row" : "")"
+                            data-status="@status"
+                            data-type="@type"
+                            data-requested="@x.RequestedAt.Ticks"
+                            data-search="@($"{x.RequestNo} {x.RequestType} {x.Status} {x.Requester}".ToLowerInvariant())">
+
+                            <td>
+                                <div class="request-no">@x.RequestNo</div>
+
+                                @if (isPending)
+                                {
+                                    <div class="pending-flag">
+                                        ● NEEDS REVIEW · @ageLabel
+                                    </div>
+                                }
+                            </td>
+
+                            <td>
+                                <span class="type-pill @RequestTypeClass(x.RequestType)">
+                                    @RequestTypeLabel(x.RequestType)
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="status-pill @StatusClass(x.Status)">
+                                    @x.Status
+                                </span>
+                            </td>
+
+                            <td>@x.Requester</td>
+
+                            <td>
+                                <div class="fw-semibold">
+                                    @x.RequestedAt.ToString("dd MMM yyyy")
+                                </div>
+                                <div class="cell-subtext">
+                                    @x.RequestedAt.ToString("HH:mm")
+                                </div>
+                            </td>
+
+                            <td class="text-center">
+                                <span class="fw-bold">@x.RowCount</span>
+                            </td>
+
+                            <td class="text-end">
+                                <a class="btn btn-sm @(isPending ? "btn-warning" : "btn-outline-primary") btn-review"
+                                   href="@Url.Action("Details", "PriceBuyApproval", new { id = x.ApprovalId })">
+                                    @(isPending ? "Review request" : "View details")
+                                    <i class="bi bi-arrow-right-short"></i>
+                                </a>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div id="approvalEmptyState" class="empty-state" style="display:none;">
+                <div>
+                    <i class="bi bi-inbox fs-2"></i>
+                </div>
+                <div class="empty-title">
+                    No matching approval requests
+                </div>
+                <div class="small">
+                    Try changing the status/type filters or search term.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="small text-muted mt-3">
+        Approval applies proposed changes to the official buying tariff only after the request is approved.
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const search = document.getElementById('approvalSearch');
+        const status = document.getElementById('approvalStatus');
+        const type = document.getElementById('approvalType');
+        const sort = document.getElementById('approvalSort');
+        const table = document.getElementById('approvalTable');
+        const tbody = document.getElementById('approvalTableBody');
+        const count = document.getElementById('approvalResultCount');
+        const empty = document.getElementById('approvalEmptyState');
+        const reset = document.getElementById('resetApprovalFilters');
+        const refresh = document.getElementById('refreshApprovalList');
+
+        if (!search || !status || !type || !sort || !tbody || !table) {
+            return;
+        }
+
+        const originalRows = Array.from(tbody.querySelectorAll('tr'));
+
+        function applyFilters() {
+            const term = search.value.trim().toLowerCase();
+            const statusValue = status.value;
+            const typeValue = type.value;
+            const visible = [];
+
+            originalRows.forEach(row => {
+                const matchesSearch =
+                    !term || (row.dataset.search || '').includes(term);
+
+                const matchesStatus =
+                    statusValue === 'ALL' || row.dataset.status === statusValue;
+
+                const matchesType =
+                    typeValue === 'ALL' || row.dataset.type === typeValue;
+
+                const show = matchesSearch && matchesStatus && matchesType;
+
+                row.style.display = show ? '' : 'none';
+
+                if (show) {
+                    visible.push(row);
+                }
+            });
+
+            visible.sort((a, b) => {
+                const aPending = a.dataset.status === 'PENDING';
+                const bPending = b.dataset.status === 'PENDING';
+
+                if (statusValue === 'ALL' && aPending !== bPending) {
+                    return aPending ? -1 : 1;
+                }
+
+                const aTime = Number(a.dataset.requested || 0);
+                const bTime = Number(b.dataset.requested || 0);
+
+                return sort.value === 'NEWEST'
+                    ? bTime - aTime
+                    : aTime - bTime;
+            });
+
+            visible.forEach(row => tbody.appendChild(row));
+
+            count.textContent =
+                `Showing ${visible.length} of ${originalRows.length} requests`;
+
+            empty.style.display = visible.length ? 'none' : 'block';
+            table.style.display = visible.length ? '' : 'none';
+        }
+
+        search.addEventListener('input', applyFilters);
+        status.addEventListener('change', applyFilters);
+        type.addEventListener('change', applyFilters);
+        sort.addEventListener('change', applyFilters);
+
+        reset?.addEventListener('click', function () {
+            search.value = '';
+            status.value = 'PENDING';
+            type.value = 'ALL';
+            sort.value = 'NEWEST';
+            applyFilters();
+        });
+
+        refresh?.addEventListener('click', function () {
+            window.location.reload();
+        });
+
+        applyFilters();
+    })();
+</script>

@@ -3597,6 +3597,145 @@ namespace TMSBilling.Migrations
                     b.ToTable("TRC_PRICEBUY");
                 });
 
+            modelBuilder.Entity("TMSBilling.Models.PriceBuyApproval", b =>
+                {
+                    b.Property<long>("ApprovalId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ApprovalId"));
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Approver")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RequestNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Requester")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceFileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("ApprovalId");
+
+                    b.HasIndex("RequestNo")
+                        .IsUnique();
+
+                    b.ToTable("TRC_PRICEBUY_APPROVAL_H");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceBuyApprovalDetail", b =>
+                {
+                    b.Property<long>("DetailId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("DetailId"));
+
+                    b.Property<long>("ApprovalId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ConflictKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("NewValuesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValuesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PendingConflictKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("PriceBuyId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DetailId");
+
+                    b.HasIndex("ApprovalId");
+
+                    b.HasIndex("PendingConflictKey")
+                        .IsUnique()
+                        .HasFilter("[PendingConflictKey] IS NOT NULL");
+
+                    b.ToTable("TRC_PRICEBUY_APPROVAL_D");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceBuyAudit", b =>
+                {
+                    b.Property<long>("AuditId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AuditId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<long>("ApprovalId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("AuditId");
+
+                    b.ToTable("TRC_PRICEBUY_APPROVAL_AUDIT");
+                });
+
             modelBuilder.Entity("TMSBilling.Models.PriceSell", b =>
                 {
                     b.Property<int>("id_seq")
@@ -3715,6 +3854,149 @@ namespace TMSBilling.Migrations
                     b.HasKey("id_seq");
 
                     b.ToTable("TRC_PRICESELL");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceSellApproval", b =>
+                {
+                    b.Property<long>("ApprovalId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ApprovalId"));
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Approver")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RequestNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Requester")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceFileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("ApprovalId");
+
+                    b.HasIndex("RequestNo")
+                        .IsUnique();
+
+                    b.ToTable("TRC_PRICESELL_APPROVAL");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceSellApprovalDetail", b =>
+                {
+                    b.Property<long>("ApprovalDetailId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ApprovalDetailId"));
+
+                    b.Property<long>("ApprovalId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ConflictKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NewValuesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValuesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PendingConflictKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("PriceSellId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ApprovalDetailId");
+
+                    b.HasIndex("ApprovalId");
+
+                    b.HasIndex("PendingConflictKey")
+                        .IsUnique()
+                        .HasFilter("[PendingConflictKey] IS NOT NULL");
+
+                    b.ToTable("TRC_PRICESELL_APPROVAL_DETAIL");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceSellAudit", b =>
+                {
+                    b.Property<long>("AuditId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AuditId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("ApprovalDetailId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ApprovalId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("AuditId");
+
+                    b.HasIndex("ApprovalId", "PerformedAt");
+
+                    b.ToTable("TRC_PRICESELL_AUDIT");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.ProductTable", b =>
@@ -5359,6 +5641,28 @@ namespace TMSBilling.Migrations
                     b.Navigation("Permission");
                 });
 
+            modelBuilder.Entity("TMSBilling.Models.PriceBuyApprovalDetail", b =>
+                {
+                    b.HasOne("TMSBilling.Models.PriceBuyApproval", "Approval")
+                        .WithMany("Details")
+                        .HasForeignKey("ApprovalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Approval");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceSellApprovalDetail", b =>
+                {
+                    b.HasOne("TMSBilling.Models.PriceSellApproval", "Approval")
+                        .WithMany("Details")
+                        .HasForeignKey("ApprovalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Approval");
+                });
+
             modelBuilder.Entity("TMSBilling.Models.ProformaDetail", b =>
                 {
                     b.HasOne("TMSBilling.Models.ProformaHeader", "Header")
@@ -5545,6 +5849,16 @@ namespace TMSBilling.Migrations
                     b.Navigation("Menus");
 
                     b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceBuyApproval", b =>
+                {
+                    b.Navigation("Details");
+                });
+
+            modelBuilder.Entity("TMSBilling.Models.PriceSellApproval", b =>
+                {
+                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("TMSBilling.Models.ProformaHeader", b =>

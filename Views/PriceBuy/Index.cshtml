@@ -1,7 +1,8 @@
-﻿    @model IEnumerable<TMSBilling.Models.PriceBuy>
+    @model IEnumerable<TMSBilling.Models.PriceBuy>
     @{
         Layout = "~/Views/Shared/_MainLayout.cshtml";
         ViewData["Title"] = "Price Buy";
+        var successMessage = TempData["SuccessMessage"] as string;
         var isAdmin = Context.Session.GetString("is_admin") == "true";
     }
 
@@ -10,14 +11,25 @@
         @if (isAdmin)
         {
             <button class="btn btn-primary btn-sm" onclick="loadForm(0)">Add Price Buy</button>
-            <a href="/PriceBuy/Upload" class="btn btn-success btn-sm" >Import</a>
+            <a href="/PriceBuy/Upload" class="btn btn-success btn-sm">Import</a>
+            <a href="/PriceBuyApproval/Index" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-clipboard-check"></i> Price Buy Approval
+                @if ((ViewBag.PendingApprovalCount ?? 0) > 0)
+                {
+                    <span class="badge rounded-pill bg-danger ms-1">@ViewBag.PendingApprovalCount</span>
+                }
+            </a>
             <button class="btn btn-info btn-sm" id="btnDownloadPriceBuy">
                 Download Price Buy
             </button>
         }
     </div>
 
-    <table class="table table-bordered table-sm table-striped" id="priceBuyTable">
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div id="priceBuySuccessMessage" data-message="@successMessage" hidden></div>
+}
+<table class="table table-bordered table-sm table-striped" id="priceBuyTable">
         <thead>
             <tr>
                 <th>Vendor ID</th>
@@ -172,6 +184,10 @@
 
     @section Scripts {
         <script>
+            function escapeHtml(value) {
+                return $('<div>').text(value || '').html();
+            }
+
             function loadForm(id) {
                 $.get('/PriceBuy/Form', { id }, function (html) {
                     $('#formBody').html(html);
@@ -193,7 +209,75 @@
                 });
             }
 
+            $(document).on('submit', '#formBody form', function (e) {
+                e.preventDefault();
+                const form = $(this);
+                if (form.data('submitting')) return;
+                form.data('submitting', true);
+                form.find('button[type="submit"]').prop('disabled', true);
+
+                // Edit-mode identity fields are disabled; enable them so they are included in serialization.
+                form.find('select:disabled').prop('disabled', false);
+                $.ajax({
+                    url: form.attr('action'),
+                    type: (form.attr('method') || 'POST').toUpperCase(),
+                    data: form.serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    dataType: 'html'
+                }).done(function (response, status, xhr) {
+                    if (response.includes('id="priceBuyTable"') || response.includes("id='priceBuyTable'")) {
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('formModal')).hide();
+                        const doc = new DOMParser().parseFromString(response, 'text/html');
+                        const el = doc.querySelector('#priceBuySuccessMessage');
+                        const msg = el ? el.getAttribute('data-message') : '';
+                        if (msg && typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Request Submitted Successfully',
+                                html: `<p>${escapeHtml(msg)}</p><p>Your request is now <strong>pending approval</strong>.</p><p>Please contact your direct supervisor to review and approve the request.</p>`,
+                                confirmButtonText: 'Understood',
+                                confirmButtonColor: '#198754'
+                            }).then(() => location.reload());
+                        } else {
+                            location.reload();
+                        }
+                        return;
+                    }
+                    const contentType = xhr.getResponseHeader('content-type') || '';
+                    if (contentType.includes('text/html')) {
+                        $('#formBody').html(response);
+                        $('#formBody .select2').each(function () {
+                            if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
+                            $(this).select2({ dropdownParent: $('#formModal'), placeholder: 'Select an Option', allowClear: true, width: '100%' });
+                        });
+                        return;
+                    }
+                    location.reload();
+                }).fail(function (xhr) {
+                    const contentType = xhr.getResponseHeader('content-type') || '';
+                    if ([400, 409, 422].includes(xhr.status) && contentType.includes('text/html') && xhr.responseText) {
+                        $('#formBody').html(xhr.responseText);
+                        return;
+                    }
+                    Swal.fire({ icon: 'error', title: 'Request Failed', text: xhr.responseJSON?.message || 'Unable to submit the request. Please try again.' });
+                }).always(function () {
+                    form.removeData('submitting');
+                    $('#formBody button[type="submit"]').prop('disabled', false);
+                });
+            });
+
             $(document).ready(() => {
+                const successElement = document.getElementById('priceBuySuccessMessage');
+                if (successElement && typeof Swal !== 'undefined') {
+                    const message = successElement.getAttribute('data-message') || '';
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Request Submitted Successfully',
+                        html: `<p>${escapeHtml(message)}</p><p>Your request is now <strong>pending approval</strong>.</p><p>Please contact your direct supervisor to review and approve the request.</p>`,
+                        confirmButtonText: 'Understood',
+                        confirmButtonColor: '#198754'
+                    });
+                }
                 // $('#priceBuyTable').DataTable();
                 const table = $('#priceBuyTable').DataTable({
                     responsive: true,

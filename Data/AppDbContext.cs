@@ -107,6 +107,16 @@ namespace TMSBilling.Data
         public DbSet<RoutePlanStop> RoutePlanStops { get; set; }
         public DbSet<RoutePlanStopHistory> RoutePlanStopHistories { get; set; }
 
+        public DbSet<PriceSellApproval> PriceSellApprovals { get; set; } = null!;
+
+        public DbSet<PriceSellApprovalDetail> PriceSellApprovalDetails { get; set; } = null!;
+
+        public DbSet<PriceSellAudit> PriceSellAudits { get; set; } = null!;
+
+        public DbSet<PriceBuyApproval> PriceBuyApprovals => Set<PriceBuyApproval>();
+        public DbSet<PriceBuyApprovalDetail> PriceBuyApprovalDetails => Set<PriceBuyApprovalDetail>();
+        public DbSet<PriceBuyAudit> PriceBuyAudits => Set<PriceBuyAudit>();
+
         protected void ConfigureIntegrationHub(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Integration>(e =>
@@ -342,6 +352,40 @@ namespace TMSBilling.Data
                 e.HasIndex(x => new { x.report_id, x.run_at });
                 e.HasIndex(x => x.run_by);
             });
+
+
+            modelBuilder.Entity<PriceSellApproval>()
+                .HasIndex(x => x.RequestNo)
+                .IsUnique();
+
+            modelBuilder.Entity<PriceSellApproval>()
+                .HasMany(x => x.Details)
+                .WithOne(x => x.Approval)
+                .HasForeignKey(x => x.ApprovalId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PriceSellApprovalDetail>()
+                .HasIndex(x => x.PendingConflictKey)
+                .IsUnique()
+                .HasFilter("[PendingConflictKey] IS NOT NULL");
+
+            modelBuilder.Entity<PriceSellApprovalDetail>()
+                .HasIndex(x => x.ApprovalId);
+
+            modelBuilder.Entity<PriceSellAudit>()
+                .HasIndex(x => new { x.ApprovalId, x.PerformedAt });
+
+            modelBuilder.Entity<PriceBuyApproval>()
+                .HasIndex(x => x.RequestNo).IsUnique();
+                        modelBuilder.Entity<PriceBuyApprovalDetail>()
+                            .HasIndex(x => x.PendingConflictKey)
+                            .IsUnique()
+                            .HasFilter("[PendingConflictKey] IS NOT NULL");
+            modelBuilder.Entity<PriceBuyApprovalDetail>()
+                .HasOne(x => x.Approval)
+                .WithMany(x => x.Details)
+                .HasForeignKey(x => x.ApprovalId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

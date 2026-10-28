@@ -1,0 +1,330 @@
+@model TMSBilling.Models.PriceSellApproval
+@using System.Text.Json
+@using System.Globalization
+@using TMSBilling.Models
+@{
+    Layout = "~/Views/Shared/_MainLayout.cshtml";
+    ViewData["Title"] = "Price Sell Approval Detail";
+    var audits = ViewBag.Audit as IEnumerable<PriceSellAudit> ?? Enumerable.Empty<PriceSellAudit>();
+
+    PriceSell? ParseSnapshot(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<PriceSell>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
+        catch { return null; }
+    }
+
+    string DisplayValue(PriceSell? item, string propertyName)
+    {
+        if (item == null) return "—";
+        var property = typeof(PriceSell).GetProperty(propertyName);
+        if (property == null) return "—";
+        var value = property.GetValue(item);
+        if (value == null) return "—";
+        if (propertyName == "valid_date" && value is DateTime date) return date.ToString("dd MMM yyyy", CultureInfo.InvariantCulture);
+        if (propertyName.StartsWith("sell", StringComparison.OrdinalIgnoreCase) || propertyName is "charge_min" or "min_range" or "max_range" or "rate_value")
+        {
+            if (decimal.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+                return amount.ToString("N0", CultureInfo.GetCultureInfo("id-ID"));
+        }
+        if (propertyName is "flag_min" or "flag_range" or "active_flag")
+            return Convert.ToString(value, CultureInfo.InvariantCulture) == "1" ? "Yes" : "No";
+        return Convert.ToString(value, CultureInfo.InvariantCulture) ?? "—";
+    }
+
+    var fields = new (string Label, string Property)[]
+    {
+        ("Customer", "cust_code"), ("Origin", "origin"), ("Destination", "dest"),
+        ("Service Type", "serv_type"), ("Service Moda", "serv_moda"), ("Truck Size", "truck_size"),
+        ("Charge UOM", "charge_uom"), ("Currency", "curr"), ("Rate Currency", "rate_value"),
+        ("Flag Min", "flag_min"), ("Charge Min", "charge_min"), ("Flag Range", "flag_range"),
+        ("Min Range", "min_range"), ("Max Range", "max_range"), ("Rate 1", "sell1"),
+        ("Rate 2", "sell2"), ("Rate 3", "sell3"), ("Return Empty", "sell_ret_empty"),
+        ("Return Cargo", "sell_ret_cargo"), ("Overnight", "sell_ovnight"), ("Cancel Rate", "sell_cancel"),
+        ("Trip 2", "selltrip2"), ("Trip 3", "selltrip3"), ("Different Area", "sell_diff_area"),
+        ("Valid Date", "valid_date"), ("Active", "active_flag")
+    };
+    var statusClass = Model.Status switch { "PENDING" => "warning", "APPROVED" => "success", "REJECTED" => "danger", "CANCELLED" => "secondary", _ => "secondary" };
+}
+
+<style>
+    .approval-page { font-size: 14px; }
+    .approval-page .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: .85rem; }
+    .approval-page .meta-label { color: #6c757d; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+    .approval-page .meta-value { font-weight: 600; overflow-wrap: anywhere; }
+    .approval-page .rate-value { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .approval-page .changed-row { background-color: #fff8e1; }
+    .approval-page .snapshot-card { border: 1px solid #dee2e6; border-radius: .5rem; padding: 1rem; height: 100%; }
+    .approval-page .snapshot-card h6 { font-weight: 700; margin-bottom: 1rem; }
+    .approval-page .table th { white-space: nowrap; }
+    .approval-page .detail-search { max-width: 420px; }
+    .approval-page .tariff-detail-card { transition: border-color .15s ease-in-out; }
+    .approval-page .tariff-detail-card:hover { border-color: #adb5bd !important; }
+    .approval-page .detail-toggle { color: inherit; text-decoration: none; }
+    .approval-page .detail-toggle:focus { box-shadow: none; }
+    .approval-page .detail-chevron { transition: transform .2s ease; }
+    .approval-page .detail-toggle[aria-expanded="true"] .detail-chevron { transform: rotate(180deg); }
+    .approval-page .detail-search-empty { display: none; }
+</style>
+
+<div class="approval-page container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <div class="text-muted small">PRICE SELL · APPROVAL REQUEST</div>
+            <h3 class="mb-1">@Model.RequestNo</h3>
+            <span class="badge text-bg-@statusClass">@Model.Status</span>
+            <span class="badge text-bg-light border text-dark">@Model.RequestType</span>
+        </div>
+        <a class="btn btn-outline-secondary" href="/PriceSellApproval/Index"><i class="bi bi-arrow-left me-1"></i> Back to Approval List</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="section-title">Request Information</div>
+            <div class="row g-3">
+                <div class="col-6 col-lg-3"><div class="meta-label">Requested By</div><div class="meta-value">@Model.Requester</div></div>
+                <div class="col-6 col-lg-3"><div class="meta-label">Submitted At</div><div class="meta-value">@Model.RequestedAt.ToString("dd MMM yyyy, HH:mm")</div></div>
+                <div class="col-6 col-lg-3"><div class="meta-label">Number of Tariffs</div><div class="meta-value">@Model.RowCount</div></div>
+                <div class="col-6 col-lg-3"><div class="meta-label">Source File</div><div class="meta-value">@(string.IsNullOrWhiteSpace(Model.SourceFileName) ? "—" : Model.SourceFileName)</div></div>
+                @if (!string.IsNullOrWhiteSpace(Model.Approver))
+                {
+                    <div class="col-6 col-lg-3"><div class="meta-label">Decision By</div><div class="meta-value">@Model.Approver</div></div>
+                    <div class="col-6 col-lg-3"><div class="meta-label">Decision At</div><div class="meta-value">@(Model.DecidedAt?.ToString("dd MMM yyyy, HH:mm") ?? "—")</div></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.DecisionNote))
+                {
+                    <div class="col-12"><div class="meta-label">Decision Note</div><div class="meta-value">@Model.DecisionNote</div></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <div class="section-title mb-1">Tariff Change Details</div>
+                    <div class="text-muted small">Review tariff identity and amounts before making a decision. Highlighted rows indicate changed values.</div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="text-muted small" id="detailResultCount">@Model.Details.Count item(s)</span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="expandAllDetails">
+                        <i class="bi bi-arrows-expand me-1"></i> Expand all
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="collapseAllDetails">
+                        <i class="bi bi-arrows-collapse me-1"></i> Collapse all
+                    </button>
+                </div>
+            </div>
+
+            <div class="input-group input-group-sm detail-search mb-3">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="search" class="form-control" id="detailSearch"
+                       placeholder="Search customer, origin, destination, service, rate..."
+                       aria-label="Search tariff details" autocomplete="off" />
+                <button class="btn btn-outline-secondary" type="button" id="clearDetailSearch" title="Clear search">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div id="tariffDetailsList">
+            @foreach (var detail in Model.Details)
+            {
+                var oldItem = ParseSnapshot(detail.OldValuesJson);
+                var newItem = ParseSnapshot(detail.NewValuesJson);
+                var identity = newItem ?? oldItem;
+                var collapseId = $"tariffDetail_{detail.ApprovalDetailId}";
+                <div class="tariff-detail-card border rounded-3 mb-3" data-detail-card>
+                    <div class="p-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <button class="btn btn-link detail-toggle p-0 text-start flex-grow-1"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId"
+                                    aria-expanded="false" aria-controls="@collapseId">
+                                <span class="d-flex flex-wrap align-items-center gap-2">
+                                    <i class="bi bi-chevron-down detail-chevron"></i>
+                                    <span class="badge text-bg-info">@detail.OperationType</span>
+                                    <span class="fw-bold">@(identity?.cust_code ?? "Tariff")</span>
+                                    <span class="text-muted">· @(identity?.origin ?? "—") → @(identity?.dest ?? "—")</span>
+                                </span>
+                                <span class="d-block small text-muted mt-1 ms-4">@(identity?.serv_type ?? "—") / @(identity?.serv_moda ?? "—") · Truck @(identity?.truck_size?.ToString() ?? "—") · @(identity?.charge_uom ?? "—")</span>
+                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                @if (detail.PriceSellId.HasValue)
+                                {
+                                    <span class="small text-muted">Tariff ID: @detail.PriceSellId</span>
+                                }
+                                <span class="badge text-bg-light border text-dark">Details</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="collapse" id="@collapseId">
+                        <div class="px-3 pb-3">
+                            <hr class="mt-0" />
+                            @if (oldItem == null && newItem == null)
+                            {
+                                <div class="alert alert-warning mb-0">Unable to read tariff details. Please check the request data or snapshot JSON format.</div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width:30%">Field</th>
+                                                <th style="width:35%">Current Value</th>
+                                                <th style="width:35%">Proposed Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach (var field in fields)
+                                        {
+                                            var oldValue = DisplayValue(oldItem, field.Property);
+                                            var newValue = DisplayValue(newItem, field.Property);
+                                            var changed = !string.Equals(oldValue, newValue, StringComparison.Ordinal);
+                                            <tr class="@(changed ? "changed-row" : "")">
+                                                <td class="fw-semibold">@field.Label @if (changed) { <span class="badge text-bg-warning ms-1">Changed</span> }</td>
+                                                <td class="@(field.Property.StartsWith("sell") || field.Property is "charge_min" or "min_range" or "max_range" or "rate_value" ? "rate-value" : "")">@oldValue</td>
+                                                <td class="@(field.Property.StartsWith("sell") || field.Property is "charge_min" or "min_range" or "max_range" or "rate_value" ? "rate-value fw-semibold" : "fw-semibold")">@newValue</td>
+                                            </tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            </div>
+            <div class="alert alert-light border text-center text-muted detail-search-empty" id="detailSearchEmpty">
+                No tariff details match your search.
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Status == "PENDING")
+    {
+        <div class="card border-primary shadow-sm mb-4">
+            <div class="card-body">
+                <div class="section-title">Approval Decision</div>
+                <label for="decisionNote" class="form-label">Decision note <span class="text-muted">(required when rejecting)</span></label>
+                <textarea id="decisionNote" class="form-control mb-3" rows="3" maxlength="1000" placeholder="Enter a rejection reason or decision note..."></textarea>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-success px-4" onclick="decide('Approve')"><i class="bi bi-check-circle me-1"></i> Approve Request</button>
+                    <button type="button" class="btn btn-danger px-4" onclick="decide('Reject')"><i class="bi bi-x-circle me-1"></i> Reject Request</button>
+                    @if (string.Equals(Model.Requester, Context.Session.GetString("username"), StringComparison.OrdinalIgnoreCase))
+                    {
+                        <button type="button" class="btn btn-outline-secondary ms-lg-auto" onclick="cancelRequest()">Cancel My Request</button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="section-title">Audit Trail</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle mb-0">
+                    <thead class="table-light"><tr><th>Action</th><th>User</th><th>Date & Time</th><th>Details</th></tr></thead>
+                    <tbody>
+                    @foreach (var audit in audits)
+                    {
+                        <tr><td><span class="badge text-bg-light border text-dark">@audit.Action</span></td><td>@audit.PerformedBy</td><td>@audit.PerformedAt.ToString("dd MMM yyyy, HH:mm:ss")</td><td class="text-break">@audit.Details</td></tr>
+                    }
+                    @if (!audits.Any())
+                    {
+                        <tr><td colspan="4" class="text-center text-muted py-3">No audit activity available.</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="antiForgeryForm" class="d-none">@Html.AntiForgeryToken()</form>
+@section Scripts {
+<script>
+    // Search across all visible and collapsed tariff detail content.
+    (function initializeTariffDetailControls() {
+        const searchInput = document.getElementById('detailSearch');
+        const clearButton = document.getElementById('clearDetailSearch');
+        const cards = Array.from(document.querySelectorAll('[data-detail-card]'));
+        const resultCount = document.getElementById('detailResultCount');
+        const emptyState = document.getElementById('detailSearchEmpty');
+
+        function applyDetailSearch() {
+            const query = (searchInput?.value || '').trim().toLocaleLowerCase();
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const matches = !query || card.textContent.toLocaleLowerCase().includes(query);
+                card.classList.toggle('d-none', !matches);
+                if (matches) visibleCount++;
+            });
+
+            if (resultCount) resultCount.textContent = `${visibleCount} of ${cards.length} item(s)`;
+            if (emptyState) emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+
+        searchInput?.addEventListener('input', applyDetailSearch);
+        clearButton?.addEventListener('click', function () {
+            if (searchInput) {
+                searchInput.value = '';
+                applyDetailSearch();
+                searchInput.focus();
+            }
+        });
+
+        document.getElementById('expandAllDetails')?.addEventListener('click', function () {
+            document.querySelectorAll('#tariffDetailsList .collapse').forEach(element => {
+                bootstrap.Collapse.getOrCreateInstance(element, { toggle: false }).show();
+            });
+        });
+
+        document.getElementById('collapseAllDetails')?.addEventListener('click', function () {
+            document.querySelectorAll('#tariffDetailsList .collapse').forEach(element => {
+                bootstrap.Collapse.getOrCreateInstance(element, { toggle: false }).hide();
+            });
+        });
+
+        applyDetailSearch();
+    })();
+
+    const tokenElement = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
+    const token = tokenElement ? tokenElement.value : '';
+    async function post(url, body) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify(body || {})
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Request failed');
+        return data;
+    }
+    async function decide(action) {
+        const note = document.getElementById('decisionNote').value;
+        if (action === 'Reject' && !note.trim()) { alert('A rejection reason is required.'); return; }
+        const promptText = action === 'Approve'
+            ? 'Approve this request? The tariff changes will be applied to the official price list.'
+            : 'Reject this request? The official tariff data will remain unchanged.';
+        if (!confirm(promptText)) return;
+        try {
+            const result = await post('/PriceSellApproval/' + action + '/@Model.ApprovalId', { note });
+            alert(result.message || 'The decision was saved successfully.');
+            location.reload();
+        } catch (e) { alert(e.message); }
+    }
+    async function cancelRequest() {
+        if (!confirm('Cancel this request?')) return;
+        try {
+            const result = await post('/PriceSellApproval/Cancel/@Model.ApprovalId', {});
+            alert(result.message || 'The request was cancelled successfully.');
+            location.reload();
+        } catch (e) { alert(e.message); }
+    }
+</script>
+}

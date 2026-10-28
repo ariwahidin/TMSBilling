@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Import Data Price Sell";
 }
@@ -108,7 +108,7 @@
         /* ── preview ── */
         function previewExcel() {
             const file = document.getElementById('excelFile').files[0];
-            if (!file) return alert('Pilih file Excel terlebih dahulu!');
+            if (!file) return Swal.fire({ icon: 'warning', title: 'No File Selected', text: 'Please select an Excel file first.' });
 
             showLoading('Membaca file Excel...');
             setButtonLoading('previewBtn', true);
@@ -157,7 +157,7 @@
 
                 } catch (err) {
                     console.error(err);
-                    alert('Gagal membaca file Excel.');
+                    Swal.fire({ icon: 'error', title: 'Unable to Read Excel File', text: 'Please check the file format and try again.' });
                     hideLoading();
                     setButtonLoading('previewBtn', false);
                 }
@@ -186,7 +186,7 @@
         /* ── submit ── */
         function submitData() {
             if (!parsedData.length) {
-                alert('Preview data terlebih dahulu!');
+                Swal.fire({ icon: 'warning', title: 'Preview Required', text: 'Please preview the Excel data before submitting.' });
                 return;
             }
 
@@ -199,17 +199,65 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ mode: mode, data: parsedData })
             })
-            .then(res => res.json())
-            .then(result => {
+            .then(async res => {
+                const result = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    throw new Error(
+                        result.message ||
+                        result.error ||
+                        'The import request could not be submitted. Please review the data and try again.'
+                    );
+                }
+
+                return result;
+            })
+            .then(async result => {
                 hideLoading();
                 setButtonLoading('submitBtn', false);
+
+                const processed = Array.isArray(result.processed) ? result.processed : [];
+                const errors = Array.isArray(result.errors) ? result.errors : [];
+                const isApprovalSubmitted =
+                    result.success === true ||
+                    result.approvalId != null ||
+                    result.requestNo != null ||
+                    (processed.length > 0 && errors.length === 0);
+
                 renderResultCard(result);
+
+                if (isApprovalSubmitted) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Request Submitted Successfully',
+                        html: `
+                            <p class="mb-2">Your Price Sell import request has been submitted successfully.</p>
+                            <p class="mb-2">The request is now <strong>pending approval</strong>. No tariff changes will be applied until it is approved.</p>
+                            <p class="mb-0">Please contact your direct supervisor to review and approve this request.</p>
+                        `,
+                        confirmButtonText: 'Understood',
+                        confirmButtonColor: '#198754'
+                    });
+                } else if (errors.length > 0) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Submission Failed',
+                        text: 'The import request was not submitted successfully. Please review the errors shown on the page.',
+                        confirmButtonText: 'Review Errors'
+                    });
+                }
             })
             .catch(err => {
                 console.error(err);
                 hideLoading();
                 setButtonLoading('submitBtn', false);
-                alert('Gagal menghubungi server.');
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Submission Failed',
+                    text: err.message || 'Unable to connect to the server. Please try again.',
+                    confirmButtonText: 'OK'
+                });
             });
         }
 

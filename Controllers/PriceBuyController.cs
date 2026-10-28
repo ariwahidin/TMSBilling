@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +6,8 @@ using TMSBilling.Data;
 using TMSBilling.Filters;
 using TMSBilling.Models;
 using TMSBilling.Models.UploadModels;
+using TMSBilling.Services;
+using System.Text.Json;
 namespace TMSBilling.Controllers
 {
     [SessionAuthorize]
@@ -13,16 +15,19 @@ namespace TMSBilling.Controllers
     {
         private readonly AppDbContext _context;
         private readonly SelectListService _selectList;
+        private readonly PriceBuyApprovalService _approvalService;
 
-        public PriceBuyController(AppDbContext context, SelectListService selectList)
+        public PriceBuyController(AppDbContext context, SelectListService selectList, PriceBuyApprovalService approvalService)
         {
             _context = context;
             _selectList = selectList;
+            _approvalService = approvalService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var data = _context.PriceBuys.OrderByDescending(x => x.entry_date).ToList();
+            ViewBag.PendingApprovalCount = await _context.PriceBuyApprovals.CountAsync(x => x.Status == "PENDING");
+            var data = await _context.PriceBuys.OrderByDescending(x => x.entry_date).ToListAsync();
             return View(data);
         }
 
@@ -46,72 +51,125 @@ namespace TMSBilling.Controllers
         }
 
         [HttpPost]
-        public IActionResult Save(PriceBuy model)
+        [ValidateAntiForgeryToken]
+        [RequirePermission("pricebuy_create")]
+        public async Task<IActionResult> SubmitCreate(PriceBuy model, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return RedirectToAction("Index");
-
-            if (model.id_seq == 0)
             {
-                model.entry_date = DateTime.Now;
+                PopulateFormLists();
+                return PartialView("_Form", model);
+            }
+            if (model.id_seq != 0)
+                return BadRequest(new { success = false, message = "A create request cannot contain an existing tariff ID." });
+
+            try
+            {
+                model.origin = model.origin?.Trim().ToUpperInvariant();
+                model.dest = model.dest?.Trim().ToUpperInvariant();
                 model.entry_user = HttpContext.Session.GetString("username") ?? "System";
-                _context.PriceBuys.Add(model);
+                var dto = new PriceBuyApprovalSubmitDto {
+                    RequestType = "CREATE",
+                    Items = new List<PriceBuyApprovalItemDto> {
+                        new() { OperationType = "CREATE", NewValuesJson = JsonSerializer.Serialize(model) }
+                    }
+                };
+                var id = await _approvalService.SubmitAsync(dto, HttpContext.Session.GetString("username") ?? "", ct);
+                TempData["SuccessMessage"] = $"Create approval request submitted successfully (ID: {id}).";
+                return RedirectToAction(nameof(Index));
             }
-            else
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException)
             {
-                var existing = _context.PriceBuys.FirstOrDefault(x => x.id_seq == model.id_seq);
-                if (existing == null) return NotFound();
-
-                // Map properti
-                existing.sup_code = model.sup_code;
-                existing.origin = model.origin;
-                existing.dest = model.dest;
-                existing.serv_type = model.serv_type;
-                existing.serv_moda = model.serv_moda;
-                existing.truck_size = model.truck_size;
-                existing.charge_uom = model.charge_uom;
-                existing.flag_min = model.flag_min;
-                existing.charge_min = model.charge_min;
-                existing.flag_range = model.flag_range;
-                existing.min_range = model.min_range;
-                existing.max_range = model.max_range;
-                existing.buy1 = model.buy1;
-                existing.buy2 = model.buy2;
-                existing.buy3 = model.buy3;
-                existing.buy_ret_empt = model.buy_ret_empt;
-                existing.buy_ret_cargo = model.buy_ret_cargo;
-                existing.buy_ovnight = model.buy_ovnight;
-                existing.buy_cancel = model.buy_cancel;
-                existing.buytrip2 = model.buytrip2;
-                existing.buytrip3 = model.buytrip3;
-                existing.buy_diff_area = model.buy_diff_area;
-                existing.valid_date = model.valid_date;
-                existing.curr = model.curr;
-                existing.rate_value = model.rate_value;
-                existing.active_flag = model.active_flag;
-                existing.update_date = DateTime.Now;
-                existing.update_user = HttpContext.Session.GetString("username") ?? "System";
+                ModelState.AddModelError(string.Empty, ex.Message);
+                PopulateFormLists();
+                return PartialView("_Form", model);
             }
-
-            _context.SaveChanges();
-            return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult Delete(int id)
+        [ValidateAntiForgeryToken]
+        [RequirePermission("pricebuy_update")]
+        public async Task<IActionResult> SubmitUpdate(PriceBuy model, CancellationToken ct)
         {
-            var item = _context.PriceBuys.Find(id);
-            if (item == null) return NotFound();
+            if (!ModelState.IsValid)
+            {
+                PopulateFormLists();
+                return PartialView("_Form", model);
+            }
+            if (model.id_seq <= 0)
+                return BadRequest(new { success = false, message = "A valid tariff ID is required for an update request." });
 
-            _context.PriceBuys.Remove(item);
-            _context.SaveChanges();
-            return RedirectToAction("Index");
+            var existing = await _context.PriceBuys.AsNoTracking().FirstOrDefaultAsync(x => x.id_seq == model.id_seq, ct);
+            if (existing == null) return NotFound();
+            try
+            {
+                model.sup_code = existing.sup_code;
+                model.origin = existing.origin;
+                model.dest = existing.dest;
+                model.serv_type = existing.serv_type;
+                model.serv_moda = existing.serv_moda;
+                model.truck_size = existing.truck_size;
+                model.charge_uom = existing.charge_uom;
+                model.update_user = HttpContext.Session.GetString("username") ?? "System";
+                var dto = new PriceBuyApprovalSubmitDto {
+                    RequestType = "UPDATE",
+                    Items = new List<PriceBuyApprovalItemDto> {
+                        new() { OperationType = "UPDATE", PriceBuyId = existing.id_seq, NewValuesJson = JsonSerializer.Serialize(model) }
+                    }
+                };
+                var id = await _approvalService.SubmitAsync(dto, HttpContext.Session.GetString("username") ?? "", ct);
+                TempData["SuccessMessage"] = $"Update approval request submitted successfully (ID: {id}).";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                PopulateFormLists();
+                return PartialView("_Form", model);
+            }
         }
 
+        // Legacy writes are disabled to ensure all tariff changes go through approval.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Save() => BadRequest(new { success = false, message = "The legacy Save endpoint is disabled. Please submit an approval request." });
 
-        public IActionResult Upload()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequirePermission("pricebuy_deactivate")]
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
-            return View();
+            var existing = await _context.PriceBuys.AsNoTracking().FirstOrDefaultAsync(x => x.id_seq == id, ct);
+            if (existing == null) return NotFound();
+            try
+            {
+                var proposed = existing;
+                proposed.active_flag = 0;
+                var dto = new PriceBuyApprovalSubmitDto {
+                    RequestType = "DEACTIVATE",
+                    Items = new List<PriceBuyApprovalItemDto> {
+                        new() { OperationType = "DEACTIVATE", PriceBuyId = existing.id_seq, NewValuesJson = JsonSerializer.Serialize(proposed) }
+                    }
+                };
+                var idApproval = await _approvalService.SubmitAsync(dto, HttpContext.Session.GetString("username") ?? "", ct);
+                return Ok(new { success = true, approvalId = idApproval, message = "Deactivation request submitted successfully and is pending approval." });
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException)
+            {
+                return Conflict(new { success = false, message = ex.Message });
+            }
+        }
+
+        private void PopulateFormLists()
+        {
+            ViewBag.ListVendor = _selectList.GetVendors();
+            ViewBag.ListCurrency = _selectList.GetCurrency();
+            ViewBag.ListOrigin = _selectList.GetOrigins();
+            ViewBag.ListDestination = _selectList.GetDestinations();
+            ViewBag.ListServiceType = _selectList.GetServiceTypes();
+            ViewBag.ListServiceModa = _selectList.GetServiceModas();
+            ViewBag.ListTruckSize = _selectList.GetTruckSizes();
+            ViewBag.ListChargeUom = _selectList.GetChargeUoms();
         }
 
         [HttpGet]
@@ -214,156 +272,92 @@ namespace TMSBilling.Controllers
             return (true, null);
         }
 
+        public IActionResult Upload()
+        {
+            return View();
+        }
 
         [HttpPost]
-        public async Task<IActionResult> UploadExcel([FromBody] UploadPriceBuyRequest request)
+        [ValidateAntiForgeryToken]
+        [RequirePermission("pricebuy_import")]
+        public async Task<IActionResult> UploadExcel([FromBody] UploadPriceBuyRequest request, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(new { message = "Model binding gagal." });
+            if (!ModelState.IsValid || request?.data == null || request.data.Count == 0)
+                return BadRequest(new { success = false, message = "No valid Excel rows were submitted." });
 
-            if (request?.data == null || !request.data.Any())
-                return BadRequest(new { message = "Data kosong atau tidak bisa dibaca." });
+            var username = HttpContext.Session.GetString("username") ?? "";
+            var items = new List<PriceBuyApprovalItemDto>();
+            var skipped = new List<string>();
+            var errors = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var results = new
+            foreach (var row in request.data)
             {
-                processed = new List<string>(),
-                skipped = new List<string>(),
-                errors = new List<string>()
-            };
+                var label = $"{row.sup_code} | {row.origin} | {row.dest} | {row.serv_type} | {row.serv_moda} | {row.truck_size} | {row.charge_uom}";
+                var key = string.Join("|", new[] { row.sup_code, row.origin, row.dest, row.serv_type, row.serv_moda, row.truck_size, row.charge_uom });
+                if (!seen.Add(key)) { errors.Add($"Duplicate row in Excel: {label}"); continue; }
 
-            // Cek duplikat antar baris di file itu sendiri
-            var seen = new HashSet<string>();
-
-            foreach (var item in request.data)
-            {
-                var key = $"{item.sup_code}|{item.origin}|{item.dest}|{item.serv_type}|{item.serv_moda}|{item.truck_size}|{item.charge_uom}";
-                var label = $"{item.sup_code} › {item.origin} › {item.dest} › {item.serv_type} › {item.serv_moda} › {item.truck_size} › {item.charge_uom}";
-
-                if (!seen.Add(key))
-                {
-                    results.errors.Add($"[Duplikat di file] {label}");
-                    continue;
-                }
-
-                // Validasi master data
-                var (isValid, errorMessage) = await ValidatePriceBuyItemAsync(item);
-                if (!isValid)
-                {
-                    results.errors.Add($"[Validasi] {label} — {errorMessage}");
-                    continue;
-                }
-
-                // Cek eksistensi di DB
-                var exists = await _context.PriceBuys.AnyAsync(x =>
-                    x.sup_code == item.sup_code &&
-                    x.origin == item.origin &&
-                    x.dest == item.dest &&
-                    x.serv_type == item.serv_type &&
-                    x.serv_moda == item.serv_moda &&
-                    x.truck_size == item.truck_size &&
-                    x.charge_uom == item.charge_uom
-                );
-
-                if (request.mode == "add" && exists)
-                {
-                    results.skipped.Add(label);
-                    continue;
-                }
-
-                if (request.mode == "edit" && !exists)
-                {
-                    results.errors.Add($"[Tidak ditemukan] {label}");
-                    continue;
-                }
-
-                // Build entity
-                var entity = new PriceBuy
-                {
-                    sup_code = item.sup_code,
-                    origin = item.origin?.ToUpper(),
-                    dest = item.dest?.ToUpper(),
-                    serv_type = item.serv_type,
-                    serv_moda = item.serv_moda,
-                    truck_size = item.truck_size,
-                    charge_uom = item.charge_uom,
-                    flag_min = item.flag_min.HasValue ? (byte?)item.flag_min : null,
-                    charge_min = item.charge_min,
-                    flag_range = item.flag_range.HasValue ? (byte?)item.flag_range : null,
-                    min_range = item.min_range,
-                    max_range = item.max_range,
-                    buy1 = item.buy1,
-                    buy2 = item.buy2,
-                    buy3 = item.buy3,
-                    buy_ret_empt = item.buy_ret_empt,
-                    buy_ret_cargo = item.buy_ret_cargo,
-                    buy_ovnight = item.buy_ovnight,
-                    buy_cancel = item.buy_cancel,
-                    buytrip2 = item.buytrip2,
-                    buytrip3 = item.buytrip3,
-                    buy_diff_area = item.buy_diff_area,
-                    valid_date = item.valid_date,
-                    active_flag = item.active_flag,
-                    curr = item.curr,
-                    rate_value = item.rate_value,
-                    entry_user = HttpContext.Session.GetString("username") ?? "System",
-                    entry_date = DateTime.Now
+                var entity = new PriceBuy {
+                    sup_code = row.sup_code?.Trim(),
+                    origin = row.origin?.Trim().ToUpperInvariant(),
+                    dest = row.dest?.Trim().ToUpperInvariant(),
+                    serv_type = row.serv_type?.Trim(),
+                    serv_moda = row.serv_moda?.Trim(),
+                    truck_size = row.truck_size?.Trim(),
+                    charge_uom = row.charge_uom?.Trim(),
+                    flag_min = row.flag_min.HasValue ? (byte?)row.flag_min : null,
+                    charge_min = row.charge_min,
+                    flag_range = row.flag_range.HasValue ? (byte?)row.flag_range : null,
+                    min_range = row.min_range, max_range = row.max_range,
+                    buy1 = row.buy1, buy2 = row.buy2, buy3 = row.buy3,
+                    buy_ret_empt = row.buy_ret_empt, buy_ret_cargo = row.buy_ret_cargo,
+                    buy_ovnight = row.buy_ovnight, buy_cancel = row.buy_cancel,
+                    buytrip2 = row.buytrip2, buytrip3 = row.buytrip3, buy_diff_area = row.buy_diff_area,
+                    valid_date = row.valid_date, active_flag = row.active_flag, curr = row.curr, rate_value = row.rate_value,
+                    entry_user = username, entry_date = DateTime.Now
                 };
 
-                if (request.mode == "edit")
-                {
-                    var existing = await _context.PriceBuys.FirstOrDefaultAsync(x =>
-                        x.sup_code == item.sup_code &&
-                        x.origin == item.origin &&
-                        x.dest == item.dest &&
-                        x.serv_type == item.serv_type &&
-                        x.serv_moda == item.serv_moda &&
-                        x.truck_size == item.truck_size &&
-                        x.charge_uom == item.charge_uom
-                    );
+                if (!await _context.Vendors.AnyAsync(v => v.SUP_CODE == entity.sup_code, ct) ||
+                    !await _context.Origins.AnyAsync(v => v.origin_code == entity.origin, ct) ||
+                    !await _context.Destinations.AnyAsync(v => v.destination_code == entity.dest, ct) ||
+                    !await _context.ServiceTypes.AnyAsync(v => v.serv_name == entity.serv_type, ct) ||
+                    !await _context.ServiceModas.AnyAsync(v => v.moda_name == entity.serv_moda, ct) ||
+                    !await _context.TruckSizes.AnyAsync(v => v.trucksize_code == entity.truck_size, ct) ||
+                    !await _context.ChargeUoms.AnyAsync(v => v.charge_name == entity.charge_uom, ct))
+                { errors.Add($"Invalid master data: {label}"); continue; }
 
-                    if (existing != null)
-                    {
-                        existing.charge_uom = item.charge_uom;
-                        existing.flag_min = item.flag_min.HasValue ? (byte?)item.flag_min : null;
-                        existing.charge_min = item.charge_min;
-                        existing.flag_range = item.flag_range.HasValue ? (byte?)item.flag_range : null;
-                        existing.min_range = item.min_range;
-                        existing.max_range = item.max_range;
-                        existing.buy1 = item.buy1;
-                        existing.buy2 = item.buy2;
-                        existing.buy3 = item.buy3;
-                        existing.buy_ret_empt = item.buy_ret_empt;
-                        existing.buy_ret_cargo = item.buy_ret_cargo;
-                        existing.buy_ovnight = item.buy_ovnight;
-                        existing.buy_cancel = item.buy_cancel;
-                        existing.buytrip2 = item.buytrip2;
-                        existing.buytrip3 = item.buytrip3;
-                        existing.buy_diff_area = item.buy_diff_area;
-                        existing.valid_date = item.valid_date;
-                        existing.active_flag = item.active_flag;
-                        existing.curr = item.curr;
-                        existing.rate_value = item.rate_value;
-                        existing.update_user = HttpContext.Session.GetString("username") ?? "System";
-                        existing.update_date = DateTime.Now;
+                var existing = await _context.PriceBuys.FirstOrDefaultAsync(x =>
+                    x.sup_code == entity.sup_code && x.origin == entity.origin && x.dest == entity.dest &&
+                    x.serv_type == entity.serv_type && x.serv_moda == entity.serv_moda &&
+                    x.truck_size == entity.truck_size && x.charge_uom == entity.charge_uom, ct);
 
-                        results.processed.Add(label);
-                        continue;
-                    }
-                }
+                if (string.Equals(request.mode, "add", StringComparison.OrdinalIgnoreCase) && existing != null)
+                { skipped.Add(label); continue; }
+                if (string.Equals(request.mode, "edit", StringComparison.OrdinalIgnoreCase) && existing == null)
+                { errors.Add($"Tariff not found for edit: {label}"); continue; }
 
-                _context.PriceBuys.Add(entity);
-                results.processed.Add(label);
+                items.Add(new PriceBuyApprovalItemDto {
+                    OperationType = existing == null ? "CREATE" : "UPDATE",
+                    PriceBuyId = existing?.id_seq,
+                    NewValuesJson = JsonSerializer.Serialize(entity)
+                });
             }
 
-            await _context.SaveChangesAsync();
+            if (errors.Count > 0)
+                return BadRequest(new { success = false, message = "Import was cancelled because one or more rows are invalid. No approval request was created.", errors, skipped });
+            if (items.Count == 0)
+                return Ok(new { success = false, message = "No new approval request was created. All rows were skipped.", submitted = 0, skipped });
 
-            return Ok(new
+            try
             {
-                message = $"Selesai diproses. {results.processed.Count} berhasil, {results.skipped.Count} dilewati, {results.errors.Count} error.",
-                processed = results.processed,
-                skipped = results.skipped,
-                errors = results.errors
-            });
+                var dto = new PriceBuyApprovalSubmitDto { RequestType = "IMPORT", SourceFileName = "PriceBuy Excel import", Items = items };
+                var approvalId = await _approvalService.SubmitAsync(dto, username, ct);
+                return Ok(new { success = true, message = "Excel import approval request submitted successfully.", approvalId, submitted = items.Count, skipped });
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException)
+            {
+                return Conflict(new { success = false, message = ex.Message, skipped });
+            }
         }
 
         [HttpGet]

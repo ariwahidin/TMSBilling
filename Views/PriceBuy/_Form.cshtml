@@ -1,4 +1,4 @@
-﻿@model TMSBilling.Models.PriceBuy
+@model TMSBilling.Models.PriceBuy
 @{
     bool isEdit = Model != null && Model.id_seq > 0;
 }
@@ -12,7 +12,8 @@
 
 </style>
 
-<form asp-action="Save" method="post">
+<form asp-controller="PriceBuy" asp-action="@(isEdit ? "SubmitUpdate" : "SubmitCreate")" method="post">
+    @Html.AntiForgeryToken()
     <input type="hidden" asp-for="id_seq" />
 
     <div class="row form-price-buy">

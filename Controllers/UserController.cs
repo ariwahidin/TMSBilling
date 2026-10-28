@@ -7,7 +7,7 @@ using TMSBilling.Filters;
 using TMSBilling.Models;
 
 [SessionAuthorize]
-[RequirePermission("user")]   // semua action di controller ini butuh permission "user"
+[RequirePermission("user")]
 public class UserController : Controller
 {
     private readonly AppDbContext _context;
