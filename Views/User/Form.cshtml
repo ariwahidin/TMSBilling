@@ -78,7 +78,8 @@
                 Id: id,
                 Username: $("#Username").val(),
                 Password: $("#Password").val(),
-                RoleIds: roleIds
+                RoleIds: roleIds,
+                IsAdmin: $("#IsAdmin").is(":checked")
             };
 
             $.ajax({

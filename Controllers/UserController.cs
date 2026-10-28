@@ -63,6 +63,7 @@ public class UserController : Controller
         user.CreatedBy = HttpContext.Session.GetString("username");
         user.CreatedAt = DateTime.Now;
         user.UpdatedBy = HttpContext.Session.GetString("username");
+        user.IsAdmin = user.IsAdmin;
         user.UpdatedAt = DateTime.Now;
 
         _context.Users.Add(user);
@@ -70,14 +71,6 @@ public class UserController : Controller
 
         return Ok(new { success = true, message = "User berhasil ditambahkan.", data = user });
     }
-
-    // GET: form edit
-    //public IActionResult Edit(int id)
-    //{
-    //    var user = _context.Users.Find(id);
-    //    if (user == null) return NotFound();
-    //    return View("Form", user);
-    //}
 
     public async Task<IActionResult> Edit(int id)
     {
@@ -101,6 +94,8 @@ public class UserController : Controller
         public string Username { get; set; } = "";
         public string? Password { get; set; }
         public List<int> RoleIds { get; set; } = new();
+
+        public bool IsAdmin { get; set; }
     }
 
     [HttpPost]
@@ -123,6 +118,7 @@ public class UserController : Controller
         }
         user.UpdatedBy = HttpContext.Session.GetString("username") ?? "system";
         user.UpdatedAt = DateTime.Now;
+        user.IsAdmin = model.IsAdmin;
 
         // Replace UserRoles
         var existingRoles = _context.UserRoles.Where(ur => ur.UserId == model.Id);
@@ -143,33 +139,6 @@ public class UserController : Controller
         return Ok(new { success = true, message = "User successfully edited." });
     }
 
-
-    //[HttpPost]
-    //public IActionResult EditAjax([FromBody] User model)
-    //{
-    //    var user = _context.Users.Find(model.Id);
-    //    if (user == null)
-    //        return NotFound(new { success = false, message = "User not found." });
-
-    //    var duplicate = _context.Users
-    //        .Any(u => u.Username == model.Username && u.Id != model.Id);
-
-    //    if (duplicate)
-    //        return BadRequest(new { success = false, message = "Username already used by another user." });
-
-    //    user.Username = model.Username;
-    //    if (!string.IsNullOrWhiteSpace(model.Password))
-    //    {
-    //        var hasher = new PasswordHasher<User>();
-    //        user.Password = hasher.HashPassword(user, model.Password);
-    //    }
-    //    user.UpdatedBy = HttpContext.Session.GetString("username") ?? "system";
-    //    user.UpdatedAt = DateTime.Now;
-
-    //    _context.SaveChanges();
-
-    //    return Ok(new { success = true, message = "User successfully edited.", data = user });
-    //}
 
     // POST: delete single
     [HttpPost]
