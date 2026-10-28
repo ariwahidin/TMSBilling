@@ -12,46 +12,33 @@
     .dashboard-page { color: #172033; }
     .dashboard-hero {
         position: relative;
+        isolation: isolate;
         overflow: hidden;
+        min-height: 290px;
         border: 0;
         border-radius: 18px;
-        background: linear-gradient(115deg, #102a56 0%, #1d4ed8 58%, #3b82f6 100%);
         color: #fff;
-        box-shadow: 0 12px 28px rgba(29, 78, 216, .16);
+        background: linear-gradient(105deg, #082653 0%, #104b91 48%, #1d4ed8 100%);
+        box-shadow: 0 12px 28px rgba(29, 78, 216, .15);
     }
-    .dashboard-hero::after {
+    .dashboard-hero::before {
         content: "";
         position: absolute;
-        width: 280px;
-        height: 280px;
-        border-radius: 50%;
-        right: -75px;
-        top: -115px;
-        background: rgba(255,255,255,.08);
-        pointer-events: none;
+        z-index: -1;
+        inset: 0;
+            background-image: linear-gradient(90deg, rgba(7, 32, 71, .98) 0%, rgba(10, 54, 109, .93) 34%, rgba(13, 64, 126, .58) 54%, rgba(13, 64, 126, .05) 100%), url('/img/hero.png');
+        background-size: cover;
+        background-position: center right;
     }
     .dashboard-hero-content { position: relative; z-index: 1; }
     .dashboard-eyebrow { color: #bfdbfe; font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
-    .dashboard-hero h2 { font-weight: 750; letter-spacing: -.035em; }
-    .dashboard-meta { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(255,255,255,.11); color: #eff6ff; padding: 8px 12px; font-size: .82rem; }
+    .dashboard-hero h2 { font-weight: 800; letter-spacing: -.035em; }
+    .dashboard-meta { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.32); border-radius: 999px; background: rgba(4,26,58,.28); color: #eff6ff; padding: 8px 12px; font-size: .82rem; backdrop-filter: blur(4px); }
     .dashboard-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.13); }
-    .dashboard-section-title { font-size: 1rem; font-weight: 750; letter-spacing: -.015em; margin: 0; color: #172033; }
-    .dashboard-section-subtitle { font-size: .84rem; color: #64748b; margin-top: 4px; }
-    .dashboard-action-card {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        height: 100%;
-        min-height: 112px;
-        padding: 18px;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        background: #fff;
-        color: inherit;
-        text-decoration: none;
-        box-shadow: 0 2px 5px rgba(15,23,42,.025);
-        transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-    }
+    .dashboard-section-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -.015em; margin: 0; color: #172033; }
+    .dashboard-section-subtitle { font-size: .86rem; color: #64748b; margin-top: 4px; }
+    .dashboard-section-icon { color: #1d4ed8; font-size: 1.35rem; }
+    .dashboard-action-card { display: flex; align-items: center; gap: 14px; height: 100%; min-height: 112px; padding: 18px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; color: inherit; text-decoration: none; box-shadow: 0 2px 5px rgba(15,23,42,.025); transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
     .dashboard-action-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15,23,42,.08); border-color: #cbd5e1; color: inherit; }
     .dashboard-action-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 13px; font-size: 1.35rem; }
     .dashboard-action-icon.sell { background: #dcfce7; color: #15803d; }
@@ -62,31 +49,38 @@
     .dashboard-action-title { font-weight: 750; font-size: .94rem; color: #172033; }
     .dashboard-action-description { color: #64748b; font-size: .79rem; line-height: 1.45; margin-top: 4px; }
     .dashboard-action-arrow { color: #94a3b8; font-size: 1.1rem; }
-    .approval-count { display: inline-flex; align-items: center; justify-content: center; min-width: 27px; height: 27px; padding: 0 8px; margin-left: 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: .76rem; font-weight: 800; line-height: 1; box-shadow: 0 0 0 3px #fff; }
-    .approval-count.zero { background: #e2e8f0; color: #475569; box-shadow: none; }
-    .dashboard-summary { height: 100%; padding: 18px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
-    .dashboard-summary-label { color: #64748b; font-size: .8rem; font-weight: 650; }
-    .dashboard-summary-value { margin-top: 8px; font-size: 1.8rem; line-height: 1.1; font-weight: 800; letter-spacing: -.04em; color: #172033; }
-    .dashboard-summary-note { margin-top: 6px; color: #64748b; font-size: .78rem; }
+    .approval-count { display: inline-flex; align-items: center; justify-content: center; min-width: 27px; height: 27px; padding: 0 8px; margin-left: 6px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .76rem; font-weight: 800; line-height: 1; box-shadow: 0 0 0 3px #fff; }
+    .approval-count.zero { background: #64748b; color: #fff; box-shadow: none; }
+    .dashboard-summary { height: 100%; padding: 18px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; box-shadow: 0 3px 10px rgba(15,23,42,.025); }
+    .dashboard-summary-label { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: .84rem; font-weight: 700; }
+    .dashboard-summary-value { margin-top: 9px; font-size: 2rem; line-height: 1.1; font-weight: 800; letter-spacing: -.04em; color: #172033; }
+    .dashboard-summary-note { margin-top: 7px; color: #64748b; font-size: .82rem; }
     .dashboard-summary.total { border-left: 4px solid #2563eb; }
     .dashboard-summary.sell { border-left: 4px solid #16a34a; }
     .dashboard-summary.buy { border-left: 4px solid #ea580c; }
-    @@media (max-width: 575.98px) {
-        .dashboard-hero { border-radius: 14px; }
+    .pending-total-badge { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 9px 14px; background: #e11d48; color: white; font-size: .8rem; font-weight: 800; white-space: nowrap; }
+    @@media (max-width: 767.98px) {
+        .dashboard-hero { min-height: 0; border-radius: 14px; }
+
+            .dashboard-hero::before {
+                background-image: linear-gradient(90deg, rgba(7,32,71,.97), rgba(10,54,109,.85)), url('/img/hero.png');
+                background-position: center;
+            }
         .dashboard-hero h2 { font-size: 1.65rem; }
         .dashboard-action-card { padding: 14px; min-height: 100px; }
         .dashboard-action-icon { flex-basis: 42px; width: 42px; height: 42px; }
+        .dashboard-summary { padding: 15px; }
     }
 </style>
 
 <div class="container-fluid dashboard-page py-3">
-    <!-- Welcome -->
+    <!-- Welcome / Transport Hero -->
     <section class="dashboard-hero mb-4">
         <div class="dashboard-hero-content p-4 p-lg-5">
             <div class="row align-items-center g-4">
                 <div class="col-lg-8">
-                    <div class="dashboard-eyebrow mb-2">TMS Billing System</div>
-                    <h2 class="mb-2">Welcome back, @username</h2>
+                    <div class="dashboard-eyebrow mb-2"><span class="me-2" style="display:inline-block;width:28px;height:3px;background:#7dd3fc;vertical-align:middle;border-radius:3px;"></span> TMS Billing System</div>
+                    <h2 class="mb-2">Welcome back, <span style="color:#60b7ff;">@username</span></h2>
                     <p class="mb-4" style="color:#dbeafe; max-width:620px;">
                         Your workspace to manage daily operations, access key features, and stay up to date.
                     </p>
@@ -96,66 +90,66 @@
                         <span class="dashboard-meta"><span class="dashboard-status-dot"></span> System online</span>
                     </div>
                 </div>
-                <div class="col-lg-4 d-none d-lg-flex justify-content-end">
-                    <div class="text-white" style="font-size:7rem; opacity:.16; padding-right:20px;">
-                        <i class="bi bi-speedometer2"></i>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
-    <!-- Approval overview -->
+    <!-- Approval Overview -->
     
 
     <!-- Quick Actions -->
-    <div class="mb-3">
-        <h5 class="dashboard-section-title">Quick Actions</h5>
-        <div class="dashboard-section-subtitle">Shortcuts to frequently used pages.</div>
-    </div>
+    <section>
+        <div class="d-flex align-items-start gap-3 mb-3">
+            <i class="bi bi-lightning-charge dashboard-section-icon mt-1"></i>
+            <div>
+                <h5 class="dashboard-section-title">Quick Actions</h5>
+                <div class="dashboard-section-subtitle">Shortcuts to frequently used pages.</div>
+            </div>
+        </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-md-6 col-xl-3">
-            <a href="@Url.Action("Index", "PriceSellApproval")" class="dashboard-action-card">
-                <span class="dashboard-action-icon sell"><i class="bi bi-graph-up-arrow"></i></span>
-                <span class="dashboard-action-content">
-                    <span class="dashboard-action-title d-flex align-items-center flex-wrap">Price Sell Approval <span class="approval-count @(priceSellPending == 0 ? "zero" : "")">@priceSellPending</span></span>
-                    <span class="dashboard-action-description d-block">Review selling tariff change requests.</span>
-                </span>
-                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
-            </a>
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6 col-xl-3">
+                <a href="@Url.Action("Index", "PriceSellApproval")" class="dashboard-action-card">
+                    <span class="dashboard-action-icon sell"><i class="bi bi-graph-up-arrow"></i></span>
+                    <span class="dashboard-action-content">
+                        <span class="dashboard-action-title d-flex align-items-center flex-wrap">Price Sell Approval <span class="approval-count @(priceSellPending == 0 ? "zero" : "")">@priceSellPending</span></span>
+                        <span class="dashboard-action-description d-block">Review selling tariff change requests.</span>
+                    </span>
+                    <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+                </a>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <a href="@Url.Action("Index", "PriceBuyApproval")" class="dashboard-action-card">
+                    <span class="dashboard-action-icon buy"><i class="bi bi-wallet2"></i></span>
+                    <span class="dashboard-action-content">
+                        <span class="dashboard-action-title d-flex align-items-center flex-wrap">Price Buy Approval <span class="approval-count @(priceBuyPending == 0 ? "zero" : "")">@priceBuyPending</span></span>
+                        <span class="dashboard-action-description d-block">Review buying tariff change requests.</span>
+                    </span>
+                    <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+                </a>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <a href="@Url.Action("ChangePassword", "Account")" class="dashboard-action-card">
+                    <span class="dashboard-action-icon account"><i class="bi bi-key"></i></span>
+                    <span class="dashboard-action-content">
+                        <span class="dashboard-action-title d-block">Change Password</span>
+                        <span class="dashboard-action-description d-block">Keep your account secure.</span>
+                    </span>
+                    <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+                </a>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <a href="#" onclick="confirmLogout(); return false;" class="dashboard-action-card">
+                    <span class="dashboard-action-icon logout"><i class="bi bi-box-arrow-right"></i></span>
+                    <span class="dashboard-action-content">
+                        <span class="dashboard-action-title d-block">Log Out</span>
+                        <span class="dashboard-action-description d-block">Sign out from your account.</span>
+                    </span>
+                    <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+                </a>
+            </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <a href="@Url.Action("Index", "PriceBuyApproval")" class="dashboard-action-card">
-                <span class="dashboard-action-icon buy"><i class="bi bi-wallet2"></i></span>
-                <span class="dashboard-action-content">
-                    <span class="dashboard-action-title d-flex align-items-center flex-wrap">Price Buy Approval <span class="approval-count @(priceBuyPending == 0 ? "zero" : "")">@priceBuyPending</span></span>
-                    <span class="dashboard-action-description d-block">Review buying tariff change requests.</span>
-                </span>
-                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
-            </a>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <a href="@Url.Action("ChangePassword", "Account")" class="dashboard-action-card">
-                <span class="dashboard-action-icon account"><i class="bi bi-key"></i></span>
-                <span class="dashboard-action-content">
-                    <span class="dashboard-action-title d-block">Change Password</span>
-                    <span class="dashboard-action-description d-block">Keep your account secure.</span>
-                </span>
-                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
-            </a>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <a href="#" onclick="confirmLogout(); return false;" class="dashboard-action-card">
-                <span class="dashboard-action-icon logout"><i class="bi bi-box-arrow-right"></i></span>
-                <span class="dashboard-action-content">
-                    <span class="dashboard-action-title d-block">Log Out</span>
-                    <span class="dashboard-action-description d-block">Sign out from your account.</span>
-                </span>
-                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
-            </a>
-        </div>
-    </div>
+    </section>
 </div>
 
 @section Scripts {
