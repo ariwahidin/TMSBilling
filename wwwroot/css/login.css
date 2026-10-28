@@ -390,3 +390,287 @@ body {
         flex-direction: column;
     }
 }
+
+
+/* ==========================================
+   TMS BILLING - ENTERPRISE MOBILE LOGIN
+========================================== */
+
+@media screen and (max-width: 767.98px) {
+    body {
+        background: #f2f5f9 !important;
+        color: #172b4d;
+    }
+
+    .login-page {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        gap: 0 !important;
+        width: 100% !important;
+        min-height: 100vh !important;
+        min-height: 100dvh !important;
+        padding: 0 0 24px !important;
+        overflow-x: clip !important;
+        background: #f2f5f9 !important;
+    }
+
+    /* Compact corporate brand header */
+    .login-hero {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        padding: 22px 24px 24px !important;
+        overflow: hidden !important;
+        color: #fff !important;
+        background: linear-gradient( 120deg, #0dcaf0 0%, #0757a6 65%, #0877bd 100% ) !important;
+        border-radius: 0 0 22px 22px !important;
+        box-shadow: 0 8px 22px rgba(7, 59, 112, 0.12) !important;
+    }
+
+        .login-hero::before,
+        .login-hero::after {
+            display: none !important;
+        }
+
+    .hero-brand {
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+        .hero-brand img {
+            flex: 0 1 auto !important;
+            width: 112px !important;
+            max-width: 40% !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+        }
+
+        .hero-brand .divider {
+            display: block !important;
+            flex: 0 0 1px !important;
+            min-height: 36px !important;
+            background: rgba(255, 255, 255, 0.4) !important;
+        }
+
+    .brand-title {
+        color: #fff !important;
+        font-size: 17px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.3px !important;
+    }
+
+    .brand-sub {
+        margin-top: 3px !important;
+        color: rgba(255, 255, 255, 0.78) !important;
+        font-size: 10px !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Remove desktop-only marketing content */
+    .hero-headline,
+    .hero-desc,
+    .hero-features,
+    .hero-footer {
+        display: none !important;
+    }
+
+    /* Login area */
+    .login-panel {
+        display: flex !important;
+        flex: 1 0 auto !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        padding: 30px 20px 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }
+
+    .login-card {
+        width: 100% !important;
+        max-width: 420px !important;
+        min-width: 0 !important;
+        margin: 0 auto !important;
+        padding: 30px 24px 26px !important;
+        box-sizing: border-box !important;
+        border: 1px solid #e6ebf2 !important;
+        border-radius: 16px !important;
+        background: #fff !important;
+        box-shadow: 0 8px 24px rgba(31, 55, 88, 0.045), 0 1px 2px rgba(31, 55, 88, 0.025) !important;
+    }
+
+    .login-title {
+        margin: 0 0 8px !important;
+        color: #102c50 !important;
+        font-size: clamp(25px, 6vw, 30px) !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+        letter-spacing: -0.9px !important;
+    }
+
+    .login-subtitle {
+        margin: 0 0 30px !important;
+        color: #687b93 !important;
+        font-size: 13px !important;
+        line-height: 1.7 !important;
+    }
+
+    /* Precise and consistent form controls */
+    #loginForm,
+    #loginForm .form-group,
+    #loginForm .input-group {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+        #loginForm .form-group {
+            margin-bottom: 22px !important;
+        }
+
+        #loginForm .form-label {
+            margin-bottom: 9px !important;
+            color: #293d57 !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.1px !important;
+        }
+
+        #loginForm .input-group {
+            position: relative !important;
+        }
+
+        #loginForm input.form-control {
+            width: 100% !important;
+            height: 49px !important;
+            min-width: 0 !important;
+            padding: 0 44px 0 14px !important;
+            box-sizing: border-box !important;
+            border: 1px solid #d8e1ed !important;
+            border-radius: 8px !important;
+            background: #fff !important;
+            color: #172b4d !important;
+            font-size: 14px !important;
+            box-shadow: none !important;
+            transition: border-color 0.18s, box-shadow 0.18s !important;
+        }
+
+            #loginForm input.form-control::placeholder {
+                color: #9aa8ba !important;
+                font-size: 12px !important;
+                opacity: 1 !important;
+            }
+
+            #loginForm input.form-control:focus {
+                border-color: #1769aa !important;
+                box-shadow: 0 0 0 3px rgba(23, 105, 170, 0.10) !important;
+                outline: none !important;
+            }
+
+        #loginForm .input-icon {
+            top: 50% !important;
+            right: 13px !important;
+            left: auto !important;
+            transform: translateY(-50%) !important;
+            color: #71859e !important;
+        }
+
+        #loginForm .input-group:has(.password-toggle) .input-icon {
+            display: none !important;
+        }
+
+        #loginForm .password-toggle {
+            top: 50% !important;
+            right: 8px !important;
+            left: auto !important;
+            color: #71859e !important;
+        }
+
+        /* Primary action */
+        #loginForm .btn-login {
+            width: 100% !important;
+            min-height: 49px !important;
+            margin-top: 8px !important;
+            padding: 13px 42px !important;
+            border: 1px solid #0757a6 !important;
+            border-radius: 8px !important;
+            background: #0757a6 !important;
+            color: #fff !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.15px !important;
+            box-shadow: 0 3px 8px rgba(7, 87, 166, 0.12) !important;
+        }
+
+            #loginForm .btn-login:hover:not(:disabled) {
+                background: #064681 !important;
+                border-color: #064681 !important;
+            }
+
+        #loginForm .btn-arrow {
+            right: 15px !important;
+        }
+
+    /* Footer */
+    .panel-footer {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+        max-width: 420px !important;
+        margin: 22px auto 0 !important;
+        padding: 0 0 8px !important;
+        color: #8391a5 !important;
+        font-size: 11px !important;
+    }
+
+        .panel-footer a {
+            color: #687b93 !important;
+        }
+
+        .panel-footer .sep {
+            color: #c3cdda !important;
+        }
+}
+
+@media screen and (max-width: 380px) {
+    .login-hero {
+        padding: 20px 18px 22px !important;
+    }
+
+    .hero-brand {
+        gap: 10px !important;
+    }
+
+        .hero-brand img {
+            width: 96px !important;
+        }
+
+    .brand-title {
+        font-size: 15px !important;
+    }
+
+    .brand-sub {
+        font-size: 9px !important;
+    }
+
+    .login-panel {
+        padding: 24px 14px 0 !important;
+    }
+
+    .login-card {
+        padding: 25px 19px 22px !important;
+    }
+}

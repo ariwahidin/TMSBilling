@@ -76,7 +76,12 @@
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Something went wrong. Please try again.');
+            Swal.fire({
+                title: "Connection Error",
+                text: "Unable to connect to the server. Please try again.",
+                icon: "error",
+                confirmButtonText: "OK"
+            });
         } finally {
             submitBtn.classList.remove('loading');
             submitBtn.disabled = false;
