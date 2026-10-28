@@ -1,70 +1,75 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TMSBilling.Data;
 
 namespace TMSBilling.Controllers
 {
     public class DashboardController : Controller
     {
-
         private readonly AppDbContext _context;
         private readonly ILogger<DashboardController> _logger;
 
-        public DashboardController(
-            AppDbContext context,
-            ILogger<DashboardController> logger)
+        public DashboardController(AppDbContext context, ILogger<DashboardController> logger)
         {
             _context = context;
             _logger = logger;
         }
 
-        //public IActionResult Index()
-        //{
-        //    return View();
-        //}
-
-        public IActionResult Index()
+        [HttpGet]
+        public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            // Check if user is logged in (has session)
             var username = HttpContext.Session.GetString("username");
-            if (string.IsNullOrEmpty(username))
+            if (string.IsNullOrWhiteSpace(username))
             {
-                _logger.LogWarning("User attempted to access dashboard without valid session");
+                _logger.LogWarning("User attempted to access dashboard without a valid session.");
                 return RedirectToAction("Login", "Account");
             }
 
-            // Pass username to view
             ViewBag.Username = username;
-
-            // You can add more data here later
-            ViewBag.CurrentDate = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
+            ViewBag.CurrentDate = DateTime.Now.ToString("dddd, dd MMM yyyy");
             ViewBag.CurrentTime = DateTime.Now.ToString("HH:mm:ss");
 
-            _logger.LogInformation($"User {username} accessed dashboard");
+            // Counts only pending requests; tariff data is not modified by these queries.
+            ViewBag.PriceSellPending = await _context.PriceSellApprovals
+                .AsNoTracking()
+                .CountAsync(x => x.Status == "PENDING", cancellationToken);
 
+            ViewBag.PriceBuyPending = await _context.PriceBuyApprovals
+                .AsNoTracking()
+                .CountAsync(x => x.Status == "PENDING", cancellationToken);
+
+            _logger.LogInformation("User {Username} accessed dashboard.", username);
             return View();
         }
 
-        // Optional: API endpoint to get dashboard data
         [HttpGet]
-        public IActionResult GetDashboardData()
+        public async Task<IActionResult> GetDashboardData(CancellationToken cancellationToken)
         {
             var username = HttpContext.Session.GetString("username");
-            if (string.IsNullOrEmpty(username))
+            if (string.IsNullOrWhiteSpace(username))
             {
-                return Json(new { success = false, message = "Session expired" });
+                return Unauthorized(new { success = false, message = "Session expired. Please sign in again." });
             }
 
-            var dashboardData = new
+            var priceSellPending = await _context.PriceSellApprovals
+                .AsNoTracking()
+                .CountAsync(x => x.Status == "PENDING", cancellationToken);
+            var priceBuyPending = await _context.PriceBuyApprovals
+                .AsNoTracking()
+                .CountAsync(x => x.Status == "PENDING", cancellationToken);
+
+            return Json(new
             {
                 success = true,
-                username = username,
-                currentDate = DateTime.Now.ToString("dddd, MMMM dd, yyyy"),
+                username,
+                currentDate = DateTime.Now.ToString("dddd, dd MMM yyyy"),
                 currentTime = DateTime.Now.ToString("HH:mm:ss"),
                 systemStatus = "Online",
+                priceSellPending,
+                priceBuyPending,
+                totalPendingApprovals = priceSellPending + priceBuyPending,
                 message = $"Welcome back, {username}!"
-            };
-
-            return Json(dashboardData);
+            });
         }
     }
 }

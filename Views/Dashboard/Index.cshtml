@@ -1,249 +1,175 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_MainLayout.cshtml";
     ViewData["Title"] = "Dashboard";
+
+    var username = ViewBag.Username as string ?? "User";
+    var priceSellPending = ViewBag.PriceSellPending is int sellCount ? sellCount : 0;
+    var priceBuyPending = ViewBag.PriceBuyPending is int buyCount ? buyCount : 0;
+    var totalPending = priceSellPending + priceBuyPending;
 }
 
-<div class="container-fluid">
-    <!-- Welcome Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm" style="background: #f8f9fa;">
-                <div class="card-body py-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary rounded-circle p-3 me-3">
-                                    <i class="fas fa-tachometer-alt text-white fa-lg"></i>
-                                </div>
-                                <div>
-                                    <h4 class="mb-1 text-dark fw-semibold">Dashboard</h4>
-                                    <p class="text-muted mb-0 small">TMS Billing System</p>
-                                </div>
-                            </div>
-                            <h2 class="mb-3 text-dark">
-                                Welcome back, <span class="text-primary fw-bold">@ViewBag.Username</span>
-                            </h2>
-                            <p class="text-muted mb-3">
-                                Monitor and manage your billing operations efficiently.
-                            </p>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="badge bg-white border text-muted px-3 py-2">
-                                    <i class="far fa-calendar me-2"></i>
-                                    @DateTime.Now.ToString("dddd, MMMM dd, yyyy")
-                                </span>
-                                <span class="badge bg-white border text-muted px-3 py-2">
-                                    <i class="far fa-clock me-2"></i>
-                                    @* <span id="header-time">@DateTime.Now.ToString("HH:mm")
-                                        
-                                    </span> *@
-                                    <span id="current-time">@DateTime.Now.ToString("HH:mm:ss")</span>
-                                    
-                                </span>
-                                @* <h3 class="text-warning mb-0" id="current-time">
-                                    @DateTime.Now.ToString("HH:mm:ss")
-                                </h3> *@
-                                <span class="badge bg-success text-white px-3 py-2">
-                                    <i class="fas fa-circle me-2" style="font-size: 8px;"></i>
-                                    System Online
-                                </span>
-                            </div>
-                        </div>
-                        @* <div class="col-md-4 text-end">
-                            <div class="text-muted">
-                                <i class="fas fa-chart-line" style="font-size: 4rem; opacity: 0.1;"></i>
-                            </div>
-                        </div> *@
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<style>
+    .dashboard-page { color: #172033; }
+    .dashboard-hero {
+        position: relative;
+        overflow: hidden;
+        border: 0;
+        border-radius: 18px;
+        background: linear-gradient(115deg, #102a56 0%, #1d4ed8 58%, #3b82f6 100%);
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(29, 78, 216, .16);
+    }
+    .dashboard-hero::after {
+        content: "";
+        position: absolute;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        right: -75px;
+        top: -115px;
+        background: rgba(255,255,255,.08);
+        pointer-events: none;
+    }
+    .dashboard-hero-content { position: relative; z-index: 1; }
+    .dashboard-eyebrow { color: #bfdbfe; font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    .dashboard-hero h2 { font-weight: 750; letter-spacing: -.035em; }
+    .dashboard-meta { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(255,255,255,.11); color: #eff6ff; padding: 8px 12px; font-size: .82rem; }
+    .dashboard-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.13); }
+    .dashboard-section-title { font-size: 1rem; font-weight: 750; letter-spacing: -.015em; margin: 0; color: #172033; }
+    .dashboard-section-subtitle { font-size: .84rem; color: #64748b; margin-top: 4px; }
+    .dashboard-action-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 100%;
+        min-height: 112px;
+        padding: 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #fff;
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 0 2px 5px rgba(15,23,42,.025);
+        transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+    .dashboard-action-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15,23,42,.08); border-color: #cbd5e1; color: inherit; }
+    .dashboard-action-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 13px; font-size: 1.35rem; }
+    .dashboard-action-icon.sell { background: #dcfce7; color: #15803d; }
+    .dashboard-action-icon.buy { background: #ffedd5; color: #c2410c; }
+    .dashboard-action-icon.account { background: #dbeafe; color: #1d4ed8; }
+    .dashboard-action-icon.logout { background: #f1f5f9; color: #475569; }
+    .dashboard-action-content { min-width: 0; flex: 1; }
+    .dashboard-action-title { font-weight: 750; font-size: .94rem; color: #172033; }
+    .dashboard-action-description { color: #64748b; font-size: .79rem; line-height: 1.45; margin-top: 4px; }
+    .dashboard-action-arrow { color: #94a3b8; font-size: 1.1rem; }
+    .approval-count { display: inline-flex; align-items: center; justify-content: center; min-width: 27px; height: 27px; padding: 0 8px; margin-left: 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: .76rem; font-weight: 800; line-height: 1; box-shadow: 0 0 0 3px #fff; }
+    .approval-count.zero { background: #e2e8f0; color: #475569; box-shadow: none; }
+    .dashboard-summary { height: 100%; padding: 18px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+    .dashboard-summary-label { color: #64748b; font-size: .8rem; font-weight: 650; }
+    .dashboard-summary-value { margin-top: 8px; font-size: 1.8rem; line-height: 1.1; font-weight: 800; letter-spacing: -.04em; color: #172033; }
+    .dashboard-summary-note { margin-top: 6px; color: #64748b; font-size: .78rem; }
+    .dashboard-summary.total { border-left: 4px solid #2563eb; }
+    .dashboard-summary.sell { border-left: 4px solid #16a34a; }
+    .dashboard-summary.buy { border-left: 4px solid #ea580c; }
+    @@media (max-width: 575.98px) {
+        .dashboard-hero { border-radius: 14px; }
+        .dashboard-hero h2 { font-size: 1.65rem; }
+        .dashboard-action-card { padding: 14px; min-height: 100px; }
+        .dashboard-action-icon { flex-basis: 42px; width: 42px; height: 42px; }
+    }
+</style>
 
-    <!-- Quick Info Cards -->
-    @* <div class="row mt-4">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="icon-circle bg-primary text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                        <i class="fas fa-chart-line fa-lg"></i>
+<div class="container-fluid dashboard-page py-3">
+    <!-- Welcome -->
+    <section class="dashboard-hero mb-4">
+        <div class="dashboard-hero-content p-4 p-lg-5">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <div class="dashboard-eyebrow mb-2">TMS Billing System</div>
+                    <h2 class="mb-2">Welcome back, @username</h2>
+                    <p class="mb-4" style="color:#dbeafe; max-width:620px;">
+                        Your workspace to manage daily operations, access key features, and stay up to date.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="dashboard-meta"><i class="bi bi-calendar3"></i> @DateTime.Now.ToString("dddd, dd MMM yyyy")</span>
+                        <span class="dashboard-meta"><i class="bi bi-clock"></i> <span id="current-time">@DateTime.Now.ToString("HH:mm:ss")</span></span>
+                        <span class="dashboard-meta"><span class="dashboard-status-dot"></span> System online</span>
                     </div>
-                    <h5 class="card-title text-muted">System Status</h5>
-                    <h3 class="text-success mb-0">
-                        <i class="fas fa-check-circle me-2"></i>
-                        Online
-                    </h3>
+                </div>
+                <div class="col-lg-4 d-none d-lg-flex justify-content-end">
+                    <div class="text-white" style="font-size:7rem; opacity:.16; padding-right:20px;">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="icon-circle bg-success text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                        <i class="fas fa-users fa-lg"></i>
-                    </div>
-                    <h5 class="card-title text-muted">Welcome Back</h5>
-                    <h3 class="text-primary mb-0">
-                        <i class="fas fa-smile me-2"></i>
-                        Good to see you!
-                    </h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="icon-circle bg-info text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                        <i class="fas fa-calendar-check fa-lg"></i>
-                    </div>
-                    <h5 class="card-title text-muted">Today's Date</h5>
-                    <h3 class="text-info mb-0">
-                        @DateTime.Now.ToString("MMM dd")
-                    </h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="icon-circle bg-warning text-white mb-3 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                        <i class="fas fa-clock fa-lg"></i>
-                    </div>
-                    <h5 class="card-title text-muted">Current Time</h5>
-                    <h3 class="text-warning mb-0" id="current-time">
-                        @DateTime.Now.ToString("HH:mm:ss")
-                    </h3>
-                </div>
-            </div>
-        </div>
-    </div> *@
-
-    <!-- Motivational Quote Section -->
-    @* <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center py-5">
-                    <div class="mb-4">
-                        <i class="fas fa-quote-left text-muted" style="font-size: 2rem;"></i>
-                    </div>
-                    <blockquote class="blockquote mb-4">
-                        <p class="fs-4 text-muted fst-italic" id="daily-quote">
-                            "Success is not final, failure is not fatal: it is the courage to continue that counts."
-                        </p>
-                    </blockquote>
-                    <footer class="blockquote-footer">
-                        <cite title="Source Title" class="text-muted">Daily Motivation</cite>
-                    </footer>
-                </div>
-            </div>
-        </div>
-    </div> *@
+    <!-- Approval overview -->
+    
 
     <!-- Quick Actions -->
-    <div class="row mt-4 mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom">
-                    <h6 class="mb-0 text-dark fw-semibold">
-                        Quick Actions
-                    </h6>
-                </div>
-                <div class="card-body py-3">
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <a href="@Url.Action("ChangePassword", "Account")" class="btn btn-light border w-100 py-2 text-start">
-                                <i class="bi bi-key text-primary me-2"></i>
-                                <span class="fw-medium">Change Password</span>
-                            </a>
-                        </div>
-                        <div class="col-md-4">
-                            <a href="#" onclick="confirmLogout()" class="btn btn-light border w-100 py-2 text-start">
-                                <i class="bi bi-box-arrow-right text-primary me-2"></i>
-                                <span class="fw-medium">Log Out</span>
-                            </a>
-                        </div>
-                        @* <div class="col-md-4">
-                            <a href="#" class="btn btn-light border w-100 py-2 text-start">
-                                <i class="fas fa-cog text-secondary me-2"></i>
-                                <span class="fw-medium">Settings</span>
-                            </a>
-                        </div> *@
-                    </div>
-                </div>
-            </div>
+    <div class="mb-3">
+        <h5 class="dashboard-section-title">Quick Actions</h5>
+        <div class="dashboard-section-subtitle">Shortcuts to frequently used pages.</div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="@Url.Action("Index", "PriceSellApproval")" class="dashboard-action-card">
+                <span class="dashboard-action-icon sell"><i class="bi bi-graph-up-arrow"></i></span>
+                <span class="dashboard-action-content">
+                    <span class="dashboard-action-title d-flex align-items-center flex-wrap">Price Sell Approval <span class="approval-count @(priceSellPending == 0 ? "zero" : "")">@priceSellPending</span></span>
+                    <span class="dashboard-action-description d-block">Review selling tariff change requests.</span>
+                </span>
+                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+            </a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="@Url.Action("Index", "PriceBuyApproval")" class="dashboard-action-card">
+                <span class="dashboard-action-icon buy"><i class="bi bi-wallet2"></i></span>
+                <span class="dashboard-action-content">
+                    <span class="dashboard-action-title d-flex align-items-center flex-wrap">Price Buy Approval <span class="approval-count @(priceBuyPending == 0 ? "zero" : "")">@priceBuyPending</span></span>
+                    <span class="dashboard-action-description d-block">Review buying tariff change requests.</span>
+                </span>
+                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+            </a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="@Url.Action("ChangePassword", "Account")" class="dashboard-action-card">
+                <span class="dashboard-action-icon account"><i class="bi bi-key"></i></span>
+                <span class="dashboard-action-content">
+                    <span class="dashboard-action-title d-block">Change Password</span>
+                    <span class="dashboard-action-description d-block">Keep your account secure.</span>
+                </span>
+                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+            </a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="#" onclick="confirmLogout(); return false;" class="dashboard-action-card">
+                <span class="dashboard-action-icon logout"><i class="bi bi-box-arrow-right"></i></span>
+                <span class="dashboard-action-content">
+                    <span class="dashboard-action-title d-block">Log Out</span>
+                    <span class="dashboard-action-description d-block">Sign out from your account.</span>
+                </span>
+                <i class="bi bi-chevron-right dashboard-action-arrow"></i>
+            </a>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Update header time every minute
-        function updateHeaderTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', {
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            const headerTimeElement = document.getElementById('header-time');
-            if (headerTimeElement) {
-                headerTimeElement.textContent = timeString;
+        (function () {
+            const timeElement = document.getElementById('current-time');
+            function updateTime() {
+                if (!timeElement) return;
+                timeElement.textContent = new Date().toLocaleTimeString('en-GB', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                });
             }
-        }
-
-        // Update time every second
-        function updateTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', {
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('current-time').textContent = timeString;
-        }
-
-        // Update both times
-        updateHeaderTime();
-        updateTime();
-        setInterval(updateHeaderTime, 60000); // Update header time every minute
-        setInterval(updateTime, 1000); // Update detailed time every second
-
-        // Random motivational quotes
-        const quotes = [
-            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-            "The way to get started is to quit talking and begin doing.",
-            "Innovation distinguishes between a leader and a follower.",
-            "Your limitation—it's only your imagination.",
-            "Push yourself, because no one else is going to do it for you.",
-            "Great things never come from comfort zones.",
-            "Dream it. Wish it. Do it.",
-            "Success doesn't just find you. You have to go out and get it."
-        ];
-
-        // Change quote every 10 seconds
-        let quoteIndex = 0;
-        function changeQuote() {
-            const quoteElement = document.getElementById('daily-quote');
-            if (quoteElement) {
-                quoteElement.style.opacity = '0';
-                setTimeout(() => {
-                    quoteElement.textContent = `"${quotes[quoteIndex]}"`;
-                    quoteElement.style.opacity = '1';
-                    quoteIndex = (quoteIndex + 1) % quotes.length;
-                }, 500);
-            }
-        }
-
-        // Change quote every 10 seconds
-        setInterval(changeQuote, 10000);
-
-        // Add smooth transition for quote changes
-        const quoteElement = document.getElementById('daily-quote');
-        if (quoteElement) {
-            quoteElement.style.transition = 'opacity 0.5s ease-in-out';
-        }
+            updateTime();
+            window.setInterval(updateTime, 1000);
+        })();
     </script>
 }
