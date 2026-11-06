@@ -20,6 +20,12 @@ namespace TMSBilling.Models.ViewModels
         [StringLength(50)]
         public string? CustomerCode { get; set; }
 
+
+        // Supplier selected from TRC_VENDOR
+        [Required(ErrorMessage = "Please select a supplier.")]
+        [StringLength(50)]
+        public string? SupplierCode { get; set; }
+
         [DataType(DataType.DateTime)]
         public DateTime? PlannedDeparture { get; set; }
 
@@ -35,6 +41,8 @@ namespace TMSBilling.Models.ViewModels
         public string? Status { get; set; }
         public List<SelectListItem> Routes { get; set; } = new();
         public List<SelectListItem> Customers { get; set; } = new();
+
+        public List<SelectListItem> Suppliers { get; set; } = new();
         public List<RoutePlanStopPreviewViewModel> Stops { get; set; } = new();
 
         public int? VehicleId { get; set; }

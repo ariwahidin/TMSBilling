@@ -271,8 +271,11 @@ public sealed class PriceBuyApprovalService
         foreach (var detail in header.Details) detail.PendingConflictKey = null;
         _db.PriceBuyAudits.Add(new PriceBuyAudit
         {
-            ApprovalId = approvalId, Action = "REJECTED", PerformedBy = username,
-            PerformedAt = DateTime.Now, Details = note
+            ApprovalId = approvalId,
+            Action = "REJECTED",
+            PerformedBy = username,
+            PerformedAt = DateTime.Now,
+            Details = note
         });
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -301,8 +304,11 @@ public sealed class PriceBuyApprovalService
         foreach (var detail in header.Details) detail.PendingConflictKey = null;
         _db.PriceBuyAudits.Add(new PriceBuyAudit
         {
-            ApprovalId = approvalId, Action = "CANCELLED", PerformedBy = username,
-            PerformedAt = DateTime.Now, Details = "Cancelled by requester"
+            ApprovalId = approvalId,
+            Action = "CANCELLED",
+            PerformedBy = username,
+            PerformedAt = DateTime.Now,
+            Details = "Cancelled by requester"
         });
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -345,6 +351,10 @@ public sealed class PriceBuyApprovalService
         x.truck_size = x.truck_size?.Trim();
         x.charge_uom = x.charge_uom?.Trim();
         x.curr = x.curr?.Trim();
+
+        // Optional rates: normalize omitted/null values to zero.
+        x.rate_bbm ??= 0m;
+        x.rate_toll ??= 0m;
     }
 
     private static string Normalize(string? value) => (value ?? "").Trim().ToUpperInvariant();
@@ -376,7 +386,8 @@ public sealed class PriceBuyApprovalService
             a.buy_cancel == b.buy_cancel && a.buytrip2 == b.buytrip2 &&
             a.buytrip3 == b.buytrip3 && a.buy_diff_area == b.buy_diff_area &&
             a.valid_date == b.valid_date && a.active_flag == b.active_flag &&
-            a.curr == b.curr && a.rate_value == b.rate_value;
+            a.curr == b.curr && a.rate_value == b.rate_value &&
+            a.rate_bbm == b.rate_bbm && a.rate_toll == b.rate_toll;
     }
 
     private static void CopyEditableFields(PriceBuy from, PriceBuy to)
@@ -400,6 +411,8 @@ public sealed class PriceBuyApprovalService
         to.active_flag = from.active_flag;
         to.curr = from.curr;
         to.rate_value = from.rate_value;
+        to.rate_bbm = from.rate_bbm ?? 0m;
+        to.rate_toll = from.rate_toll ?? 0m;
     }
 
     private async Task<string> GenerateRequestNoAsync(CancellationToken ct)

@@ -134,6 +134,7 @@ namespace TMSBilling.Controllers
                 vm.PlanDate = plan.PlanDate;
                 vm.RouteId = plan.RouteId;
                 vm.CustomerCode = plan.CustomerCode;
+                vm.SupplierCode = plan.SupplierCode;
                 vm.PlannedDeparture = plan.PlannedDeparture;
                 vm.VehicleNo = plan.VehicleNo;
                 vm.VehicleId = plan.VehicleId;
@@ -176,92 +177,11 @@ namespace TMSBilling.Controllers
 
             await PopulateVehiclesAsync(vm);
             await PopulateDriversAsync(vm);
+            await PopulateSuppliers(vm);
 
             return View(vm);
         }
 
-        // =========================================================
-        // CREATE / EDIT FORM
-        // =========================================================
-        //[HttpGet]
-        //public async Task<IActionResult> Form(int? id)
-        //{
-        //    var vm = new RoutePlanFormViewModel
-        //    {
-        //        PlanDate = DateTime.Today,
-        //        Status = RoutePlanStatuses.Draft
-        //    };
-
-        //    if (id.HasValue)
-        //    {
-        //        var plan = await _context.RoutePlans
-        //            .AsNoTracking()
-        //            .Include(x => x.Stops)
-        //            .FirstOrDefaultAsync(x => x.Id == id.Value);
-
-        //        if (plan == null)
-        //        {
-        //            return NotFound();
-        //        }
-
-        //        if (plan.Status != RoutePlanStatuses.Draft)
-        //        {
-        //            TempData["Error"] =
-        //                "Only DRAFT route plans can be edited.";
-
-        //            return RedirectToAction(
-        //                nameof(Details),
-        //                new { id = plan.Id });
-        //        }
-
-        //        vm.Id = plan.Id;
-        //        vm.PlanNo = plan.PlanNo;
-        //        vm.PlanDate = plan.PlanDate;
-        //        vm.RouteId = plan.RouteId;
-        //        vm.CustomerCode = plan.CustomerCode;
-        //        vm.PlannedDeparture = plan.PlannedDeparture;
-        //        vm.VehicleNo = plan.VehicleNo;
-        //        vm.VehicleId = plan.VehicleId;
-        //        vm.DriverName = plan.DriverName;
-        //        vm.DriverId = plan.DriverId;
-        //        vm.Notes = plan.Notes;
-        //        vm.Status = plan.Status;
-
-        //        vm.Stops = plan.Stops
-        //            .OrderBy(s => s.SequenceNo)
-        //            .Select(s => new RoutePlanStopPreviewViewModel
-        //            {
-        //                StopId = s.Id,
-        //                SequenceNo = s.SequenceNo,
-        //                StopType = s.StopType,
-        //                FenceName = s.FenceName,
-        //                Address = s.Address,
-        //                City = s.City,
-        //                PlannedArrival = s.PlannedArrival,
-        //                StopDurationMinutes = s.StopDurationMinutes,
-        //                Status = s.Status,
-        //                ActualArrivalAt = s.ActualArrivalAt,
-        //                CompletedAt = s.CompletedAt
-        //            })
-        //            .ToList();
-        //    }
-
-        //    await PopulateRoutes(vm);
-
-        //    if (vm.RouteId.HasValue)
-        //    {
-        //        await PopulateCustomers(vm, vm.RouteId.Value);
-        //    }
-        //    else
-        //    {
-        //        vm.Customers = new List<SelectListItem>();
-        //    }
-
-        //    await PopulateVehiclesAsync(vm);
-        //    await PopulateDriversAsync(vm);
-
-        //    return View(vm);
-        //}
 
 
         // =========================================================
@@ -379,6 +299,141 @@ namespace TMSBilling.Controllers
                     return View("Form", vm);
                 }
             }
+
+
+            // =====================================================
+            // 5. Resolve PriceBuy and PriceSell
+            // =====================================================
+
+            const string defaultServiceType = "FTL";
+            const string defaultServiceModa = "LAND";
+            const string defaultTruckSize = "NON-SIZE";
+            const string defaultChargeUom = "TRIP";
+
+            var supplierCode = vm.SupplierCode?.Trim();
+            var customerCode = vm.CustomerCode?.Trim();
+            var tariffRouteCode = route.ROUTE_CODE.Trim();
+
+            // Both supplier and customer are required for tariff resolution.
+            if (string.IsNullOrWhiteSpace(supplierCode))
+            {
+                ModelState.AddModelError(
+                    nameof(vm.SupplierCode),
+                    "Supplier is required to resolve Price Buy.");
+
+                await RepopulateFormAsync(vm);
+                return View("Form", vm);
+            }
+
+            if (string.IsNullOrWhiteSpace(customerCode))
+            {
+                ModelState.AddModelError(
+                    nameof(vm.CustomerCode),
+                    "Customer is required to resolve Price Sell.");
+
+                await RepopulateFormAsync(vm);
+                return View("Form", vm);
+            }
+
+            // -----------------------------------------------------
+            // Resolve Price Buy
+            // -----------------------------------------------------
+
+            var priceBuyCandidates = await _context.PriceBuys
+                .AsNoTracking()
+                .Where(x =>
+                    x.sup_code == supplierCode &&
+                    x.origin == tariffRouteCode &&
+                    x.dest == tariffRouteCode &&
+                    x.serv_type == defaultServiceType &&
+                    x.serv_moda == defaultServiceModa &&
+                    x.truck_size == defaultTruckSize &&
+                    x.charge_uom == defaultChargeUom &&
+                    x.active_flag == 1 &&
+                    x.valid_date.HasValue &&
+                    x.valid_date.Value <= vm.PlanDate.Date)
+                .OrderByDescending(x => x.valid_date)
+                .ThenByDescending(x => x.id_seq)
+                .Take(2)
+                .ToListAsync();
+
+            if (!priceBuyCandidates.Any())
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    $"Price Buy not found. Supplier: {supplierCode}, " +
+                    $"Route: {tariffRouteCode}, Service: {defaultServiceType}, " +
+                    $"Moda: {defaultServiceModa}, Truck Size: {defaultTruckSize}, " +
+                    $"UOM: {defaultChargeUom}, Plan Date: {vm.PlanDate:yyyy-MM-dd}.");
+
+                await RepopulateFormAsync(vm);
+                return View("Form", vm);
+            }
+
+            var priceBuy = priceBuyCandidates.First();
+
+            if (priceBuyCandidates.Count > 1 &&
+                priceBuyCandidates[1].valid_date == priceBuy.valid_date)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    $"Multiple active Price Buy records found for the latest valid date " +
+                    $"{priceBuy.valid_date:yyyy-MM-dd}. Please resolve the duplicate tariff.");
+
+                await RepopulateFormAsync(vm);
+                return View("Form", vm);
+            }
+
+            // -----------------------------------------------------
+            // Resolve Price Sell
+            // -----------------------------------------------------
+
+            var priceSellCandidates = await _context.PriceSells
+                .AsNoTracking()
+                .Where(x =>
+                    x.cust_code == customerCode &&
+                    x.origin == tariffRouteCode &&
+                    x.dest == tariffRouteCode &&
+                    x.serv_type == defaultServiceType &&
+                    x.serv_moda == defaultServiceModa &&
+                    x.truck_size == defaultTruckSize &&
+                    x.charge_uom == defaultChargeUom &&
+                    x.active_flag == 1 &&
+                    x.valid_date.HasValue &&
+                    x.valid_date.Value <= vm.PlanDate.Date)
+                .OrderByDescending(x => x.valid_date)
+                .ThenByDescending(x => x.id_seq)
+                .Take(2)
+                .ToListAsync();
+
+            if (!priceSellCandidates.Any())
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    $"Price Sell not found. Customer: {customerCode}, " +
+                    $"Route: {tariffRouteCode}, Service: {defaultServiceType}, " +
+                    $"Moda: {defaultServiceModa}, Truck Size: {defaultTruckSize}, " +
+                    $"UOM: {defaultChargeUom}, Plan Date: {vm.PlanDate:yyyy-MM-dd}.");
+
+                await RepopulateFormAsync(vm);
+                return View("Form", vm);
+            }
+
+            var priceSell = priceSellCandidates.First();
+
+            if (priceSellCandidates.Count > 1 &&
+                priceSellCandidates[1].valid_date == priceSell.valid_date)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    $"Multiple active Price Sell records found for the latest valid date " +
+                    $"{priceSell.valid_date:yyyy-MM-dd}. Please resolve the duplicate tariff.");
+
+                await RepopulateFormAsync(vm);
+                return View("Form", vm);
+            }
+
+
 
             // 5. Validate external vehicle and driver
             ExternalVehicle? selectedVehicle = null;
@@ -880,20 +935,121 @@ namespace TMSBilling.Controllers
                     _context.RoutePlanStops.RemoveRange(plan.Stops);
                 }
 
+                //plan.ExternalFleetTaskId = externalFleetTaskId;
+                //plan.PlanDate = vm.PlanDate.Date;
+                //plan.RouteId = route.ID;
+                //plan.RouteCode = route.ROUTE_CODE;
+                //plan.RouteName = route.ROUTE_NAME;
+                //plan.CustomerCode = string.IsNullOrWhiteSpace(vm.CustomerCode) ? null : vm.CustomerCode.Trim();
+                //plan.PlannedDeparture = vm.PlannedDeparture;
+                //plan.VehicleId = vm.VehicleId;
+                //plan.SupplierCode = vm.SupplierCode;
+                //plan.VehicleNo = selectedVehicle.LicensePlate?.Trim();
+                //plan.DriverId = vm.DriverId;
+                //plan.DriverName = selectedDriver.Name?.Trim();
+                //plan.Notes = string.IsNullOrWhiteSpace(vm.Notes) ? null : vm.Notes.Trim();
+                //plan.UpdatedBy = username;
+                //plan.UpdatedAt = DateTime.Now;
+
+
+                // =====================================================
+                // HEADER
+                // =====================================================
+
                 plan.ExternalFleetTaskId = externalFleetTaskId;
                 plan.PlanDate = vm.PlanDate.Date;
                 plan.RouteId = route.ID;
                 plan.RouteCode = route.ROUTE_CODE;
                 plan.RouteName = route.ROUTE_NAME;
-                plan.CustomerCode = string.IsNullOrWhiteSpace(vm.CustomerCode) ? null : vm.CustomerCode.Trim();
+                plan.CustomerCode = customerCode;
+                plan.SupplierCode = supplierCode;
+
                 plan.PlannedDeparture = vm.PlannedDeparture;
                 plan.VehicleId = vm.VehicleId;
                 plan.VehicleNo = selectedVehicle.LicensePlate?.Trim();
                 plan.DriverId = vm.DriverId;
                 plan.DriverName = selectedDriver.Name?.Trim();
-                plan.Notes = string.IsNullOrWhiteSpace(vm.Notes) ? null : vm.Notes.Trim();
+
+                plan.Notes = string.IsNullOrWhiteSpace(vm.Notes)
+                    ? null
+                    : vm.Notes.Trim();
+
                 plan.UpdatedBy = username;
                 plan.UpdatedAt = DateTime.Now;
+
+                // =====================================================
+                // TARIFF CONFIGURATION SNAPSHOT
+                // =====================================================
+
+                plan.TariffServType = defaultServiceType;
+                plan.TariffServModa = defaultServiceModa;
+                plan.TariffTruckSize = defaultTruckSize;
+                plan.TariffChargeUom = defaultChargeUom;
+
+                // =====================================================
+                // PRICE BUY SNAPSHOT
+                // =====================================================
+
+                plan.PriceBuyId = priceBuy.id_seq;
+                plan.PriceBuyValidDate = priceBuy.valid_date;
+                plan.PriceBuyCurrency = priceBuy.curr;
+                plan.PriceBuyRateValue = priceBuy.rate_value;
+
+                plan.PriceBuyFlagMin = priceBuy.flag_min;
+                plan.PriceBuyChargeMin = priceBuy.charge_min;
+                plan.PriceBuyFlagRange = priceBuy.flag_range;
+                plan.PriceBuyMinRange = priceBuy.min_range;
+                plan.PriceBuyMaxRange = priceBuy.max_range;
+
+                plan.PriceBuy1 = priceBuy.buy1;
+                plan.PriceBuy2 = priceBuy.buy2;
+                plan.PriceBuy3 = priceBuy.buy3;
+
+                plan.PriceBuyRetEmpt = priceBuy.buy_ret_empt;
+                plan.PriceBuyRetCargo = priceBuy.buy_ret_cargo;
+                plan.PriceBuyOvnnight = priceBuy.buy_ovnight;
+                plan.PriceBuyCancel = priceBuy.buy_cancel;
+
+                plan.PriceBuyTrip2 = priceBuy.buytrip2;
+                plan.PriceBuyTrip3 = priceBuy.buytrip3;
+                plan.PriceBuyDiffArea = priceBuy.buy_diff_area;
+
+                plan.PriceBuyRateBbm = priceBuy.rate_bbm;
+                plan.PriceBuyRateToll = priceBuy.rate_toll;
+
+                // =====================================================
+                // PRICE SELL SNAPSHOT
+                // =====================================================
+
+                plan.PriceSellId = priceSell.id_seq;
+                plan.PriceSellValidDate = priceSell.valid_date;
+                plan.PriceSellCurrency = priceSell.curr;
+                plan.PriceSellRateValue = priceSell.rate_value;
+
+                plan.PriceSellFlagMin = priceSell.flag_min;
+                plan.PriceSellChargeMin = priceSell.charge_min;
+                plan.PriceSellFlagRange = priceSell.flag_range;
+                plan.PriceSellMinRange = priceSell.min_range;
+                plan.PriceSellMaxRange = priceSell.max_range;
+
+                plan.PriceSell1 = priceSell.sell1;
+                plan.PriceSell2 = priceSell.sell2;
+                plan.PriceSell3 = priceSell.sell3;
+
+                plan.PriceSellRetEmpty = priceSell.sell_ret_empty;
+                plan.PriceSellRetCargo = priceSell.sell_ret_cargo;
+                plan.PriceSellOvnnight = priceSell.sell_ovnight;
+                plan.PriceSellCancel = priceSell.sell_cancel;
+
+                plan.PriceSellTrip2 = priceSell.selltrip2;
+                plan.PriceSellTrip3 = priceSell.selltrip3;
+                plan.PriceSellDiffArea = priceSell.sell_diff_area;
+
+                plan.PriceSellRateToll = priceSell.rate_toll;
+                plan.PriceSellRateTruck = priceSell.rate_truck;
+                plan.PriceSellRateDriver = priceSell.rate_driver;
+
+                //await _context.SaveChangesAsync();
 
                 await _context.SaveChangesAsync();
 
@@ -1013,1799 +1169,6 @@ namespace TMSBilling.Controllers
             }
         }
 
-
-        // =========================================================
-        // SAVE ROUTE PLAN
-        // =========================================================
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Save(RoutePlanFormViewModel vm)
-        //{
-        //    var username = HttpContext.Session.GetString("username") ?? "System";
-
-        //    if (vm.Id == 0)
-        //        ModelState.Remove(nameof(vm.PlanNo));
-        //    ModelState.Remove(nameof(vm.Status));
-
-        //    // 1. Basic validation
-        //    if (!vm.RouteId.HasValue || vm.RouteId.Value <= 0)
-        //        ModelState.AddModelError(nameof(vm.RouteId), "Please select a Master Route.");
-
-        //    if (vm.PlanDate == default)
-        //        ModelState.AddModelError(nameof(vm.PlanDate), "Plan Date is required.");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        LogModelStateErrors();
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // 2. Load active Master Route
-        //    var route = await _context.Routes
-        //        .AsNoTracking()
-        //        .FirstOrDefaultAsync(r => r.ID == vm.RouteId!.Value && r.STATUS == "ACTIVE");
-
-        //    if (route == null)
-        //    {
-        //        ModelState.AddModelError(nameof(vm.RouteId), "The selected route does not exist or is inactive.");
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // 3. Load current Master Route stops
-        //    var masterStops = await (
-        //        from rs in _context.RouteStops
-        //        join g in _context.Geofences on rs.GEOFENCE_TABLE_ID equals g.Id
-        //        where rs.ROUTE_ID == route.ID
-        //        orderby rs.SEQUENCE_NO
-        //        select new
-        //        {
-        //            rs.ID,
-        //            rs.GEOFENCE_TABLE_ID,
-        //            rs.SEQUENCE_NO,
-        //            rs.STOP_TYPE,
-        //            rs.PLANNED_ARRIVAL,
-        //            rs.PLANNED_DEPARTURE,
-        //            rs.STOP_DURATION_MINUTES,
-        //            rs.NOTES,
-        //            g.FenceName,
-        //            g.Address,
-        //            g.City,
-        //            g.Lat,
-        //            g.Long,
-        //            g.PhoneNo
-        //        })
-        //        .ToListAsync();
-
-        //    if (masterStops.Count == 0)
-        //    {
-        //        ModelState.AddModelError(nameof(vm.RouteId), "The selected Master Route has no valid stops.");
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // 4. Validate customer assignment to the selected Master Route
-        //    var assignedCustomerCodes = await _context.RouteCustomerAssignments
-        //        .AsNoTracking()
-        //        .Where(x => x.ROUTE_ID == route.ID)
-        //        .Select(x => x.CUSTOMER_CODE)
-        //        .Distinct()
-        //        .ToListAsync();
-
-        //    if (!string.IsNullOrWhiteSpace(vm.CustomerCode))
-        //    {
-        //        vm.CustomerCode = vm.CustomerCode.Trim();
-        //        var customerAssigned = assignedCustomerCodes.Any(code =>
-        //            string.Equals(code, vm.CustomerCode, StringComparison.OrdinalIgnoreCase));
-
-        //        if (!customerAssigned)
-        //        {
-        //            ModelState.AddModelError(nameof(vm.CustomerCode),
-        //                "The selected customer is not assigned to this Master Route.");
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-        //    }
-
-        //    // 5. Validate external vehicle and driver
-        //    ExternalVehicle? selectedVehicle = null;
-        //    ExternalDriver? selectedDriver = null;
-
-        //    try
-        //    {
-        //        if (vm.VehicleId.HasValue && vm.VehicleId.Value > 0)
-        //        {
-        //            var vehicles = await FetchVehiclesFromApiAsync();
-        //            selectedVehicle = vehicles.FirstOrDefault(v => v.Id == vm.VehicleId.Value);
-        //            if (selectedVehicle == null)
-        //                ModelState.AddModelError(nameof(vm.VehicleId),
-        //                    "The selected vehicle is no longer available in the external fleet system. Please select it again.");
-        //        }
-
-        //        if (vm.DriverId.HasValue && vm.DriverId.Value > 0)
-        //        {
-        //            var drivers = await FetchDriversFromApiAsync();
-        //            selectedDriver = drivers.FirstOrDefault(d => d.Id == vm.DriverId.Value);
-        //            if (selectedDriver == null)
-        //                ModelState.AddModelError(nameof(vm.DriverId),
-        //                    "The selected driver is no longer available in the external fleet system. Please select them again.");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to validate external vehicle/driver selection.");
-        //        ModelState.AddModelError(string.Empty,
-        //            "Unable to validate the selected vehicle or driver against the external fleet system. Please retry.");
-        //    }
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // 6. Load and validate the existing local DRAFT, if this is an edit
-        //    RoutePlanHeader? existingDraftPlan = null;
-        //    if (vm.Id > 0)
-        //    {
-        //        existingDraftPlan = await _context.RoutePlans
-        //            .AsNoTracking()
-        //            .FirstOrDefaultAsync(x => x.Id == vm.Id);
-
-        //        if (existingDraftPlan == null)
-        //            return NotFound();
-
-        //        if (existingDraftPlan.Status != RoutePlanStatuses.Draft)
-        //        {
-        //            TempData["Error"] = "Only DRAFT route plans can be edited.";
-        //            return RedirectToAction(nameof(Details), new { id = existingDraftPlan.Id });
-        //        }
-
-        //        if (string.IsNullOrWhiteSpace(existingDraftPlan.ExternalFleetTaskId))
-        //        {
-        //            ModelState.AddModelError(string.Empty,
-        //                "External Fleet Task ID is missing. Data was not saved to avoid a local/external mismatch.");
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-        //    }
-
-        //    if (selectedVehicle == null || selectedDriver == null)
-        //    {
-        //        if (selectedVehicle == null)
-        //            ModelState.AddModelError(nameof(vm.VehicleId), "Select a valid external vehicle.");
-        //        if (selectedDriver == null)
-        //            ModelState.AddModelError(nameof(vm.DriverId), "Select a valid external driver.");
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    var generatedPlanNo = vm.Id == 0
-        //        ? await GeneratePlanNoAsync()
-        //        : existingDraftPlan!.PlanNo;
-        //    var externalFleetTaskId = existingDraftPlan?.ExternalFleetTaskId;
-
-        //    // Temporary defaults retained from the currently working API integration.
-        //    const int debugUserGroupId = 1;
-        //    const string debugExternalAddressId = "1";
-        //    const double debugLatitude = -7.265122697218518;
-        //    const double debugLongitude = 112.74688141009835;
-
-        //    var generalNote = string.IsNullOrWhiteSpace(vm.Notes) ? "mendesak" : vm.Notes.Trim();
-
-        //    // Build the target points once. The same mapping is used for initial CREATE
-        //    // and for one-by-one point PATCH/POST during UPDATE.
-        //    var updatePointPayloads = masterStops
-        //        .Select((stop, index) =>
-        //        {
-        //            var locationName = string.IsNullOrWhiteSpace(stop.FenceName)
-        //                ? "McEasy Surabaya"
-        //                : stop.FenceName.Trim();
-        //            var fullAddress = string.IsNullOrWhiteSpace(stop.Address)
-        //                ? locationName
-        //                : stop.Address.Trim();
-        //            var lat = ParseCoordinateOrFallback(stop.Lat, debugLatitude);
-        //            var lng = ParseCoordinateOrFallback(stop.Long, debugLongitude);
-        //            var durationMinutes = stop.STOP_DURATION_MINUTES.HasValue && stop.STOP_DURATION_MINUTES.Value > 0
-        //                ? stop.STOP_DURATION_MINUTES.Value
-        //                : 15;
-        //            var targetArrival = ResolveTargetArrival(
-        //                vm.PlanDate,
-        //                vm.PlannedDeparture,
-        //                stop.PLANNED_ARRIVAL,
-        //                stop.SEQUENCE_NO);
-        //            var targetDeparture = targetArrival.AddMinutes(durationMinutes);
-        //            var stopNote = string.IsNullOrWhiteSpace(stop.NOTES) ? generalNote : stop.NOTES.Trim();
-
-        //            // Preserve the currently working activity label until official mapping is finalized.
-        //            return new Dictionary<string, object?>
-        //            {
-        //                //["activity_label"] = "PICKUP",
-        //                ["activity_label"] = MapExternalActivityLabel(stop.STOP_TYPE),
-        //                ["address"] = new Dictionary<string, object?>
-        //                {
-        //                    ["full_name"] = fullAddress,
-        //                    ["id"] = debugExternalAddressId,
-        //                    ["lat"] = lat,
-        //                    ["lng"] = lng,
-        //                    ["name"] = locationName,
-        //                    ["type"] = "GOOGLE_MAP"
-        //                },
-        //                ["note"] = stopNote,
-        //                ["plan_sequence"] = index + 1,
-        //                ["service_time"] = $"PT{durationMinutes}M",
-        //                ["target_time_arrival"] = FormatJakartaDateTime(targetArrival),
-        //                ["target_time_departure"] = FormatJakartaDateTime(targetDeparture),
-        //                ["type"] = "DEFAULT"
-        //            };
-        //        })
-        //        .ToList();
-
-        //    // The CREATE endpoint accepts point payloads without plan_sequence.
-        //    var createPointPayloads = updatePointPayloads
-        //        .Select(point =>
-        //        {
-        //            var copy = new Dictionary<string, object?>(point);
-        //            copy.Remove("plan_sequence");
-        //            return copy;
-        //        })
-        //        .ToList();
-
-        //    var phoneNumber = string.IsNullOrWhiteSpace(selectedDriver.PhoneNo)
-        //        ? "081234567890"
-        //        : selectedDriver.PhoneNo;
-
-        //    var createFleetTaskPayload = new
-        //    {
-        //        custom_field = new Dictionary<string, string> { ["key"] = "value" },
-        //        driver_id = selectedDriver.Id,
-        //        note = $"Route Plan {generatedPlanNo} - {generalNote}",
-        //        phone_number = phoneNumber,
-        //        points = createPointPayloads,
-        //        send_late_notification = true,
-        //        user_group_id = debugUserGroupId,
-        //        vehicle_id = selectedVehicle.Id
-        //    };
-
-        //    // UPDATE: the external API is currently being called one header field at a time.
-        //    // Keep this list limited to the three confirmed fields requested for now.
-        //    // They are sent sequentially on every Save so retries can safely reapply them.
-        //    var updateHeaderFieldPayloads = new List<(string FieldName, Dictionary<string, object?> Payload)>
-        //    {
-        //        ("driver_id", new Dictionary<string, object?>
-        //        {
-        //            ["driver_id"] = selectedDriver.Id
-        //        }),
-        //        ("vehicle_id", new Dictionary<string, object?>
-        //        {
-        //            ["vehicle_id"] = selectedVehicle.Id
-        //        }),
-        //        ("note", new Dictionary<string, object?>
-        //        {
-        //            ["note"] = $"Route Plan {generatedPlanNo} - {generalNote}"
-        //        })
-        //    };
-
-        //    try
-        //    {
-        //        if (vm.Id == 0)
-        //        {
-        //            // CREATE: preserve the existing working flow. Create task -> transition
-        //            // to DRAFT -> only then create the local record. This is not an edit.
-        //            var createPayloadLog = JsonSerializer.Serialize(createFleetTaskPayload);
-        //            _logger.LogInformation(
-        //                "Creating external fleet task. PlanNo={PlanNo}; Payload={Payload}",
-        //                generatedPlanNo, createPayloadLog);
-
-        //            var (createOk, createJson) = await _apiService.SendRequestAsync(
-        //                HttpMethod.Post,
-        //                "fleet-planning/api/web/v1/fleet-task-instant",
-        //                createFleetTaskPayload);
-
-        //            var createResponseText = createJson.ToString();
-        //            _logger.LogInformation(
-        //                "Create external fleet task response. PlanNo={PlanNo}; Success={Success}; Response={Response}",
-        //                generatedPlanNo, createOk, createResponseText);
-
-        //            if (!createOk)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    "External fleet task gagal dibuat. Respons API: " + createResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            externalFleetTaskId = TryReadExternalFleetTaskId(createJson);
-        //            if (string.IsNullOrWhiteSpace(externalFleetTaskId))
-        //            {
-        //                _logger.LogError(
-        //                    "External task creation returned no task ID. PlanNo={PlanNo}; Response={Response}",
-        //                    generatedPlanNo, createResponseText);
-        //                ModelState.AddModelError(string.Empty,
-        //                    "API eksternal merespons sukses tetapi ID Fleet Task tidak ditemukan. Data lokal belum disimpan untuk mencegah duplikasi. Periksa log/response API: " + createResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            var (transitionOk, transitionJson) = await _apiService.SendRequestAsync(
-        //                HttpMethod.Post,
-        //                $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId)}/transition",
-        //                new { status = "DRAFT" });
-
-        //            var transitionResponseText = transitionJson.ToString();
-        //            _logger.LogInformation(
-        //                "Initial external DRAFT transition. ExternalFleetTaskId={ExternalFleetTaskId}; Success={Success}; Response={Response}",
-        //                externalFleetTaskId, transitionOk, transitionResponseText);
-
-        //            if (!transitionOk)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    $"External Fleet Task sudah terbentuk dengan ID {externalFleetTaskId}, tetapi transition awal ke DRAFT gagal. Data lokal belum disimpan. Jangan submit Create ulang karena dapat membuat task duplikat. Respons: {transitionResponseText}");
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            // UPDATE: read the current planned point IDs before changing anything.
-        //            // We only know how to synchronize DEFAULT points from Master Route. If
-        //            // external START/END points exist, stop safely rather than deleting or
-        //            // overwriting points that do not have a local Master Route equivalent.
-        //            var readResult = await ReadExternalPointsAsync(externalFleetTaskId!);
-        //            if (!readResult.Success)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    "Tidak dapat membaca/validasi point eksternal. Header dan data lokal belum diubah. " + readResult.Response);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            var existingExternalPoints = readResult.Points
-        //                .OrderBy(point => point.Sequence)
-        //                .ToList();
-
-        //            // 1) PATCH the confirmed header fields individually and sequentially.
-        //            // No /transition call is made during Save. If one request fails, stop before
-        //            // touching points/local DB. Earlier successful field PATCHes may remain in
-        //            // the external system; retrying Save reapplies all three fields idempotently.
-        //            var headerEndpoint =
-        //                $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId!)}";
-
-        //            foreach (var headerField in updateHeaderFieldPayloads)
-        //            {
-        //                var headerPayloadLog = JsonSerializer.Serialize(headerField.Payload);
-        //                _logger.LogInformation(
-        //                    "Patching external Fleet Task header field. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}; Field={Field}; Payload={Payload}",
-        //                    generatedPlanNo, externalFleetTaskId, headerField.FieldName, headerPayloadLog);
-
-        //                var (headerOk, headerJson) = await _apiService.SendRequestAsync(
-        //                    HttpMethod.Patch,
-        //                    headerEndpoint,
-        //                    headerField.Payload);
-
-        //                var headerResponseText = headerJson.ToString();
-        //                _logger.LogInformation(
-        //                    "External Fleet Task header field PATCH response. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}; Field={Field}; Success={Success}; Response={Response}",
-        //                    generatedPlanNo, externalFleetTaskId, headerField.FieldName, headerOk, headerResponseText);
-
-        //                if (!headerOk)
-        //                {
-        //                    ModelState.AddModelError(string.Empty,
-        //                        $"Update header field '{headerField.FieldName}' ke sistem eksternal gagal. Field sebelumnya mungkin sudah berhasil di-update, tetapi points dan database lokal belum diubah. Save ulang akan mengirim kembali driver_id, vehicle_id, dan note satu per satu. Respons API: {headerResponseText}");
-        //                    await RepopulateFormAsync(vm);
-        //                    return View("Form", vm);
-        //                }
-        //            }
-
-        //            // 2) PATCH the points that remain, matching by planned sequence.
-        //            // Since both lists are sorted by sequence, the point ID is retained while
-        //            // the stop data and desired plan_sequence are updated.
-        //            var commonCount = Math.Min(existingExternalPoints.Count, updatePointPayloads.Count);
-        //            for (var index = 0; index < commonCount; index++)
-        //            {
-        //                var externalPoint = existingExternalPoints[index];
-        //                var pointEndpoint =
-        //                    $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId!)}/point/{Uri.EscapeDataString(externalPoint.Id)}";
-        //                var pointPayloadLog = JsonSerializer.Serialize(updatePointPayloads[index]);
-
-        //                _logger.LogInformation(
-        //                    "Patching external point. PlanNo={PlanNo}; PointId={PointId}; OldSequence={OldSequence}; NewSequence={NewSequence}; Payload={Payload}",
-        //                    generatedPlanNo, externalPoint.Id, externalPoint.Sequence, index + 1, pointPayloadLog);
-
-        //                var (pointPatchOk, pointPatchJson) = await _apiService.SendRequestAsync(
-        //                    HttpMethod.Patch,
-        //                    pointEndpoint,
-        //                    updatePointPayloads[index]);
-
-        //                var pointPatchResponseText = pointPatchJson.ToString();
-        //                _logger.LogInformation(
-        //                    "External point PATCH response. PlanNo={PlanNo}; PointId={PointId}; Success={Success}; Response={Response}",
-        //                    generatedPlanNo, externalPoint.Id, pointPatchOk, pointPatchResponseText);
-
-        //                if (!pointPatchOk)
-        //                {
-        //                    ModelState.AddModelError(string.Empty,
-        //                        $"Sinkronisasi point gagal pada urutan {index + 1} (ID {externalPoint.Id}). Header atau point sebelumnya mungkin sudah berhasil berubah di eksternal, tetapi database lokal belum disimpan. Save ulang akan membaca daftar point terbaru lalu melanjutkan sinkronisasi. Respons API: {pointPatchResponseText}");
-        //                    await RepopulateFormAsync(vm);
-        //                    return View("Form", vm);
-        //                }
-        //            }
-
-        //            // 3) If there are extra old points, delete highest sequence first.
-        //            // This avoids deleting a point still needed by the target list and follows
-        //            // the sequential order required by the API.
-        //            if (existingExternalPoints.Count > updatePointPayloads.Count)
-        //            {
-        //                var pointsToDelete = existingExternalPoints
-        //                    .Skip(updatePointPayloads.Count)
-        //                    .OrderByDescending(point => point.Sequence)
-        //                    .ToList();
-
-        //                foreach (var point in pointsToDelete)
-        //                {
-        //                    var deleteEndpoint =
-        //                        $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId!)}/point/{Uri.EscapeDataString(point.Id)}";
-
-        //                    _logger.LogInformation(
-        //                        "Deleting excess external point. PlanNo={PlanNo}; PointId={PointId}; Sequence={Sequence}",
-        //                        generatedPlanNo, point.Id, point.Sequence);
-
-        //                    var (deleteOk, deleteJson) = await _apiService.SendRequestAsync(
-        //                        HttpMethod.Delete,
-        //                        deleteEndpoint);
-
-        //                    var deleteResponseText = deleteJson.ToString();
-        //                    _logger.LogInformation(
-        //                        "External point DELETE response. PlanNo={PlanNo}; PointId={PointId}; Success={Success}; Response={Response}",
-        //                        generatedPlanNo, point.Id, deleteOk, deleteResponseText);
-
-        //                    if (!deleteOk)
-        //                    {
-        //                        ModelState.AddModelError(string.Empty,
-        //                            $"Gagal menghapus point eksternal urutan {point.Sequence} (ID {point.Id}). Sebagian perubahan eksternal mungkin sudah berhasil, tetapi database lokal belum disimpan. Save ulang akan membaca ulang point terbaru. Respons API: {deleteResponseText}");
-        //                        await RepopulateFormAsync(vm);
-        //                        return View("Form", vm);
-        //                    }
-        //                }
-        //            }
-        //            // 4) If new points are needed, POST each one sequentially. The POST
-        //            // schema supplied does not accept plan_sequence, so request order is used;
-        //            // the final GET below verifies the sequence assigned by the API.
-        //            else if (updatePointPayloads.Count > existingExternalPoints.Count)
-        //            {
-        //                for (var index = existingExternalPoints.Count; index < updatePointPayloads.Count; index++)
-        //                {
-        //                    var newPointPayload = new Dictionary<string, object?>(updatePointPayloads[index]);
-        //                    newPointPayload.Remove("plan_sequence");
-        //                    var newPointPayloadLog = JsonSerializer.Serialize(newPointPayload);
-
-        //                    _logger.LogInformation(
-        //                        "Creating additional external point sequentially. PlanNo={PlanNo}; TargetSequence={Sequence}; Payload={Payload}",
-        //                        generatedPlanNo, index + 1, newPointPayloadLog);
-
-        //                    var (pointCreateOk, pointCreateJson) = await _apiService.SendRequestAsync(
-        //                        HttpMethod.Post,
-        //                        $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId!)}/point",
-        //                        newPointPayload);
-
-        //                    var pointCreateResponseText = pointCreateJson.ToString();
-        //                    _logger.LogInformation(
-        //                        "External point POST response. PlanNo={PlanNo}; TargetSequence={Sequence}; Success={Success}; Response={Response}",
-        //                        generatedPlanNo, index + 1, pointCreateOk, pointCreateResponseText);
-
-        //                    if (!pointCreateOk)
-        //                    {
-        //                        ModelState.AddModelError(string.Empty,
-        //                            $"Gagal menambahkan point eksternal untuk urutan {index + 1}. Database lokal belum disimpan. Karena respons jaringan bisa tidak memastikan apakah point sudah terbentuk, Save ulang akan membaca point eksternal terbaru sebelum meneruskan. Respons API: {pointCreateResponseText}");
-        //                        await RepopulateFormAsync(vm);
-        //                        return View("Form", vm);
-        //                    }
-        //                }
-        //            }
-
-        //            // 5) Verify the result from the external API before saving locally.
-        //            var verifyResult = await ReadExternalPointsAsync(externalFleetTaskId!);
-        //            if (!verifyResult.Success)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    "Update eksternal telah dijalankan, tetapi verifikasi point akhir gagal. Database lokal belum disimpan. Save ulang akan membaca point terbaru. " + verifyResult.Response);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            var verifiedPoints = verifyResult.Points.OrderBy(point => point.Sequence).ToList();
-        //            var sequenceIsCorrect = verifiedPoints.Count == updatePointPayloads.Count &&
-        //                verifiedPoints.Select((point, index) => point.Sequence == index + 1).All(matches => matches);
-
-        //            if (!sequenceIsCorrect)
-        //            {
-        //                var actualSequences = string.Join(", ", verifiedPoints.Select(point => point.Sequence));
-        //                ModelState.AddModelError(string.Empty,
-        //                    $"Verifikasi sinkronisasi point gagal. Seharusnya terdapat {updatePointPayloads.Count} point dengan urutan 1..{updatePointPayloads.Count}, tetapi API mengembalikan {verifiedPoints.Count} point dengan sequence [{actualSequences}]. Database lokal belum disimpan. Periksa data eksternal sebelum mencoba Save ulang.");
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex,
-        //            "External Fleet Task synchronization failed. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}",
-        //            generatedPlanNo, externalFleetTaskId);
-        //        ModelState.AddModelError(string.Empty,
-        //            "Gagal menyinkronkan data ke sistem eksternal. Database lokal belum disimpan. Jika sebagian request sudah berhasil, Save ulang akan membaca ulang point eksternal. Detail: " + ex.Message);
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // External API and local database cannot share a transaction. Save locally only
-        //    // after all required external operations have succeeded and final point verification passed.
-        //    await using var transaction = await _context.Database.BeginTransactionAsync();
-        //    try
-        //    {
-        //        RoutePlanHeader plan;
-        //        if (vm.Id == 0)
-        //        {
-        //            plan = new RoutePlanHeader
-        //            {
-        //                PlanNo = generatedPlanNo ?? await GeneratePlanNoAsync(),
-        //                ExternalFleetTaskId = externalFleetTaskId,
-        //                CreatedBy = username,
-        //                CreatedAt = DateTime.Now,
-        //                Status = RoutePlanStatuses.Draft
-        //            };
-        //            _context.RoutePlans.Add(plan);
-        //        }
-        //        else
-        //        {
-        //            plan = await _context.RoutePlans
-        //                .Include(x => x.Stops)
-        //                .FirstOrDefaultAsync(x => x.Id == vm.Id);
-
-        //            if (plan == null)
-        //            {
-        //                await transaction.RollbackAsync();
-        //                return NotFound();
-        //            }
-
-        //            if (plan.Status != RoutePlanStatuses.Draft)
-        //            {
-        //                await transaction.RollbackAsync();
-        //                TempData["Error"] = "Only DRAFT route plans can be edited.";
-        //                return RedirectToAction(nameof(Details), new { id = plan.Id });
-        //            }
-
-        //            _context.RoutePlanStops.RemoveRange(plan.Stops);
-        //        }
-
-        //        plan.ExternalFleetTaskId = externalFleetTaskId;
-        //        plan.PlanDate = vm.PlanDate.Date;
-        //        plan.RouteId = route.ID;
-        //        plan.RouteCode = route.ROUTE_CODE;
-        //        plan.RouteName = route.ROUTE_NAME;
-        //        plan.CustomerCode = string.IsNullOrWhiteSpace(vm.CustomerCode) ? null : vm.CustomerCode.Trim();
-        //        plan.PlannedDeparture = vm.PlannedDeparture;
-        //        plan.VehicleId = vm.VehicleId;
-        //        plan.VehicleNo = selectedVehicle.LicensePlate?.Trim();
-        //        plan.DriverId = vm.DriverId;
-        //        plan.DriverName = selectedDriver.Name?.Trim();
-        //        plan.Notes = string.IsNullOrWhiteSpace(vm.Notes) ? null : vm.Notes.Trim();
-        //        plan.UpdatedBy = username;
-        //        plan.UpdatedAt = DateTime.Now;
-
-        //        await _context.SaveChangesAsync();
-
-        //        foreach (var stop in masterStops)
-        //        {
-        //            _context.RoutePlanStops.Add(new RoutePlanStop
-        //            {
-        //                RoutePlanId = plan.Id,
-        //                MasterRouteStopId = stop.ID,
-        //                GeofenceTableId = stop.GEOFENCE_TABLE_ID,
-        //                SequenceNo = stop.SEQUENCE_NO,
-        //                StopType = stop.STOP_TYPE,
-        //                FenceName = stop.FenceName ?? "(Unnamed Location)",
-        //                Address = stop.Address,
-        //                City = stop.City,
-        //                PlannedArrival = stop.PLANNED_ARRIVAL,
-        //                PlannedDeparture = stop.PLANNED_DEPARTURE,
-        //                StopDurationMinutes = stop.STOP_DURATION_MINUTES ?? 0,
-        //                Notes = stop.NOTES,
-        //                Status = RoutePlanStopStatuses.Pending
-        //            });
-        //        }
-
-        //        await _context.SaveChangesAsync();
-        //        await transaction.CommitAsync();
-
-        //        TempData["Success"] = vm.Id == 0
-        //            ? $"Route Plan {plan.PlanNo} created and synchronized as DRAFT."
-        //            : $"Route Plan {plan.PlanNo} updated and synchronized. Status remains DRAFT.";
-
-        //        return RedirectToAction(nameof(Details), new { id = plan.Id });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex,
-        //            "Failed to save Route Plan {PlanId}; ExternalFleetTaskId={ExternalFleetTaskId}",
-        //            vm.Id, externalFleetTaskId);
-        //        await transaction.RollbackAsync();
-        //        ModelState.AddModelError(string.Empty,
-        //            "External synchronization may have succeeded, but saving the local Route Plan failed. Check the application log before retrying to avoid confusion about partial synchronization.");
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    void LogModelStateErrors()
-        //    {
-        //        var validationErrors = ModelState
-        //            .Where(entry => entry.Value != null && entry.Value.Errors.Count > 0)
-        //            .SelectMany(entry => entry.Value!.Errors.Select(error => $"{entry.Key}: {error.ErrorMessage}"))
-        //            .ToList();
-        //        _logger.LogWarning("Route Plan validation failed: {Errors}", string.Join(" | ", validationErrors));
-        //    }
-
-        //    async Task<(bool Success, List<(string Id, int Sequence)> Points, string Response)> ReadExternalPointsAsync(string taskId)
-        //    {
-        //        var endpoint =
-        //            $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(taskId)}/point?is_order_by_actual=false";
-        //        var (ok, json) = await _apiService.SendRequestAsync(HttpMethod.Get, endpoint);
-        //        var responseText = json.ToString();
-
-        //        if (!ok)
-        //            return (false, new List<(string Id, int Sequence)>(), "GET points gagal. Respons API: " + responseText);
-
-        //        if (json.ValueKind != JsonValueKind.Object ||
-        //            !json.TryGetProperty("data", out var data) ||
-        //            data.ValueKind != JsonValueKind.Object ||
-        //            !data.TryGetProperty("points", out var pointsElement) ||
-        //            pointsElement.ValueKind != JsonValueKind.Array)
-        //        {
-        //            return (false, new List<(string Id, int Sequence)>(),
-        //                "Struktur response GET points tidak sesuai schema yang diharapkan. Response: " + responseText);
-        //        }
-
-        //        var parsedPoints = new List<(string Id, int Sequence)>();
-        //        foreach (var point in pointsElement.EnumerateArray())
-        //        {
-        //            if (point.ValueKind != JsonValueKind.Object ||
-        //                !point.TryGetProperty("id", out var idElement) ||
-        //                idElement.ValueKind != JsonValueKind.String ||
-        //                string.IsNullOrWhiteSpace(idElement.GetString()))
-        //            {
-        //                return (false, new List<(string Id, int Sequence)>(),
-        //                    "GET points mengembalikan point tanpa ID. Sinkronisasi dihentikan demi keamanan. Response: " + responseText);
-        //            }
-
-        //            if (!point.TryGetProperty("plan_sequence", out var sequenceElement) ||
-        //                sequenceElement.ValueKind != JsonValueKind.Number ||
-        //                !sequenceElement.TryGetInt32(out var sequence) || sequence < 1)
-        //            {
-        //                return (false, new List<(string Id, int Sequence)>(),
-        //                    "GET points mengembalikan point tanpa plan_sequence valid. Sinkronisasi dihentikan demi keamanan. Response: " + responseText);
-        //            }
-
-        //            var pointType = point.TryGetProperty("type", out var typeElement) && typeElement.ValueKind == JsonValueKind.String
-        //                ? typeElement.GetString()?.Trim()
-        //                : null;
-
-        //            // Do not touch START/END/unknown point types because the local Master Route
-        //            // currently maps only DEFAULT stops and cannot safely reconstruct these points.
-        //            if (!string.IsNullOrWhiteSpace(pointType) &&
-        //                !string.Equals(pointType, "DEFAULT", StringComparison.OrdinalIgnoreCase))
-        //            {
-        //                return (false, new List<(string Id, int Sequence)>(),
-        //                    $"Fleet Task memiliki point type '{pointType}' yang tidak dikelola oleh Master Route. Tidak ada perubahan eksternal yang dilakukan. Response: {responseText}");
-        //            }
-
-        //            parsedPoints.Add((idElement.GetString()!, sequence));
-        //        }
-
-        //        if (parsedPoints.Select(point => point.Sequence).Distinct().Count() != parsedPoints.Count)
-        //        {
-        //            return (false, new List<(string Id, int Sequence)>(),
-        //                "GET points mengembalikan plan_sequence duplikat. Sinkronisasi dihentikan agar tidak salah memilih point. Response: " + responseText);
-        //        }
-
-        //        return (true, parsedPoints.OrderBy(point => point.Sequence).ToList(), responseText);
-        //    }
-        //}
-
-        //public async Task<IActionResult> Save(RoutePlanFormViewModel vm)
-        //{
-        //    var username =
-        //        HttpContext.Session.GetString("username") ?? "System";
-
-        //    // PlanNo is generated automatically by the server.
-        //    if (vm.Id == 0)
-        //    {
-        //        ModelState.Remove(nameof(vm.PlanNo));
-        //    }
-
-        //    // Status is controlled by the server.
-        //    ModelState.Remove(nameof(vm.Status));
-
-        //    // -----------------------------------------------------
-        //    // 1. Basic validation
-        //    // -----------------------------------------------------
-        //    if (!vm.RouteId.HasValue || vm.RouteId.Value <= 0)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.RouteId),
-        //            "Please select a Master Route.");
-        //    }
-
-        //    if (vm.PlanDate == default)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.PlanDate),
-        //            "Plan Date is required.");
-        //    }
-
-        //    //if (!ModelState.IsValid)
-        //    //{
-        //    //    await RepopulateFormAsync(vm);
-        //    //    return View("Form", vm);
-        //    //}
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        var validationErrors = ModelState
-        //            .Where(x => x.Value != null && x.Value.Errors.Count > 0)
-        //            .SelectMany(x => x.Value!.Errors.Select(e =>
-        //                $"{x.Key}: {e.ErrorMessage}"))
-        //            .ToList();
-
-        //        _logger.LogWarning(
-        //            "Route Plan validation failed: {Errors}",
-        //            string.Join(" | ", validationErrors));
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 2. Load ACTIVE Master Route
-        //    //
-        //    // IMPORTANT:
-        //    // Master Route properties use uppercase names:
-        //    // ID, ROUTE_CODE, ROUTE_NAME, STATUS.
-        //    // -----------------------------------------------------
-        //    var route = await _context.Routes
-        //        .AsNoTracking()
-        //        .FirstOrDefaultAsync(r =>
-        //            r.ID == vm.RouteId!.Value &&
-        //            r.STATUS == "ACTIVE");
-
-        //    if (route == null)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.RouteId),
-        //            "The selected route does not exist or is inactive.");
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 3. Load stops from the current Master Route
-        //    //
-        //    // Master Route stop properties:
-        //    // ROUTE_ID, GEOFENCE_TABLE_ID, SEQUENCE_NO,
-        //    // STOP_TYPE, PLANNED_ARRIVAL,
-        //    // STOP_DURATION_MINUTES, NOTES.
-        //    // -----------------------------------------------------
-        //    var masterStops = await (
-        //        from rs in _context.RouteStops
-        //        join g in _context.Geofences
-        //            on rs.GEOFENCE_TABLE_ID equals g.Id
-        //        where rs.ROUTE_ID == route.ID
-        //        orderby rs.SEQUENCE_NO
-        //        select new
-        //        {
-        //            rs.ID,
-        //            rs.GEOFENCE_TABLE_ID,
-        //            rs.SEQUENCE_NO,
-        //            rs.STOP_TYPE,
-        //            rs.PLANNED_ARRIVAL,
-        //            rs.STOP_DURATION_MINUTES,
-        //            rs.NOTES,
-        //            g.FenceName,
-        //            g.Address,
-        //            g.City,
-        //            g.Lat,
-        //            g.Long,
-        //            g.PhoneNo
-        //        })
-        //        .ToListAsync();
-
-        //    if (masterStops.Count == 0)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.RouteId),
-        //            "The selected Master Route has no valid stops.");
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 4. Validate customer assignment
-        //    //
-        //    // RouteCustomerAssignment.CUSTOMER_CODE stores
-        //    // CustomerGroup.CUST_CODE.
-        //    // -----------------------------------------------------
-        //    var assignedCustomerCodes = await _context
-        //        .RouteCustomerAssignments
-        //        .AsNoTracking()
-        //        .Where(x => x.ROUTE_ID == route.ID)
-        //        .Select(x => x.CUSTOMER_CODE)
-        //        .Distinct()
-        //        .ToListAsync();
-
-        //    if (!string.IsNullOrWhiteSpace(vm.CustomerCode))
-        //    {
-        //        vm.CustomerCode = vm.CustomerCode.Trim();
-
-        //        var customerAssigned = assignedCustomerCodes.Any(
-        //            code => string.Equals(
-        //                code,
-        //                vm.CustomerCode,
-        //                StringComparison.OrdinalIgnoreCase));
-
-        //        if (!customerAssigned)
-        //        {
-        //            ModelState.AddModelError(
-        //                nameof(vm.CustomerCode),
-        //                "The selected customer is not assigned to this Master Route.");
-
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 5. Validate selected external vehicle and driver IDs
-        //    // -----------------------------------------------------
-        //    ExternalVehicle? selectedVehicle = null;
-        //    ExternalDriver? selectedDriver = null;
-
-        //    try
-        //    {
-        //        if (vm.VehicleId.HasValue && vm.VehicleId.Value > 0)
-        //        {
-        //            var apiVehicles = await FetchVehiclesFromApiAsync();
-        //            selectedVehicle = apiVehicles.FirstOrDefault(v => v.Id == vm.VehicleId.Value);
-
-        //            if (selectedVehicle == null)
-        //            {
-        //                ModelState.AddModelError(nameof(vm.VehicleId),
-        //                    "The selected vehicle is no longer available in the external fleet system. Please select it again.");
-        //            }
-        //        }
-
-        //        if (vm.DriverId.HasValue && vm.DriverId.Value > 0)
-        //        {
-        //            var apiDrivers = await FetchDriversFromApiAsync();
-        //            selectedDriver = apiDrivers.FirstOrDefault(d => d.Id == vm.DriverId.Value);
-
-        //            if (selectedDriver == null)
-        //            {
-        //                ModelState.AddModelError(nameof(vm.DriverId),
-        //                    "The selected driver is no longer available in the external fleet system. Please select them again.");
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to validate external vehicle/driver selection.");
-        //        ModelState.AddModelError(string.Empty,
-        //            "Unable to validate the selected vehicle or driver against the external fleet system. Please retry.");
-        //    }
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 6. PREPARE EXTERNAL SYNC
-        //    // First Save: create the external task and transition it to DRAFT.
-        //    // Subsequent Save: PATCH the existing external task without changing status.
-        //    // Status changes are handled only by the dedicated actions on Details.
-        //    // -----------------------------------------------------
-        //    RoutePlanHeader? existingDraftPlan = null;
-        //    if (vm.Id > 0)
-        //    {
-        //        existingDraftPlan = await _context.RoutePlans
-        //            .AsNoTracking()
-        //            .FirstOrDefaultAsync(x => x.Id == vm.Id);
-
-        //        if (existingDraftPlan == null)
-        //            return NotFound();
-
-        //        if (existingDraftPlan.Status != RoutePlanStatuses.Draft)
-        //        {
-        //            TempData["Error"] = "Only DRAFT route plans can be edited.";
-        //            return RedirectToAction(nameof(Details), new { id = existingDraftPlan.Id });
-        //        }
-
-        //        if (string.IsNullOrWhiteSpace(existingDraftPlan.ExternalFleetTaskId))
-        //        {
-        //            ModelState.AddModelError(string.Empty,
-        //                "External Fleet Task ID is missing. Data was not saved to avoid local/external data mismatch.");
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-        //    }
-
-        //    if (selectedVehicle == null || selectedDriver == null)
-        //    {
-        //        if (selectedVehicle == null)
-        //            ModelState.AddModelError(nameof(vm.VehicleId), "Select a valid external vehicle.");
-        //        if (selectedDriver == null)
-        //            ModelState.AddModelError(nameof(vm.DriverId), "Select a valid external driver.");
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    string? generatedPlanNo = vm.Id == 0
-        //        ? await GeneratePlanNoAsync()
-        //        : existingDraftPlan!.PlanNo;
-        //    string? externalFleetTaskId = existingDraftPlan?.ExternalFleetTaskId;
-
-        //    // Temporary defaults retained from the working API integration.
-        //    // Replace these mappings with the official master-data mapping when available.
-        //    const int debugUserGroupId = 1;
-        //    const string debugExternalAddressId = "1";
-        //    const double debugLatitude = -7.265122697218518;
-        //    const double debugLongitude = 112.74688141009835;
-
-        //    var generalNote = string.IsNullOrWhiteSpace(vm.Notes)
-        //        ? "mendesak"
-        //        : vm.Notes.Trim();
-
-        //    var points = masterStops.Select(stop =>
-        //    {
-        //        var locationName = string.IsNullOrWhiteSpace(stop.FenceName)
-        //            ? "McEasy Surabaya"
-        //            : stop.FenceName.Trim();
-        //        var fullAddress = string.IsNullOrWhiteSpace(stop.Address)
-        //            ? locationName
-        //            : stop.Address.Trim();
-        //        var lat = ParseCoordinateOrFallback(stop.Lat, debugLatitude);
-        //        var lng = ParseCoordinateOrFallback(stop.Long, debugLongitude);
-        //        var durationMinutes = stop.STOP_DURATION_MINUTES.HasValue && stop.STOP_DURATION_MINUTES.Value > 0
-        //            ? stop.STOP_DURATION_MINUTES.Value
-        //            : 15;
-        //        var targetArrival = ResolveTargetArrival(
-        //            vm.PlanDate,
-        //            vm.PlannedDeparture,
-        //            stop.PLANNED_ARRIVAL,
-        //            stop.SEQUENCE_NO);
-        //        var targetDeparture = targetArrival.AddMinutes(durationMinutes);
-        //        var stopNote = string.IsNullOrWhiteSpace(stop.NOTES)
-        //            ? generalNote
-        //            : stop.NOTES.Trim();
-
-        //        // Keep the current known-good API value until the official activity mapping is finalized.
-        //        const string activityLabel = "PICKUP";
-
-        //        return new
-        //        {
-        //            activity_label = activityLabel,
-        //            address = new
-        //            {
-        //                full_name = fullAddress,
-        //                id = debugExternalAddressId,
-        //                lat,
-        //                lng,
-        //                name = locationName,
-        //                type = "GOOGLE_MAP"
-        //            },
-        //            note = stopNote,
-        //            service_time = $"PT{durationMinutes}M",
-        //            target_time_arrival = FormatJakartaDateTime(targetArrival),
-        //            target_time_departure = FormatJakartaDateTime(targetDeparture),
-        //            type = "DEFAULT"
-        //        };
-        //    }).ToList();
-
-        //    var fleetTaskPayload = new
-        //    {
-        //        custom_field = new Dictionary<string, string>
-        //        {
-        //            ["key"] = "value"
-        //        },
-        //        driver_id = selectedDriver.Id,
-        //        note = $"Route Plan {generatedPlanNo} - {generalNote}",
-        //        phone_number = string.IsNullOrWhiteSpace(selectedDriver.PhoneNo)
-        //            ? "081234567890"
-        //            : selectedDriver.PhoneNo,
-        //        points,
-        //        send_late_notification = true,
-        //        user_group_id = debugUserGroupId,
-        //        vehicle_id = selectedVehicle.Id
-        //    };
-
-        //    var fleetTaskPayloadUpdate = new
-        //    {
-        //        auto_start_type = "GEOFENCE",
-        //        custom_field = new Dictionary<string, string>
-        //        {
-        //            ["key"] = "value"
-        //        },
-        //        driver_id = selectedDriver.Id,
-        //        note = $"Route Plan {generatedPlanNo} - {generalNote}",
-        //        phone_number = string.IsNullOrWhiteSpace(selectedDriver.PhoneNo)
-        //        ? "081234567890"
-        //        : selectedDriver.PhoneNo,
-        //        //points,
-        //        send_late_notification = true,
-        //        user_group_id = debugUserGroupId,
-        //        vehicle_id = selectedVehicle.Id
-        //    };
-
-        //    try
-        //    {
-        //        var payloadLog = JsonSerializer.Serialize(fleetTaskPayload);
-
-        //        if (vm.Id == 0)
-        //        {
-        //            _logger.LogInformation(
-        //                "Creating external fleet task. PlanNo={PlanNo}; Payload={Payload}",
-        //                generatedPlanNo, payloadLog);
-
-        //            var (externalOk, externalJson) = await _apiService.SendRequestAsync(
-        //                HttpMethod.Post,
-        //                "fleet-planning/api/web/v1/fleet-task-instant",
-        //                fleetTaskPayload);
-
-        //            var externalResponseText = externalJson.ToString();
-        //            _logger.LogInformation(
-        //                "Create external fleet task response. PlanNo={PlanNo}; Success={Success}; Response={Response}",
-        //                generatedPlanNo, externalOk, externalResponseText);
-
-        //            if (!externalOk)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    "External fleet task gagal dibuat. Respons API: " + externalResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            externalFleetTaskId = TryReadExternalFleetTaskId(externalJson);
-        //            if (string.IsNullOrWhiteSpace(externalFleetTaskId))
-        //            {
-        //                _logger.LogError(
-        //                    "External task creation returned no task ID. PlanNo={PlanNo}; Response={Response}",
-        //                    generatedPlanNo, externalResponseText);
-        //                ModelState.AddModelError(string.Empty,
-        //                    "API eksternal merespons sukses tetapi ID Fleet Task tidak ditemukan. Data lokal belum disimpan untuk mencegah duplikasi. Periksa log dan respons API: " + externalResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            // Only the first Save initializes the external status to DRAFT.
-        //            var transitionPayload = new { status = "DRAFT" };
-        //            var (transitionOk, transitionJson) = await _apiService.SendRequestAsync(
-        //                HttpMethod.Post,
-        //                $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId)}/transition",
-        //                transitionPayload);
-
-        //            var transitionResponseText = transitionJson.ToString();
-        //            _logger.LogInformation(
-        //                "Initial external DRAFT transition. ExternalFleetTaskId={ExternalFleetTaskId}; Success={Success}; Response={Response}",
-        //                externalFleetTaskId, transitionOk, transitionResponseText);
-
-        //            if (!transitionOk)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    $"External Fleet Task sudah terbentuk dengan ID {externalFleetTaskId}, tetapi transition awal ke DRAFT gagal. Data lokal belum disimpan. Jangan submit Create ulang karena dapat membuat task duplikat. Respons: {transitionResponseText}");
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            // Editing a DRAFT updates the same external task. Do not call /transition here.
-        //            var updateEndpoint =
-        //                $"fleet-planning/api/web/v1/fleet-task-instant/{Uri.EscapeDataString(externalFleetTaskId!)}";
-
-        //            _logger.LogInformation(
-        //                "Updating existing external DRAFT task. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}; Payload={Payload}",
-        //                generatedPlanNo, externalFleetTaskId, payloadLog);
-
-        //            var (updateOk, updateJson) = await _apiService.SendRequestAsync(
-        //                HttpMethod.Patch,
-        //                updateEndpoint,
-        //                fleetTaskPayloadUpdate);
-
-        //            var updateResponseText = updateJson.ToString();
-        //            _logger.LogInformation(
-        //                "Update external fleet task response. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}; Success={Success}; Response={Response}",
-        //                generatedPlanNo, externalFleetTaskId, updateOk, updateResponseText);
-
-        //            if (!updateOk)
-        //            {
-        //                ModelState.AddModelError(string.Empty,
-        //                    "Update ke sistem eksternal gagal. Data lokal tidak diubah agar tetap sinkron. Respons API: " + updateResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex,
-        //            "External Fleet Task sync failed. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}",
-        //            generatedPlanNo, externalFleetTaskId);
-        //        ModelState.AddModelError(string.Empty,
-        //            "Gagal menyinkronkan data ke sistem eksternal. Data lokal belum disimpan. Detail: " + ex.Message);
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // NOTE: API and local database cannot share one transaction. If external
-        //    // creation succeeds but local save fails, the external task may remain orphaned.
-        //    // The external task ID is logged and persisted to make recovery possible.
-
-        //    // -----------------------------------------------------
-        //    // 7. Begin local transaction AFTER the external create
-        //    // -----------------------------------------------------
-        //    await using var transaction =
-        //        await _context.Database.BeginTransactionAsync();
-
-        //    try
-        //    {
-        //        RoutePlanHeader plan;
-
-        //        if (vm.Id == 0)
-        //        {
-        //            // CREATE
-        //            plan = new RoutePlanHeader
-        //            {
-        //                PlanNo = generatedPlanNo ?? await GeneratePlanNoAsync(),
-        //                ExternalFleetTaskId = externalFleetTaskId,
-        //                CreatedBy = username,
-        //                CreatedAt = DateTime.Now,
-        //                Status = RoutePlanStatuses.Draft
-        //            };
-
-        //            _context.RoutePlans.Add(plan);
-        //        }
-        //        else
-        //        {
-        //            // EDIT
-        //            plan = await _context.RoutePlans
-        //                .Include(x => x.Stops)
-        //                .FirstOrDefaultAsync(x => x.Id == vm.Id);
-
-        //            if (plan == null)
-        //            {
-        //                await transaction.RollbackAsync();
-        //                return NotFound();
-        //            }
-
-        //            if (plan.Status != RoutePlanStatuses.Draft)
-        //            {
-        //                await transaction.RollbackAsync();
-
-        //                TempData["Error"] =
-        //                    "Only DRAFT route plans can be edited.";
-
-        //                return RedirectToAction(
-        //                    nameof(Details),
-        //                    new { id = plan.Id });
-        //            }
-
-        //            // Replace the stop snapshot for this DRAFT plan.
-        //            _context.RoutePlanStops.RemoveRange(plan.Stops);
-        //        }
-
-        //        // -------------------------------------------------
-        //        // 6. Save header
-        //        // -------------------------------------------------
-        //        plan.PlanDate = vm.PlanDate.Date;
-        //        plan.RouteId = route.ID;
-        //        plan.RouteCode = route.ROUTE_CODE;
-        //        plan.RouteName = route.ROUTE_NAME;
-
-        //        plan.CustomerCode =
-        //            string.IsNullOrWhiteSpace(vm.CustomerCode)
-        //                ? null
-        //                : vm.CustomerCode.Trim();
-
-        //        plan.PlannedDeparture = vm.PlannedDeparture;
-
-        //        plan.VehicleId = vm.VehicleId;
-        //        plan.VehicleNo = selectedVehicle != null
-        //            ? selectedVehicle.LicensePlate?.Trim()
-        //            : (string.IsNullOrWhiteSpace(vm.VehicleNo) ? null : vm.VehicleNo.Trim());
-
-        //        plan.DriverId = vm.DriverId;
-        //        plan.DriverName = selectedDriver != null
-        //            ? selectedDriver.Name?.Trim()
-        //            : (string.IsNullOrWhiteSpace(vm.DriverName) ? null : vm.DriverName.Trim());
-
-        //        plan.Notes =
-        //            string.IsNullOrWhiteSpace(vm.Notes)
-        //                ? null
-        //                : vm.Notes.Trim();
-
-        //        plan.UpdatedBy = username;
-        //        plan.UpdatedAt = DateTime.Now;
-
-        //        await _context.SaveChangesAsync();
-
-        //        // -------------------------------------------------
-        //        // 7. Snapshot Master Route stops
-        //        //
-        //        // Route Plan retains the location data at the
-        //        // time of saving, even if the master changes later.
-        //        // -------------------------------------------------
-        //        foreach (var stop in masterStops)
-        //        {
-        //            _context.RoutePlanStops.Add(new RoutePlanStop
-        //            {
-        //                RoutePlanId = plan.Id,
-        //                MasterRouteStopId = stop.ID,
-        //                GeofenceTableId = stop.GEOFENCE_TABLE_ID,
-        //                SequenceNo = stop.SEQUENCE_NO,
-        //                StopType = stop.STOP_TYPE,
-        //                FenceName = stop.FenceName ?? "(Unnamed Location)",
-        //                Address = stop.Address,
-        //                City = stop.City,
-        //                PlannedArrival = stop.PLANNED_ARRIVAL,
-        //                //StopDurationMinutes = stop.STOP_DURATION_MINUTES,
-        //                StopDurationMinutes = stop.STOP_DURATION_MINUTES ?? 0,
-        //                Notes = stop.NOTES,
-        //                Status = RoutePlanStopStatuses.Pending
-        //            });
-        //        }
-
-        //        await _context.SaveChangesAsync();
-        //        await transaction.CommitAsync();
-
-        //        TempData["Success"] = vm.Id == 0
-        //            ? $"Route Plan {plan.PlanNo} created and synchronized as DRAFT."
-        //            : $"Route Plan {plan.PlanNo} updated and synchronized. Status remains DRAFT.";
-
-        //        return RedirectToAction(
-        //            nameof(Details),
-        //            new { id = plan.Id });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(
-        //            ex,
-        //            "Failed to save Route Plan {PlanId}; ExternalFleetTaskId={ExternalFleetTaskId}",
-        //            vm.Id,
-        //            externalFleetTaskId);
-
-        //        await transaction.RollbackAsync();
-
-        //        ModelState.AddModelError(
-        //            string.Empty,
-        //            "Unable to save the Route Plan. Check the application log for details.");
-
-        //        await RepopulateFormAsync(vm);
-
-        //        return View("Form", vm);
-        //    }
-        //}
-
-
-        //public async Task<IActionResult> Save(RoutePlanFormViewModel vm)
-        //{
-        //    var username =
-        //        HttpContext.Session.GetString("username") ?? "System";
-
-        //    // PlanNo is generated automatically by the server.
-        //    if (vm.Id == 0)
-        //    {
-        //        ModelState.Remove(nameof(vm.PlanNo));
-        //    }
-
-        //    // Status is controlled by the server.
-        //    ModelState.Remove(nameof(vm.Status));
-
-        //    // -----------------------------------------------------
-        //    // 1. Basic validation
-        //    // -----------------------------------------------------
-        //    if (!vm.RouteId.HasValue || vm.RouteId.Value <= 0)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.RouteId),
-        //            "Please select a Master Route.");
-        //    }
-
-        //    if (vm.PlanDate == default)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.PlanDate),
-        //            "Plan Date is required.");
-        //    }
-
-        //    //if (!ModelState.IsValid)
-        //    //{
-        //    //    await RepopulateFormAsync(vm);
-        //    //    return View("Form", vm);
-        //    //}
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        var validationErrors = ModelState
-        //            .Where(x => x.Value != null && x.Value.Errors.Count > 0)
-        //            .SelectMany(x => x.Value!.Errors.Select(e =>
-        //                $"{x.Key}: {e.ErrorMessage}"))
-        //            .ToList();
-
-        //        _logger.LogWarning(
-        //            "Route Plan validation failed: {Errors}",
-        //            string.Join(" | ", validationErrors));
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 2. Load ACTIVE Master Route
-        //    //
-        //    // IMPORTANT:
-        //    // Master Route properties use uppercase names:
-        //    // ID, ROUTE_CODE, ROUTE_NAME, STATUS.
-        //    // -----------------------------------------------------
-        //    var route = await _context.Routes
-        //        .AsNoTracking()
-        //        .FirstOrDefaultAsync(r =>
-        //            r.ID == vm.RouteId!.Value &&
-        //            r.STATUS == "ACTIVE");
-
-        //    if (route == null)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.RouteId),
-        //            "The selected route does not exist or is inactive.");
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 3. Load stops from the current Master Route
-        //    //
-        //    // Master Route stop properties:
-        //    // ROUTE_ID, GEOFENCE_TABLE_ID, SEQUENCE_NO,
-        //    // STOP_TYPE, PLANNED_ARRIVAL,
-        //    // STOP_DURATION_MINUTES, NOTES.
-        //    // -----------------------------------------------------
-        //    var masterStops = await (
-        //        from rs in _context.RouteStops
-        //        join g in _context.Geofences
-        //            on rs.GEOFENCE_TABLE_ID equals g.Id
-        //        where rs.ROUTE_ID == route.ID
-        //        orderby rs.SEQUENCE_NO
-        //        select new
-        //        {
-        //            rs.ID,
-        //            rs.GEOFENCE_TABLE_ID,
-        //            rs.SEQUENCE_NO,
-        //            rs.STOP_TYPE,
-        //            rs.PLANNED_ARRIVAL,
-        //            rs.STOP_DURATION_MINUTES,
-        //            rs.NOTES,
-        //            g.FenceName,
-        //            g.Address,
-        //            g.City,
-        //            g.Lat,
-        //            g.Long,
-        //            g.PhoneNo
-        //        })
-        //        .ToListAsync();
-
-        //    if (masterStops.Count == 0)
-        //    {
-        //        ModelState.AddModelError(
-        //            nameof(vm.RouteId),
-        //            "The selected Master Route has no valid stops.");
-
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 4. Validate customer assignment
-        //    //
-        //    // RouteCustomerAssignment.CUSTOMER_CODE stores
-        //    // CustomerGroup.CUST_CODE.
-        //    // -----------------------------------------------------
-        //    var assignedCustomerCodes = await _context
-        //        .RouteCustomerAssignments
-        //        .AsNoTracking()
-        //        .Where(x => x.ROUTE_ID == route.ID)
-        //        .Select(x => x.CUSTOMER_CODE)
-        //        .Distinct()
-        //        .ToListAsync();
-
-        //    if (!string.IsNullOrWhiteSpace(vm.CustomerCode))
-        //    {
-        //        vm.CustomerCode = vm.CustomerCode.Trim();
-
-        //        var customerAssigned = assignedCustomerCodes.Any(
-        //            code => string.Equals(
-        //                code,
-        //                vm.CustomerCode,
-        //                StringComparison.OrdinalIgnoreCase));
-
-        //        if (!customerAssigned)
-        //        {
-        //            ModelState.AddModelError(
-        //                nameof(vm.CustomerCode),
-        //                "The selected customer is not assigned to this Master Route.");
-
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 5. Validate selected external vehicle and driver IDs
-        //    // -----------------------------------------------------
-        //    ExternalVehicle? selectedVehicle = null;
-        //    ExternalDriver? selectedDriver = null;
-
-        //    try
-        //    {
-        //        if (vm.VehicleId.HasValue && vm.VehicleId.Value > 0)
-        //        {
-        //            var apiVehicles = await FetchVehiclesFromApiAsync();
-        //            selectedVehicle = apiVehicles.FirstOrDefault(v => v.Id == vm.VehicleId.Value);
-
-        //            if (selectedVehicle == null)
-        //            {
-        //                ModelState.AddModelError(nameof(vm.VehicleId),
-        //                    "The selected vehicle is no longer available in the external fleet system. Please select it again.");
-        //            }
-        //        }
-
-        //        if (vm.DriverId.HasValue && vm.DriverId.Value > 0)
-        //        {
-        //            var apiDrivers = await FetchDriversFromApiAsync();
-        //            selectedDriver = apiDrivers.FirstOrDefault(d => d.Id == vm.DriverId.Value);
-
-        //            if (selectedDriver == null)
-        //            {
-        //                ModelState.AddModelError(nameof(vm.DriverId),
-        //                    "The selected driver is no longer available in the external fleet system. Please select them again.");
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to validate external vehicle/driver selection.");
-        //        ModelState.AddModelError(string.Empty,
-        //            "Unable to validate the selected vehicle or driver against the external fleet system. Please retry.");
-        //    }
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        await RepopulateFormAsync(vm);
-        //        return View("Form", vm);
-        //    }
-
-        //    // -----------------------------------------------------
-        //    // 6. CREATE EXTERNAL FLEET TASK FIRST (CREATE ONLY)
-        //    // -----------------------------------------------------
-        //    // Debug defaults below are intentionally hard-coded for the first API test.
-        //    // Replace them with real mappings after the API validation response is known.
-        //    string? generatedPlanNo = null;
-        //    string? externalFleetTaskId = null;
-
-        //    if (vm.Id == 0)
-        //    {
-        //        if (selectedVehicle == null || selectedDriver == null)
-        //        {
-        //            if (selectedVehicle == null)
-        //                ModelState.AddModelError(nameof(vm.VehicleId), "Select a vehicle before creating an external fleet task.");
-        //            if (selectedDriver == null)
-        //                ModelState.AddModelError(nameof(vm.DriverId), "Select a driver before creating an external fleet task.");
-
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-
-        //        generatedPlanNo = await GeneratePlanNoAsync();
-        //        try
-        //        {
-        //            const int debugUserGroupId = 1;
-        //        //            //const string debugDriverAttachmentId = "00000000-0000-0000-0000-000000000000";
-        //            const string debugExternalAddressId = "1";
-        //            const double debugLatitude = -7.265122697218518;
-        //            const double debugLongitude = 112.74688141009835;
-
-        //            var generalNote = string.IsNullOrWhiteSpace(vm.Notes)
-        //                ? "mendesak"
-        //                : vm.Notes.Trim();
-
-        //            var points = masterStops.Select(stop =>
-        //            {
-        //                var locationName = string.IsNullOrWhiteSpace(stop.FenceName)
-        //                    ? "McEasy Surabaya"
-        //                    : stop.FenceName.Trim();
-        //                var fullAddress = string.IsNullOrWhiteSpace(stop.Address)
-        //                    ? locationName
-        //                    : stop.Address.Trim();
-        //                var lat = ParseCoordinateOrFallback(stop.Lat, debugLatitude);
-        //                var lng = ParseCoordinateOrFallback(stop.Long, debugLongitude);
-        //                var durationMinutes = stop.STOP_DURATION_MINUTES.HasValue && stop.STOP_DURATION_MINUTES.Value > 0
-        //                    ? stop.STOP_DURATION_MINUTES.Value
-        //                    : 15;
-        //                var targetArrival = ResolveTargetArrival(
-        //                    vm.PlanDate,
-        //                    vm.PlannedDeparture,
-        //                    stop.PLANNED_ARRIVAL,
-        //                    stop.SEQUENCE_NO);
-        //                var targetDeparture = targetArrival.AddMinutes(durationMinutes);
-        //                var stopNote = string.IsNullOrWhiteSpace(stop.NOTES)
-        //                    ? generalNote
-        //                    : stop.NOTES.Trim();
-        //                var stopType = (stop.STOP_TYPE ?? string.Empty).Trim().ToUpperInvariant();
-        //                //var activityLabel = stopType.Contains("DROP") || stopType.Contains("DELIVER")
-        //                //    ? "DROPOFF"
-        //                //    : "PICKUP";
-        //                var activityLabel = "PICKUP";
-
-        //                return new
-        //                {
-        //                    activity_label = activityLabel,
-        //                    address = new
-        //                    {
-        //                        full_name = fullAddress,
-        //                        id = debugExternalAddressId,
-        //                        lat,
-        //                        lng,
-        //                        name = locationName,
-        //                        type = "GOOGLE_MAP"
-        //                    },
-        //                    note = stopNote,
-        //                    service_time = $"PT{durationMinutes}M",
-        //                    target_time_arrival = FormatJakartaDateTime(targetArrival),
-        //                    target_time_departure = FormatJakartaDateTime(targetDeparture),
-        //                    type = "DEFAULT"
-        //                };
-        //            }).ToList();
-
-        //            var fleetTaskPayload = new
-        //            {
-        //                custom_field = new Dictionary<string, string>
-        //                {
-        //                    ["key"] = "value"
-        //                },
-        //                //driver_attachment_file_ids = new[] { debugDriverAttachmentId },
-        //                //driver_attachment_file_ids = new[] { debugDriverAttachmentId },
-        //                driver_id = selectedDriver.Id,
-        //                note = $"Route Plan {generatedPlanNo} - {generalNote}",
-        //                phone_number = string.IsNullOrWhiteSpace(selectedDriver.PhoneNo)
-        //                    ? "081234567890"
-        //                    : selectedDriver.PhoneNo,
-        //                points,
-        //                //sales_order_id = debugSalesOrderId,
-        //                send_late_notification = true,
-        //                user_group_id = debugUserGroupId,
-        //                vehicle_id = selectedVehicle.Id
-        //            };
-
-        //            var payloadLog = JsonSerializer.Serialize(fleetTaskPayload);
-        //            _logger.LogWarning(
-        //                "DEBUG POST fleet-task-instant. PlanNo={PlanNo}; Payload={Payload}",
-        //                generatedPlanNo,
-        //                payloadLog);
-
-        //            var (externalOk, externalJson) = await _apiService.SendRequestAsync(
-        //                HttpMethod.Post,
-        //                "fleet-planning/api/web/v1/fleet-task-instant",
-        //                fleetTaskPayload);
-
-        //            var externalResponseText = externalJson.ToString();
-        //            _logger.LogWarning(
-        //                "DEBUG response fleet-task-instant. PlanNo={PlanNo}; Success={Success}; Response={Response}",
-        //                generatedPlanNo,
-        //                externalOk,
-        //                externalResponseText);
-
-        //            if (!externalOk)
-        //            {
-        //                ModelState.AddModelError(
-        //                    string.Empty,
-        //                    "External fleet task gagal dibuat. Respons API: " + externalResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            externalFleetTaskId = TryReadExternalFleetTaskId(externalJson);
-        //            if (string.IsNullOrWhiteSpace(externalFleetTaskId))
-        //            {
-        //                _logger.LogError(
-        //                    "External POST may have succeeded but no task ID could be parsed. PlanNo={PlanNo}; Response={Response}",
-        //                    generatedPlanNo,
-        //                    externalResponseText);
-        //                ModelState.AddModelError(
-        //                    string.Empty,
-        //                    "API eksternal merespons sukses tetapi ID fleet task tidak ditemukan. Data lokal tidak disimpan untuk mencegah duplikasi. Periksa log dan respons API: " + externalResponseText);
-        //                await RepopulateFormAsync(vm);
-        //                return View("Form", vm);
-        //            }
-
-        //            _logger.LogWarning(
-        //                "External fleet task created; proceeding to local DB save. PlanNo={PlanNo}; ExternalFleetTaskId={ExternalFleetTaskId}",
-        //                generatedPlanNo,
-        //                externalFleetTaskId);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            _logger.LogError(
-        //                ex,
-        //                "DEBUG POST fleet-task-instant threw an exception. PlanNo={PlanNo}",
-        //                generatedPlanNo);
-        //            ModelState.AddModelError(
-        //                string.Empty,
-        //                "Gagal menghubungi API fleet-task-instant: " + ex.Message);
-        //            await RepopulateFormAsync(vm);
-        //            return View("Form", vm);
-        //        }
-        //    }
-
-        //    // NOTE: API and local database cannot share one transaction. If external
-        //    // creation succeeds but local save fails, the external task may remain orphaned.
-        //    // The external task ID is logged and persisted to make recovery possible.
-
-        //    // -----------------------------------------------------
-        //    // 7. Begin local transaction AFTER the external create
-        //    // -----------------------------------------------------
-        //    await using var transaction =
-        //        await _context.Database.BeginTransactionAsync();
-
-        //    try
-        //    {
-        //        RoutePlanHeader plan;
-
-        //        if (vm.Id == 0)
-        //        {
-        //            // CREATE
-        //            plan = new RoutePlanHeader
-        //            {
-        //                PlanNo = generatedPlanNo ?? await GeneratePlanNoAsync(),
-        //                ExternalFleetTaskId = externalFleetTaskId,
-        //                CreatedBy = username,
-        //                CreatedAt = DateTime.Now,
-        //                Status = RoutePlanStatuses.Draft
-        //            };
-
-        //            _context.RoutePlans.Add(plan);
-        //        }
-        //        else
-        //        {
-        //            // EDIT
-        //            plan = await _context.RoutePlans
-        //                .Include(x => x.Stops)
-        //                .FirstOrDefaultAsync(x => x.Id == vm.Id);
-
-        //            if (plan == null)
-        //            {
-        //                await transaction.RollbackAsync();
-        //                return NotFound();
-        //            }
-
-        //            if (plan.Status != RoutePlanStatuses.Draft)
-        //            {
-        //                await transaction.RollbackAsync();
-
-        //                TempData["Error"] =
-        //                    "Only DRAFT route plans can be edited.";
-
-        //                return RedirectToAction(
-        //                    nameof(Details),
-        //                    new { id = plan.Id });
-        //            }
-
-        //            // Replace the stop snapshot for this DRAFT plan.
-        //            _context.RoutePlanStops.RemoveRange(plan.Stops);
-        //        }
-
-        //        // -------------------------------------------------
-        //        // 6. Save header
-        //        // -------------------------------------------------
-        //        plan.PlanDate = vm.PlanDate.Date;
-        //        plan.RouteId = route.ID;
-        //        plan.RouteCode = route.ROUTE_CODE;
-        //        plan.RouteName = route.ROUTE_NAME;
-
-        //        plan.CustomerCode =
-        //            string.IsNullOrWhiteSpace(vm.CustomerCode)
-        //                ? null
-        //                : vm.CustomerCode.Trim();
-
-        //        plan.PlannedDeparture = vm.PlannedDeparture;
-
-        //        plan.VehicleId = vm.VehicleId;
-        //        plan.VehicleNo = selectedVehicle != null
-        //            ? selectedVehicle.LicensePlate?.Trim()
-        //            : (string.IsNullOrWhiteSpace(vm.VehicleNo) ? null : vm.VehicleNo.Trim());
-
-        //        plan.DriverId = vm.DriverId;
-        //        plan.DriverName = selectedDriver != null
-        //            ? selectedDriver.Name?.Trim()
-        //            : (string.IsNullOrWhiteSpace(vm.DriverName) ? null : vm.DriverName.Trim());
-
-        //        plan.Notes =
-        //            string.IsNullOrWhiteSpace(vm.Notes)
-        //                ? null
-        //                : vm.Notes.Trim();
-
-        //        plan.UpdatedBy = username;
-        //        plan.UpdatedAt = DateTime.Now;
-
-        //        await _context.SaveChangesAsync();
-
-        //        // -------------------------------------------------
-        //        // 7. Snapshot Master Route stops
-        //        //
-        //        // Route Plan retains the location data at the
-        //        // time of saving, even if the master changes later.
-        //        // -------------------------------------------------
-        //        foreach (var stop in masterStops)
-        //        {
-        //            _context.RoutePlanStops.Add(new RoutePlanStop
-        //            {
-        //                RoutePlanId = plan.Id,
-        //                MasterRouteStopId = stop.ID,
-        //                GeofenceTableId = stop.GEOFENCE_TABLE_ID,
-        //                SequenceNo = stop.SEQUENCE_NO,
-        //                StopType = stop.STOP_TYPE,
-        //                FenceName = stop.FenceName ?? "(Unnamed Location)",
-        //                Address = stop.Address,
-        //                City = stop.City,
-        //                PlannedArrival = stop.PLANNED_ARRIVAL,
-        //                //StopDurationMinutes = stop.STOP_DURATION_MINUTES,
-        //                StopDurationMinutes = stop.STOP_DURATION_MINUTES ?? 0,
-        //                Notes = stop.NOTES,
-        //                Status = RoutePlanStopStatuses.Pending
-        //            });
-        //        }
-
-        //        await _context.SaveChangesAsync();
-        //        await transaction.CommitAsync();
-
-        //        TempData["Success"] =
-        //            $"Route Plan {plan.PlanNo} saved as DRAFT.";
-
-        //        return RedirectToAction(
-        //            nameof(Details),
-        //            new { id = plan.Id });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(
-        //            ex,
-        //            "Failed to save Route Plan {PlanId}; ExternalFleetTaskId={ExternalFleetTaskId}",
-        //            vm.Id,
-        //            externalFleetTaskId);
-
-        //        await transaction.RollbackAsync();
-
-        //        ModelState.AddModelError(
-        //            string.Empty,
-        //            "Unable to save the Route Plan. Check the application log for details.");
-
-        //        await RepopulateFormAsync(vm);
-
-        //        return View("Form", vm);
-        //    }
-        //}
 
         // =========================================================
         // AJAX: CUSTOMERS ASSIGNED TO A MASTER ROUTE
@@ -3609,6 +1972,7 @@ namespace TMSBilling.Controllers
 
             await PopulateVehiclesAsync(vm);
             await PopulateDriversAsync(vm);
+            await PopulateSuppliers(vm);
         }
 
         // =========================================================
@@ -3912,6 +2276,21 @@ namespace TMSBilling.Controllers
                     "ke activity_label sistem eksternal.",
                     nameof(stopType))
             };
+        }
+
+        private async Task PopulateSuppliers(RoutePlanFormViewModel vm)
+        {
+            vm.Suppliers = await _context.Vendors
+                .AsNoTracking()
+                .Where(x => x.ACTIVE_FLAG == 1)
+                .OrderBy(x => x.SUP_NAME)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.SUP_CODE,
+                    Text = x.SUP_CODE + " - " + x.SUP_NAME,
+                    Selected = vm.SupplierCode == x.SUP_CODE
+                })
+                .ToListAsync();
         }
     }
 }

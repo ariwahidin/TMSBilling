@@ -171,6 +171,12 @@ namespace TMSBilling.Models
         public bool? order_is_finish { get; set; } = false;
         public DateTime? order_finish_time { get; set; }
 
+        [Column("PRICE_BUY_ID")]
+        public int? PriceBuyId { get; set; }
+
+        [Column("PRICE_SELL_ID")]
+        public int? PriceSellId { get; set; }
+
 
         [StringLength(50)]
         public string? entry_user { get; set; }

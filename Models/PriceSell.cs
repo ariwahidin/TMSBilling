@@ -75,6 +75,16 @@ namespace TMSBilling.Models
         [Column("sell_diff_area", TypeName = "money")]
         public decimal? sell_diff_area { get; set; }
 
+        // Optional selling surcharges. Empty values are normalized to zero.
+        [Column(TypeName = "money")]
+        public decimal? rate_toll { get; set; } = 0m;
+
+        [Column(TypeName = "money")]
+        public decimal? rate_truck { get; set; } = 0m;
+
+        [Column(TypeName = "money")]
+        public decimal? rate_driver { get; set; } = 0m;
+
         public DateTime? valid_date { get; set; }
 
         public byte? active_flag { get; set; }

@@ -78,6 +78,21 @@
     <script>
         let parsedData = [];
 
+        // Escape untrusted server/Excel text before inserting it into HTML.
+        // Keep this helper global so submitData() and renderResultCard() can both use it.
+        function htmlEscape(value) {
+            return String(value ?? '').replace(/[&<>\"']/g, function (char) {
+                const entities = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '\"': '&quot;',
+                    "'": '&#39;'
+                };
+                return entities[char];
+            });
+        }
+
         /* ── loading helpers ── */
         function showLoading(text) {
             document.getElementById('loadingText').textContent = text || 'Processing...';
@@ -146,7 +161,10 @@
                         valid_date:     fixExcelDate(row.valid_date),
                         active_flag:    row.active_flag,
                         curr:           row.curr,
-                        rate_value:     row.rate_value
+                        rate_value:     row.rate_value,
+                        rate_toll:      row.rate_toll === '' || row.rate_toll == null ? 0 : row.rate_toll,
+                        rate_truck:     row.rate_truck === '' || row.rate_truck == null ? 0 : row.rate_truck,
+                        rate_driver:    row.rate_driver === '' || row.rate_driver == null ? 0 : row.rate_driver
                     }));
 
                     setTimeout(() => {
@@ -184,7 +202,7 @@
         }
 
         /* ── submit ── */
-        function submitData() {
+        async function submitData() {
             if (!parsedData.length) {
                 Swal.fire({ icon: 'warning', title: 'Preview Required', text: 'Please preview the Excel data before submitting.' });
                 return;
@@ -194,38 +212,35 @@
             showLoading('Menyimpan data...');
             setButtonLoading('submitBtn', true);
 
-            fetch('/PriceSell/UploadExcel', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode: mode, data: parsedData })
-            })
-            .then(async res => {
-                const result = await res.json().catch(() => ({}));
+            try {
+                const response = await fetch('/PriceSell/UploadExcel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: mode, data: parsedData })
+                });
 
-                if (!res.ok) {
-                    throw new Error(
-                        result.message ||
-                        result.error ||
-                        'The import request could not be submitted. Please review the data and try again.'
-                    );
-                }
+                // Read the server response even for HTTP 400/409 so message/errors
+                // can be shown in the inline result panel instead of being lost.
+                const result = await response.json().catch(() => ({
+                    message: `Server returned HTTP ${response.status}, but the response was not valid JSON.`
+                }));
 
-                return result;
-            })
-            .then(async result => {
                 hideLoading();
                 setButtonLoading('submitBtn', false);
 
-                const processed = Array.isArray(result.processed) ? result.processed : [];
-                const errors = Array.isArray(result.errors) ? result.errors : [];
-                const isApprovalSubmitted =
-                    result.success === true ||
-                    result.approvalId != null ||
-                    result.requestNo != null ||
-                    (processed.length > 0 && errors.length === 0);
-
+                result.httpStatus = response.status;
+                result.isHttpSuccess = response.ok;
                 renderResultCard(result);
 
+                const errors = Array.isArray(result.errors) ? result.errors : [];
+                const isApprovalSubmitted = response.ok && (
+                    result.success === true ||
+                    result.approvalId != null ||
+                    result.requestNo != null
+                );
+
+                // Only successful approval submissions use SweetAlert.
+                // Validation/server errors are displayed in the inline result card.
                 if (isApprovalSubmitted) {
                     await Swal.fire({
                         icon: 'success',
@@ -238,27 +253,22 @@
                         confirmButtonText: 'Understood',
                         confirmButtonColor: '#198754'
                     });
-                } else if (errors.length > 0) {
-                    await Swal.fire({
-                        icon: 'error',
-                        title: 'Submission Failed',
-                        text: 'The import request was not submitted successfully. Please review the errors shown on the page.',
-                        confirmButtonText: 'Review Errors'
-                    });
                 }
-            })
-            .catch(err => {
+            } catch (err) {
                 console.error(err);
                 hideLoading();
                 setButtonLoading('submitBtn', false);
 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Submission Failed',
-                    text: err.message || 'Unable to connect to the server. Please try again.',
-                    confirmButtonText: 'OK'
+                // Network/runtime failures also appear inline; no error SweetAlert.
+                renderResultCard({
+                    message: err.message || 'Unable to connect to the server. Please try again.',
+                    errors: [],
+                    skipped: [],
+                    processed: [],
+                    httpStatus: null,
+                    isHttpSuccess: false
                 });
-            });
+            }
         }
 
         /* ── result card ── */
@@ -266,28 +276,40 @@
             console.log('renderResultCard', result);
 
             const processed = Array.isArray(result.processed) ? result.processed : [];
-            const skipped   = Array.isArray(result.skipped)   ? result.skipped   : [];
-            const errors    = Array.isArray(result.errors)    ? result.errors    : [];
+            const skipped = Array.isArray(result.skipped) ? result.skipped : [];
+            const errors = Array.isArray(result.errors) ? result.errors : [];
+            const message = result.message || result.error || 'The import request could not be completed.';
+            const isSuccess = result.isHttpSuccess === true;
+            const statusText = result.httpStatus ? `HTTP ${result.httpStatus}` : 'Connection error';
 
             function makeSection(label, colorClass, items) {
                 if (!items.length) return '';
-                const lis = items.map(i =>
-                    `<li class="list-group-item py-1 px-3" style="font-size:13px;">${i}</li>`
+                const lis = items.map(item =>
+                    `<li class="list-group-item py-2 px-3" style="font-size:13px; white-space:pre-wrap;">${htmlEscape(item)}</li>`
                 ).join('');
                 return `
                     <div class="mt-3">
-                        <p class="mb-1 fw-semibold ${colorClass}" style="font-size:14px;">${label} (${items.length})</p>
+                        <p class="mb-1 fw-semibold ${colorClass}" style="font-size:14px;">${htmlEscape(label)} (${items.length})</p>
                         <ul class="list-group">${lis}</ul>
                     </div>`;
             }
 
             const html = `
-                <div class="card mb-4 shadow-sm" id="resultCard" style="max-width: 1200px;">
+                <div class="card mb-4 shadow-sm" id="uploadResultCard" style="max-width:1200px;">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <strong>Upload Result</strong>
-                        <button type="button" class="btn-close" onclick="document.getElementById('resultCard').remove()"></button>
+                        <button type="button" class="btn-close" aria-label="Close"
+                                onclick="document.getElementById('uploadResultCard').remove()"></button>
                     </div>
                     <div class="card-body">
+                        <div class="alert ${isSuccess ? 'alert-success' : 'alert-danger'} mb-3" role="alert">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <strong>${isSuccess ? 'Import request result' : 'Import could not be submitted'}</strong>
+                                <small class="text-nowrap">${htmlEscape(statusText)}</small>
+                            </div>
+                            <div class="mt-1" style="white-space:pre-wrap;">${htmlEscape(message)}</div>
+                        </div>
+
                         <div class="row g-2 mb-1">
                             <div class="col-4">
                                 <div class="border border-success rounded text-center py-2">
@@ -311,7 +333,7 @@
 
                         ${makeSection('Successfully processed', 'text-success', processed)}
                         ${makeSection('Skipped — already in the database', 'text-warning', skipped)}
-                        ${makeSection('Error', 'text-danger', errors)}
+                        ${makeSection('Error details', 'text-danger', errors)}
 
                         ${processed.length > 0 ? `
                         <div class="mt-3 text-end">
@@ -320,8 +342,10 @@
                     </div>
                 </div>`;
 
-            document.getElementById('resultCard').outerHTML = html;
-            document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const container = document.getElementById('resultCard');
+            if (!container) return;
+            container.innerHTML = html;
+            document.getElementById('uploadResultCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     </script>
 }

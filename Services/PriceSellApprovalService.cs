@@ -351,6 +351,11 @@ public sealed class PriceSellApprovalService
         x.truck_size = x.truck_size?.Trim();
         x.charge_uom = x.charge_uom?.Trim();
         x.curr = x.curr?.Trim();
+
+        // Optional rates: treat null/blank payload values as zero.
+        x.rate_toll ??= 0m;
+        x.rate_truck ??= 0m;
+        x.rate_driver ??= 0m;
     }
 
     private static string Normalize(string? value) => (value ?? "").Trim().ToUpperInvariant();
@@ -382,7 +387,10 @@ public sealed class PriceSellApprovalService
             a.sell_cancel == b.sell_cancel && a.selltrip2 == b.selltrip2 &&
             a.selltrip3 == b.selltrip3 && a.sell_diff_area == b.sell_diff_area &&
             a.valid_date == b.valid_date && a.active_flag == b.active_flag &&
-            a.curr == b.curr && a.rate_value == b.rate_value;
+            a.curr == b.curr && a.rate_value == b.rate_value &&
+            (a.rate_toll ?? 0m) == (b.rate_toll ?? 0m) &&
+            (a.rate_truck ?? 0m) == (b.rate_truck ?? 0m) &&
+            (a.rate_driver ?? 0m) == (b.rate_driver ?? 0m);
     }
 
     private static void CopyEditableFields(PriceSell from, PriceSell to)
@@ -406,6 +414,9 @@ public sealed class PriceSellApprovalService
         to.active_flag = from.active_flag;
         to.curr = from.curr;
         to.rate_value = from.rate_value;
+        to.rate_toll = from.rate_toll ?? 0m;
+        to.rate_truck = from.rate_truck ?? 0m;
+        to.rate_driver = from.rate_driver ?? 0m;
     }
 
     private async Task<string> GenerateRequestNoAsync(CancellationToken ct)

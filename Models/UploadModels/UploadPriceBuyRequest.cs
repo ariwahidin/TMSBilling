@@ -34,6 +34,8 @@
         public byte? active_flag { get; set; }
         public string? curr { get; set; }
         public decimal? rate_value { get; set; }
+        public decimal? rate_bbm { get; set; }
+        public decimal? rate_toll { get; set; }
     }
 
 }

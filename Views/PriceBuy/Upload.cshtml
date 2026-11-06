@@ -79,6 +79,17 @@
     <script>
         let parsedData = [];
 
+        // Shared HTML encoder used by submitData() and renderResultCard().
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[c]));
+        }
+
         /* ── loading helpers ── */
         function showLoading(text) {
             document.getElementById('loadingText').textContent = text || 'Processing...';
@@ -147,7 +158,9 @@
                         valid_date:   fixExcelDate(row.valid_date),
                         active_flag:  row.active_flag,
                         curr:         row.curr,
-                        rate_value:   row.rate_value
+                        rate_value:   row.rate_value,
+                        rate_bbm:     row.rate_bbm === '' || row.rate_bbm == null ? 0 : row.rate_bbm,
+                        rate_toll:    row.rate_toll === '' || row.rate_toll == null ? 0 : row.rate_toll
                     }));
 
                     setTimeout(() => {
@@ -201,34 +214,41 @@
                 body: JSON.stringify({ mode: mode, data: parsedData })
             })
             .then(async res => {
-                const result = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(result.message || 'The approval request could not be submitted.');
+                const result = await res.json().catch(() => ({
+                    success: false,
+                    message: 'The server returned an unreadable response.'
+                }));
+                result.httpStatus = res.status;
                 return result;
             })
             .then(result => {
                 hideLoading();
                 setButtonLoading('submitBtn', false);
                 renderResultCard(result);
+
                 if (result.success === true && result.approvalId) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Request Submitted Successfully',
-                        html: `<p>Excel import approval request <strong>#${result.approvalId}</strong> has been submitted.</p>
+                        html: `<p>Excel import approval request <strong>#${escapeHtml(result.approvalId)}</strong> has been submitted.</p>
                                <p>Your request is now <strong>pending approval</strong>.</p>
                                <p>No tariff changes will be applied until the request is approved.</p>
                                <p>Please contact your direct supervisor to review and approve the request.</p>`,
                         confirmButtonText: 'Understood',
                         confirmButtonColor: '#198754'
                     });
-                } else {
-                    Swal.fire({ icon: 'info', title: 'No Request Submitted', text: result.message || 'No approval request was created.' });
                 }
+                // Validation errors are displayed inline in Upload Result, not in SweetAlert.
             })
             .catch(err => {
                 console.error(err);
                 hideLoading();
                 setButtonLoading('submitBtn', false);
-                Swal.fire({ icon: 'error', title: 'Submission Failed', text: err.message || 'Unable to contact the server. Please try again.' });
+                renderResultCard({
+                    success: false,
+                    message: err.message || 'Unable to contact the server. Please try again.',
+                    errors: []
+                });
             });
         }
 
@@ -239,6 +259,9 @@
             const processed = Array.isArray(result.processed) ? result.processed : [];
             const skipped   = Array.isArray(result.skipped)   ? result.skipped   : [];
             const errors    = Array.isArray(result.errors)    ? result.errors    : [];
+            const message   = result.message || (result.success === false ? 'The import request could not be submitted.' : '');
+
+
 
             function makeSection(label, colorClass, items) {
                 if (!items.length) return '';
@@ -246,7 +269,7 @@
                 return `
                     <div class="mt-3">
                         <p class="mb-1 fw-semibold ${colorClass}" style="font-size:14px;">${label} (${items.length})</p>
-                        <ul class="list-group">${lis}</ul>
+                        <ul class="list-group" style="max-height:420px; overflow-y:auto;">${lis}</ul>
                     </div>`;
             }
 
@@ -257,6 +280,12 @@
                         <button type="button" class="btn-close" onclick="document.getElementById('resultCard').remove()"></button>
                     </div>
                     <div class="card-body">
+                        ${message ? `
+                        <div class="alert ${result.success === true ? 'alert-success' : 'alert-danger'} mb-3" role="alert">
+                            <div class="fw-semibold">${result.success === true ? 'Import request status' : 'Import could not be submitted'}</div>
+                            <div>${escapeHtml(message)}</div>
+                            ${result.httpStatus ? `<small class="d-block mt-1 text-muted">HTTP ${escapeHtml(result.httpStatus)}</small>` : ''}
+                        </div>` : ''}
 
                         <div class="row g-2 mb-1">
                             <div class="col-4">

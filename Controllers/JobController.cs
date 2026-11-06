@@ -1407,6 +1407,7 @@ namespace TMSBilling.Controllers
                         dest_id = order.dest_area,
                         dvdate = Header.dvdate,
 
+                        PriceBuyId = CostRate.id_seq,
                         buy1 = CostRate.buy1,
                         buy2 = CostRate.buy2,
                         buy3 = CostRate.buy3,
@@ -1420,6 +1421,7 @@ namespace TMSBilling.Controllers
 
                         cust_ori = order.sub_custid,
 
+                        PriceSellId = SellRate.id_seq,
                         sell1 = SellRate.sell1,
                         sell2 = SellRate.sell2,
                         sell3 = SellRate.sell3,

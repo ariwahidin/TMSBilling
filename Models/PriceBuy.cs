@@ -75,6 +75,13 @@ namespace TMSBilling.Models
         [Column("buy_diff_area", TypeName = "money")]
         public decimal? buy_diff_area { get; set; }
 
+        // Optional additional buying rates. Keep nullable for compatibility with existing rows.
+        [Column(TypeName = "money")]
+        public decimal? rate_bbm { get; set; } = 0m;
+
+        [Column(TypeName = "money")]
+        public decimal? rate_toll { get; set; } = 0m;
+
         public DateTime? valid_date { get; set; }
 
         public byte? active_flag { get; set; }

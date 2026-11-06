@@ -1619,6 +1619,14 @@ namespace TMSBilling.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id_seq"));
 
+                    b.Property<int?>("PriceBuyId")
+                        .HasColumnType("int")
+                        .HasColumnName("PRICE_BUY_ID");
+
+                    b.Property<int?>("PriceSellId")
+                        .HasColumnType("int")
+                        .HasColumnName("PRICE_SELL_ID");
+
                     b.Property<decimal?>("buy1")
                         .HasColumnType("money");
 
@@ -3563,6 +3571,12 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<decimal?>("rate_bbm")
+                        .HasColumnType("money");
+
+                    b.Property<decimal?>("rate_toll")
+                        .HasColumnType("money");
+
                     b.Property<decimal?>("rate_value")
                         .HasColumnType("money");
 
@@ -3788,6 +3802,15 @@ namespace TMSBilling.Migrations
                     b.Property<string>("origin")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("rate_driver")
+                        .HasColumnType("money");
+
+                    b.Property<decimal?>("rate_toll")
+                        .HasColumnType("money");
+
+                    b.Property<decimal?>("rate_truck")
+                        .HasColumnType("money");
 
                     b.Property<decimal?>("rate_value")
                         .HasColumnType("money");
@@ -4700,6 +4723,180 @@ namespace TMSBilling.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("PLANNED_DEPARTURE");
 
+                    b.Property<decimal?>("PriceBuy1")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_1");
+
+                    b.Property<decimal?>("PriceBuy2")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_2");
+
+                    b.Property<decimal?>("PriceBuy3")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_3");
+
+                    b.Property<decimal?>("PriceBuyCancel")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_CANCEL");
+
+                    b.Property<decimal?>("PriceBuyChargeMin")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_CHARGE_MIN");
+
+                    b.Property<string>("PriceBuyCurrency")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("PRICE_BUY_CURRENCY");
+
+                    b.Property<decimal?>("PriceBuyDiffArea")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_DIFF_AREA");
+
+                    b.Property<byte?>("PriceBuyFlagMin")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("PRICE_BUY_FLAG_MIN");
+
+                    b.Property<byte?>("PriceBuyFlagRange")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("PRICE_BUY_FLAG_RANGE");
+
+                    b.Property<int?>("PriceBuyId")
+                        .HasColumnType("int")
+                        .HasColumnName("PRICE_BUY_ID");
+
+                    b.Property<decimal?>("PriceBuyMaxRange")
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("PRICE_BUY_MAX_RANGE");
+
+                    b.Property<decimal?>("PriceBuyMinRange")
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("PRICE_BUY_MIN_RANGE");
+
+                    b.Property<decimal?>("PriceBuyOvnnight")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_OVNIGHT");
+
+                    b.Property<decimal?>("PriceBuyRateBbm")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_RATE_BBM");
+
+                    b.Property<decimal?>("PriceBuyRateToll")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_RATE_TOLL");
+
+                    b.Property<decimal?>("PriceBuyRateValue")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_RATE_VALUE");
+
+                    b.Property<decimal?>("PriceBuyRetCargo")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_RET_CARGO");
+
+                    b.Property<decimal?>("PriceBuyRetEmpt")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_RET_EMPT");
+
+                    b.Property<decimal?>("PriceBuyTrip2")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_TRIP2");
+
+                    b.Property<decimal?>("PriceBuyTrip3")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_BUY_TRIP3");
+
+                    b.Property<DateTime?>("PriceBuyValidDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PRICE_BUY_VALID_DATE");
+
+                    b.Property<decimal?>("PriceSell1")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_1");
+
+                    b.Property<decimal?>("PriceSell2")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_2");
+
+                    b.Property<decimal?>("PriceSell3")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_3");
+
+                    b.Property<decimal?>("PriceSellCancel")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_CANCEL");
+
+                    b.Property<decimal?>("PriceSellChargeMin")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("PRICE_SELL_CHARGE_MIN");
+
+                    b.Property<string>("PriceSellCurrency")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("PRICE_SELL_CURRENCY");
+
+                    b.Property<decimal?>("PriceSellDiffArea")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_DIFF_AREA");
+
+                    b.Property<byte?>("PriceSellFlagMin")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("PRICE_SELL_FLAG_MIN");
+
+                    b.Property<byte?>("PriceSellFlagRange")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("PRICE_SELL_FLAG_RANGE");
+
+                    b.Property<int?>("PriceSellId")
+                        .HasColumnType("int")
+                        .HasColumnName("PRICE_SELL_ID");
+
+                    b.Property<decimal?>("PriceSellMaxRange")
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("PRICE_SELL_MAX_RANGE");
+
+                    b.Property<decimal?>("PriceSellMinRange")
+                        .HasColumnType("decimal(7,2)")
+                        .HasColumnName("PRICE_SELL_MIN_RANGE");
+
+                    b.Property<decimal?>("PriceSellOvnnight")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_OVNIGHT");
+
+                    b.Property<decimal?>("PriceSellRateDriver")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_RATE_DRIVER");
+
+                    b.Property<decimal?>("PriceSellRateToll")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_RATE_TOLL");
+
+                    b.Property<decimal?>("PriceSellRateTruck")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_RATE_TRUCK");
+
+                    b.Property<decimal?>("PriceSellRateValue")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_RATE_VALUE");
+
+                    b.Property<decimal?>("PriceSellRetCargo")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_RET_CARGO");
+
+                    b.Property<decimal?>("PriceSellRetEmpty")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_RET_EMPTY");
+
+                    b.Property<decimal?>("PriceSellTrip2")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_TRIP2");
+
+                    b.Property<decimal?>("PriceSellTrip3")
+                        .HasColumnType("money")
+                        .HasColumnName("PRICE_SELL_TRIP3");
+
+                    b.Property<DateTime?>("PriceSellValidDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PRICE_SELL_VALID_DATE");
+
                     b.Property<string>("RouteCode")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -4730,6 +4927,31 @@ namespace TMSBilling.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("STATUS");
+
+                    b.Property<string>("SupplierCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("SUPPLIER_CODE");
+
+                    b.Property<string>("TariffChargeUom")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("TARIFF_CHARGE_UOM");
+
+                    b.Property<string>("TariffServModa")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("TARIFF_SERV_MODA");
+
+                    b.Property<string>("TariffServType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("TARIFF_SERV_TYPE");
+
+                    b.Property<string>("TariffTruckSize")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("TARIFF_TRUCK_SIZE");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2")

@@ -30,15 +30,15 @@ public class PriceSellController : Controller
         _logger = logger;
     }
 
-public async Task<IActionResult> Index()
-{
-    ViewBag.PendingApprovalCount = await _context.PriceSellApprovals
-        .CountAsync(x => x.Status == "PENDING");
+    public async Task<IActionResult> Index()
+    {
+        ViewBag.PendingApprovalCount = await _context.PriceSellApprovals
+            .CountAsync(x => x.Status == "PENDING");
 
-    var priceSells = await _context.PriceSells.ToListAsync();
+        var priceSells = await _context.PriceSells.ToListAsync();
 
-    return View(priceSells);
-}
+        return View(priceSells);
+    }
 
     public IActionResult Form(int? id)
     {
@@ -64,6 +64,8 @@ public async Task<IActionResult> Index()
     [RequirePermission("pricesell_create")]
     public async Task<IActionResult> SubmitCreate(PriceSell model, CancellationToken ct)
     {
+        NormalizeOptionalRates(model);
+
         if (!ModelState.IsValid)
         {
             await PopulateFormListsAsync();
@@ -135,6 +137,9 @@ public async Task<IActionResult> Index()
                 message = "A valid tariff ID is required for an update."
             });
         }
+
+        // Optional selling rates default to zero when left blank.
+        NormalizeOptionalRates(model);
 
         // 3. Validate the submitted model
         if (!ModelState.IsValid)
@@ -284,7 +289,7 @@ public async Task<IActionResult> Index()
     public IActionResult Save() => BadRequest(new
     {
         success = false,
-        message = "Endpoint Save lama dinonaktifkan. Form harus menggunakan SubmitCreate atau SubmitUpdate."
+        message = "The old Save endpoint has been disabled. The form must use SubmitCreate or SubmitUpdate."
     });
 
     [HttpPost]
@@ -317,7 +322,7 @@ public async Task<IActionResult> Index()
             return Ok(new
             {
                 success = true,
-                message = "Request deactivation berhasil diajukan untuk approval.",
+                message = "The deactivation request has been successfully submitted for approval.",
                 approvalId
             });
         }
@@ -327,8 +332,15 @@ public async Task<IActionResult> Index()
         }
         catch (DbUpdateException)
         {
-            return Conflict(new { success = false, message = "Tarif sudah memiliki request approval pending." });
+            return Conflict(new { success = false, message = "The tariff already has a pending approval request." });
         }
+    }
+
+    private static void NormalizeOptionalRates(PriceSell model)
+    {
+        model.rate_toll ??= 0m;
+        model.rate_truck ??= 0m;
+        model.rate_driver ??= 0m;
     }
 
     private Task PopulateFormListsAsync()
@@ -362,7 +374,8 @@ public async Task<IActionResult> Index()
             "flag_range", "min_range", "max_range",
             "sell1", "sell2", "sell3", "sell_ret_empty", "sell_ret_cargo",
             "sell_ovnight", "sell_cancel", "selltrip2", "selltrip3", "sell_diff_area",
-            "valid_date", "active_flag", "curr", "rate_value"
+            "valid_date", "active_flag", "curr", "rate_value",
+            "rate_toll", "rate_truck", "rate_driver"
         };
 
         for (int i = 0; i < headers.Length; i++)
@@ -398,6 +411,9 @@ public async Task<IActionResult> Index()
         worksheet.Cell(2, 24).Value = 1;
         worksheet.Cell(2, 25).Value = "IDR";
         worksheet.Cell(2, 26).Value = 1;
+        worksheet.Cell(2, 27).Value = 0; // rate_toll (optional)
+        worksheet.Cell(2, 28).Value = 0; // rate_truck (optional)
+        worksheet.Cell(2, 29).Value = 0; // rate_driver (optional)
 
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
@@ -449,7 +465,7 @@ public async Task<IActionResult> Index()
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
+    //[ValidateAntiForgeryToken]
     [RequirePermission("pricesell_import")]
     public async Task<IActionResult> UploadExcel([FromBody] UploadPriceSellRequest request, CancellationToken ct)
     {
@@ -457,7 +473,7 @@ public async Task<IActionResult> Index()
             return BadRequest(new { message = "Model binding failed." });
 
         if (request?.data == null || request.data.Count == 0)
-            return BadRequest(new { message = "Data kosong atau tidak terbaca." });
+            return BadRequest(new { message = "The data is empty or could not be read." });
 
         var errors = new List<string>();
         var skipped = new List<string>();
@@ -465,7 +481,7 @@ public async Task<IActionResult> Index()
         var approvalItems = new List<PriceSellApprovalItemDto>();
         var mode = (request.mode ?? "").Trim().ToLowerInvariant();
         if (mode is not ("add" or "edit"))
-            return BadRequest(new { message = "Mode harus add atau edit." });
+            return BadRequest(new { message = "Mode must be either Add or Edit." });
 
         var username = HttpContext.Session.GetString("username") ?? "";
         foreach (var item in request.data)
@@ -474,7 +490,7 @@ public async Task<IActionResult> Index()
             var label = key.Replace("|", " › ");
             if (!seen.Add(key))
             {
-                errors.Add($"[Duplikat di file] {label}");
+                errors.Add($"[Duplicate entries in the uploaded file.] {label}");
                 continue;
             }
 
@@ -499,7 +515,7 @@ public async Task<IActionResult> Index()
             }
             if (mode == "edit" && existing == null)
             {
-                errors.Add($"[Tidak ditemukan untuk edit] {label}");
+                errors.Add($"[Not found for edit.] {label}");
                 continue;
             }
 
@@ -531,6 +547,9 @@ public async Task<IActionResult> Index()
                 active_flag = item.active_flag,
                 curr = item.curr,
                 rate_value = item.rate_value,
+                rate_toll = item.rate_toll ?? 0m,
+                rate_truck = item.rate_truck ?? 0m,
+                rate_driver = item.rate_driver ?? 0m,
                 entry_user = username,
                 entry_date = DateTime.Now
             };
@@ -547,7 +566,7 @@ public async Task<IActionResult> Index()
         if (errors.Count > 0)
             return BadRequest(new
             {
-                message = "Import dibatalkan. Ada baris yang tidak valid; tidak ada request approval yang dibuat.",
+                message = "The import was cancelled because some rows contain invalid data. No approval request was created.",
                 errors,
                 skipped
             });
@@ -555,7 +574,7 @@ public async Task<IActionResult> Index()
         if (approvalItems.Count == 0)
             return Ok(new
             {
-                message = "Tidak ada baris baru untuk diajukan. Semua baris mungkin sudah ada.",
+                message = "There are no new rows to submit. All rows may already exist in the database.",
                 approvalId = (long?)null,
                 skipped
             });
@@ -572,7 +591,7 @@ public async Task<IActionResult> Index()
             return Ok(new
             {
                 success = true,
-                message = $"Import diajukan untuk approval: {approvalItems.Count} baris.",
+                message = $"The import request has been submitted for approval: {approvalItems.Count} rows.",
                 approvalId,
                 submitted = approvalItems.Count,
                 skipped
@@ -584,7 +603,7 @@ public async Task<IActionResult> Index()
         }
         catch (DbUpdateException)
         {
-            return Conflict(new { success = false, message = "Import konflik dengan request pending lain atau data yang sudah ada.", skipped });
+            return Conflict(new { success = false, message = "The import conflicts with another pending request or existing data.", skipped });
         }
     }
 
@@ -619,7 +638,8 @@ public async Task<IActionResult> Index()
         "flag_range", "min_range", "max_range",
         "sell1", "sell2", "sell3", "sell_ret_empty", "sell_ret_cargo",
         "sell_ovnight", "sell_cancel", "selltrip2", "selltrip3", "sell_diff_area",
-        "valid_date", "active_flag", "curr", "rate_value"
+        "valid_date", "active_flag", "curr", "rate_value",
+        "rate_toll", "rate_truck", "rate_driver"
     };
 
         for (int i = 0; i < headers.Length; i++)
@@ -658,6 +678,9 @@ public async Task<IActionResult> Index()
             ws.Cell(row, 24).Value = item.active_flag;
             ws.Cell(row, 25).Value = item.curr;
             ws.Cell(row, 26).Value = item.rate_value;
+            ws.Cell(row, 27).Value = item.rate_toll ?? 0m;
+            ws.Cell(row, 28).Value = item.rate_truck ?? 0m;
+            ws.Cell(row, 29).Value = item.rate_driver ?? 0m;
 
             row++;
         }

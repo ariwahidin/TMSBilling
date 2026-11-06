@@ -68,7 +68,8 @@ namespace TMSBilling.Controllers
                 model.origin = model.origin?.Trim().ToUpperInvariant();
                 model.dest = model.dest?.Trim().ToUpperInvariant();
                 model.entry_user = HttpContext.Session.GetString("username") ?? "System";
-                var dto = new PriceBuyApprovalSubmitDto {
+                var dto = new PriceBuyApprovalSubmitDto
+                {
                     RequestType = "CREATE",
                     Items = new List<PriceBuyApprovalItemDto> {
                         new() { OperationType = "CREATE", NewValuesJson = JsonSerializer.Serialize(model) }
@@ -111,7 +112,8 @@ namespace TMSBilling.Controllers
                 model.truck_size = existing.truck_size;
                 model.charge_uom = existing.charge_uom;
                 model.update_user = HttpContext.Session.GetString("username") ?? "System";
-                var dto = new PriceBuyApprovalSubmitDto {
+                var dto = new PriceBuyApprovalSubmitDto
+                {
                     RequestType = "UPDATE",
                     Items = new List<PriceBuyApprovalItemDto> {
                         new() { OperationType = "UPDATE", PriceBuyId = existing.id_seq, NewValuesJson = JsonSerializer.Serialize(model) }
@@ -145,7 +147,8 @@ namespace TMSBilling.Controllers
             {
                 var proposed = existing;
                 proposed.active_flag = 0;
-                var dto = new PriceBuyApprovalSubmitDto {
+                var dto = new PriceBuyApprovalSubmitDto
+                {
                     RequestType = "DEACTIVATE",
                     Items = new List<PriceBuyApprovalItemDto> {
                         new() { OperationType = "DEACTIVATE", PriceBuyId = existing.id_seq, NewValuesJson = JsonSerializer.Serialize(proposed) }
@@ -185,7 +188,7 @@ namespace TMSBilling.Controllers
                 "flag_range", "min_range", "max_range",
                 "buy1", "buy2", "buy3", "buy_ret_empt", "buy_ret_cargo",
                 "buy_ovnight", "buy_cancel", "buytrip2", "buytrip3", "buy_diff_area",
-                "valid_date", "active_flag", "curr", "rate_value"
+                "valid_date", "active_flag", "curr", "rate_value", "rate_bbm", "rate_toll"
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -221,6 +224,8 @@ namespace TMSBilling.Controllers
             worksheet.Cell(2, 24).Value = 1;
             worksheet.Cell(2, 25).Value = "IDR";
             worksheet.Cell(2, 26).Value = 1;
+            worksheet.Cell(2, 27).Value = 0; // rate_bbm (optional)
+            worksheet.Cell(2, 28).Value = 0; // rate_toll (optional)
 
 
             var stream = new MemoryStream();
@@ -297,7 +302,8 @@ namespace TMSBilling.Controllers
                 var key = string.Join("|", new[] { row.sup_code, row.origin, row.dest, row.serv_type, row.serv_moda, row.truck_size, row.charge_uom });
                 if (!seen.Add(key)) { errors.Add($"Duplicate row in Excel: {label}"); continue; }
 
-                var entity = new PriceBuy {
+                var entity = new PriceBuy
+                {
                     sup_code = row.sup_code?.Trim(),
                     origin = row.origin?.Trim().ToUpperInvariant(),
                     dest = row.dest?.Trim().ToUpperInvariant(),
@@ -308,13 +314,26 @@ namespace TMSBilling.Controllers
                     flag_min = row.flag_min.HasValue ? (byte?)row.flag_min : null,
                     charge_min = row.charge_min,
                     flag_range = row.flag_range.HasValue ? (byte?)row.flag_range : null,
-                    min_range = row.min_range, max_range = row.max_range,
-                    buy1 = row.buy1, buy2 = row.buy2, buy3 = row.buy3,
-                    buy_ret_empt = row.buy_ret_empt, buy_ret_cargo = row.buy_ret_cargo,
-                    buy_ovnight = row.buy_ovnight, buy_cancel = row.buy_cancel,
-                    buytrip2 = row.buytrip2, buytrip3 = row.buytrip3, buy_diff_area = row.buy_diff_area,
-                    valid_date = row.valid_date, active_flag = row.active_flag, curr = row.curr, rate_value = row.rate_value,
-                    entry_user = username, entry_date = DateTime.Now
+                    min_range = row.min_range,
+                    max_range = row.max_range,
+                    buy1 = row.buy1,
+                    buy2 = row.buy2,
+                    buy3 = row.buy3,
+                    buy_ret_empt = row.buy_ret_empt,
+                    buy_ret_cargo = row.buy_ret_cargo,
+                    buy_ovnight = row.buy_ovnight,
+                    buy_cancel = row.buy_cancel,
+                    buytrip2 = row.buytrip2,
+                    buytrip3 = row.buytrip3,
+                    buy_diff_area = row.buy_diff_area,
+                    valid_date = row.valid_date,
+                    active_flag = row.active_flag,
+                    curr = row.curr,
+                    rate_value = row.rate_value,
+                    rate_bbm = row.rate_bbm ?? 0m,
+                    rate_toll = row.rate_toll ?? 0m,
+                    entry_user = username,
+                    entry_date = DateTime.Now
                 };
 
                 if (!await _context.Vendors.AnyAsync(v => v.SUP_CODE == entity.sup_code, ct) ||
@@ -336,7 +355,8 @@ namespace TMSBilling.Controllers
                 if (string.Equals(request.mode, "edit", StringComparison.OrdinalIgnoreCase) && existing == null)
                 { errors.Add($"Tariff not found for edit: {label}"); continue; }
 
-                items.Add(new PriceBuyApprovalItemDto {
+                items.Add(new PriceBuyApprovalItemDto
+                {
                     OperationType = existing == null ? "CREATE" : "UPDATE",
                     PriceBuyId = existing?.id_seq,
                     NewValuesJson = JsonSerializer.Serialize(entity)
@@ -390,7 +410,7 @@ namespace TMSBilling.Controllers
                 "flag_range", "min_range", "max_range",
                 "buy1", "buy2", "buy3", "buy_ret_empt", "buy_ret_cargo",
                 "buy_ovnight", "buy_cancel", "buytrip2", "buytrip3", "buy_diff_area",
-                "valid_date", "active_flag", "curr", "rate_value"
+                "valid_date", "active_flag", "curr", "rate_value", "rate_bbm", "rate_toll"
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -429,6 +449,8 @@ namespace TMSBilling.Controllers
                 ws.Cell(row, 24).Value = item.active_flag;
                 ws.Cell(row, 25).Value = item.curr;
                 ws.Cell(row, 26).Value = item.rate_value;
+                ws.Cell(row, 27).Value = item.rate_bbm ?? 0m;
+                ws.Cell(row, 28).Value = item.rate_toll ?? 0m;
                 row++;
             }
 

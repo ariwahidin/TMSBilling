@@ -22,7 +22,9 @@
         var value = property.GetValue(item);
         if (value == null) return "—";
         if (propertyName == "valid_date" && value is DateTime date) return date.ToString("dd MMM yyyy", CultureInfo.InvariantCulture);
-        if (propertyName.StartsWith("sell", StringComparison.OrdinalIgnoreCase) || propertyName is "charge_min" or "min_range" or "max_range" or "rate_value")
+        if (propertyName.StartsWith("sell", StringComparison.OrdinalIgnoreCase) ||
+        propertyName is "charge_min" or "min_range" or "max_range"
+        or "rate_value" or "rate_toll" or "rate_truck" or "rate_driver")
         {
             if (decimal.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
                 return amount.ToString("N0", CultureInfo.GetCultureInfo("id-ID"));
@@ -42,6 +44,9 @@
         ("Rate 2", "sell2"), ("Rate 3", "sell3"), ("Return Empty", "sell_ret_empty"),
         ("Return Cargo", "sell_ret_cargo"), ("Overnight", "sell_ovnight"), ("Cancel Rate", "sell_cancel"),
         ("Trip 2", "selltrip2"), ("Trip 3", "selltrip3"), ("Different Area", "sell_diff_area"),
+        ("Rate Toll", "rate_toll"),
+        ("Rate Truck", "rate_truck"),
+        ("Rate Driver", "rate_driver"),
         ("Valid Date", "valid_date"), ("Active", "active_flag")
     };
     var statusClass = Model.Status switch { "PENDING" => "warning", "APPROVED" => "success", "REJECTED" => "danger", "CANCELLED" => "secondary", _ => "secondary" };
@@ -184,8 +189,19 @@
                                             var changed = !string.Equals(oldValue, newValue, StringComparison.Ordinal);
                                             <tr class="@(changed ? "changed-row" : "")">
                                                 <td class="fw-semibold">@field.Label @if (changed) { <span class="badge text-bg-warning ms-1">Changed</span> }</td>
-                                                <td class="@(field.Property.StartsWith("sell") || field.Property is "charge_min" or "min_range" or "max_range" or "rate_value" ? "rate-value" : "")">@oldValue</td>
-                                                <td class="@(field.Property.StartsWith("sell") || field.Property is "charge_min" or "min_range" or "max_range" or "rate_value" ? "rate-value fw-semibold" : "fw-semibold")">@newValue</td>
+                                                    <td class="@(field.Property.StartsWith("sell", StringComparison.OrdinalIgnoreCase) ||
+                                                                     field.Property is "charge_min" or "min_range" or "max_range"
+                                                                     or "rate_value" or "rate_toll" or "rate_truck" or "rate_driver"
+                                                                     ? "rate-value" : "")">
+                                                @oldValue
+                                            </td>
+
+                                                    <td class="@(field.Property.StartsWith("sell", StringComparison.OrdinalIgnoreCase) ||
+                                                             field.Property is "charge_min" or "min_range" or "max_range"
+                                                             or "rate_value" or "rate_toll" or "rate_truck" or "rate_driver"
+                                                             ? "rate-value fw-semibold" : "fw-semibold")">
+                                                @newValue
+                                            </td>
                                             </tr>
                                         }
                                         </tbody>
@@ -293,38 +309,154 @@
         applyDetailSearch();
     })();
 
-    const tokenElement = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
-    const token = tokenElement ? tokenElement.value : '';
-    async function post(url, body) {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-            body: JSON.stringify(body || {})
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || 'Request failed');
-        return data;
-    }
-    async function decide(action) {
-        const note = document.getElementById('decisionNote').value;
-        if (action === 'Reject' && !note.trim()) { alert('A rejection reason is required.'); return; }
-        const promptText = action === 'Approve'
-            ? 'Approve this request? The tariff changes will be applied to the official price list.'
-            : 'Reject this request? The official tariff data will remain unchanged.';
-        if (!confirm(promptText)) return;
-        try {
-            const result = await post('/PriceSellApproval/' + action + '/@Model.ApprovalId', { note });
-            alert(result.message || 'The decision was saved successfully.');
-            location.reload();
-        } catch (e) { alert(e.message); }
-    }
-    async function cancelRequest() {
-        if (!confirm('Cancel this request?')) return;
-        try {
-            const result = await post('/PriceSellApproval/Cancel/@Model.ApprovalId', {});
-            alert(result.message || 'The request was cancelled successfully.');
-            location.reload();
-        } catch (e) { alert(e.message); }
-    }
+            const tokenElement = document.querySelector(
+            '#antiForgeryForm input[name="__RequestVerificationToken"]'
+        );
+        const token = tokenElement ? tokenElement.value : '';
+
+        async function post(url, body) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(body || {})
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(data.message || 'Request failed.');
+            }
+
+            return data;
+        }
+
+        // Reusable SweetAlert helpers
+        function showSuccess(message) {
+            return Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#198754'
+            });
+        }
+
+        function showError(message) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+
+        function showLoading(title, text) {
+            Swal.fire({
+                title: title,
+                text: text,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+
+        async function decide(action) {
+            const noteElement = document.getElementById('decisionNote');
+            const note = noteElement?.value?.trim() || '';
+
+            if (action === 'Reject' && !note) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Rejection Reason Required',
+                    text: 'Please enter a rejection reason before proceeding.',
+                    confirmButtonText: 'OK'
+                });
+
+                noteElement?.focus();
+                return;
+            }
+
+            const isApprove = action === 'Approve';
+
+            const confirmation = await Swal.fire({
+                icon: 'question',
+                title: isApprove ? 'Approve Request?' : 'Reject Request?',
+                text: isApprove
+                    ? 'The tariff changes will be applied to the official price list.'
+                    : 'The official tariff data will remain unchanged.',
+                showCancelButton: true,
+                confirmButtonText: isApprove ? 'Yes, Approve' : 'Yes, Reject',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: isApprove ? '#198754' : '#dc3545',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            });
+
+            if (!confirmation.isConfirmed) return;
+
+            try {
+                showLoading(
+                    isApprove ? 'Approving Request...' : 'Rejecting Request...',
+                    'Please wait while the request is being processed.'
+                );
+
+                const result = await post(
+                    '/PriceSellApproval/' + action + '/@Model.ApprovalId',
+                    { note }
+                );
+
+                await showSuccess(
+                    result.message || 'The decision was saved successfully.'
+                );
+
+                location.reload();
+
+            } catch (error) {
+                showError(error.message || 'An unexpected error occurred.');
+            }
+        }
+
+        async function cancelRequest() {
+            const confirmation = await Swal.fire({
+                icon: 'warning',
+                title: 'Cancel Request?',
+                text: 'Are you sure you want to cancel this approval request?',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Cancel Request',
+                cancelButtonText: 'Keep Request',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            });
+
+            if (!confirmation.isConfirmed) return;
+
+            try {
+                showLoading(
+                    'Cancelling Request...',
+                    'Please wait while your request is being cancelled.'
+                );
+
+                const result = await post(
+                    '/PriceSellApproval/Cancel/@Model.ApprovalId',
+                    {}
+                );
+
+                await showSuccess(
+                    result.message || 'The request was cancelled successfully.'
+                );
+
+                location.reload();
+
+            } catch (error) {
+                showError(error.message || 'An unexpected error occurred.');
+            }
+        }
 </script>
 }

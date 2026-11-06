@@ -1,4 +1,6 @@
-﻿namespace TMSBilling.Models.UploadModels
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace TMSBilling.Models.UploadModels
 {
     public class UploadPriceSellRequest
     {
@@ -41,5 +43,14 @@
 
         public string? curr { get; set; }
         public decimal? rate_value { get; set; }
+
+        [Column(TypeName = "money")]
+        public decimal? rate_toll { get; set; }
+
+        [Column(TypeName = "money")]
+        public decimal? rate_truck { get; set; }
+
+        [Column(TypeName = "money")]
+        public decimal? rate_driver { get; set; }
     }
 }
